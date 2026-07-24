@@ -1,33 +1,44 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import { Sarabun } from 'next/font/google';
+import './globals.css';
+import BottomNav from '@/components/layout/BottomNav';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const sarabun = Sarabun({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['thai', 'latin'],
+  variable: '--font-sarabun',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "ระบบคำนวณยอดการจ่ายงาน",
-  description: "ระบบลงบันทึกการจ่ายงานประจำวัน (Duty Check)",
+  title: 'BK100 — ระบบจัดการหน่วย',
+  description: 'ระบบจัดการกำลังพล เวรยาม และภารกิจประจำวัน ร้อย.บก.พัน.บร.กบร.ศบบ.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'BK100',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="th" className={sarabun.variable}>
+      <body>
+        <main>{children}</main>
+        <BottomNav />
+      </body>
     </html>
   );
 }
