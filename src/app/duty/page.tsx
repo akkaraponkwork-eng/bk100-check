@@ -82,7 +82,7 @@ function buildShift(date: string, slotPersonnelIds: string[]): DutyShift {
     personnelId: slotPersonnelIds[i] || '',
     order: i + 1,
   }));
-  return { id: crypto.randomUUID(), date, location: LOCATION, timeSlots, batchMode: false };
+  return { id: crypto.randomUUID(), date, location: LOCATION, timeSlots, batchMode: 'mixed' };
 }
 
 function formatCopyText(
