@@ -152,7 +152,7 @@ function TaskCard({
 // ==================== Add Task Modal ====================
 function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit<KanbanTask, 'id'>) => void }) {
   const today = format(new Date(), 'yyyy-MM-dd');
-  const [form, setForm] = useState({ title: '', category: 'หมวดที่ 2' as KanbanTask['category'], location: '', remark: '', date: today });
+  const [form, setForm] = useState({ title: '', category: 'งานนอก/อื่นๆ' as KanbanTask['category'], location: '', remark: '', date: today });
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   return (

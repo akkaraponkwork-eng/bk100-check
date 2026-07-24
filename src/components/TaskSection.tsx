@@ -23,7 +23,7 @@ import { Task } from '@/types';
 
 interface TaskSectionProps {
   title: string;
-  category: 'หมวดที่ 1' | 'หมวดที่ 2';
+  category: Task['category'];
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }

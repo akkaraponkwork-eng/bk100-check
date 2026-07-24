@@ -1,19 +1,28 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, isSameMonth, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { Personnel, NCODuty, DutyShift } from '@/types';
+import type { Personnel, NCODuty, DutyShift, KanbanTask } from '@/types';
 import { useToast, Toast } from '@/hooks/useToast';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import PersonIcon from '@mui/icons-material/Person';
 import SecurityIcon from '@mui/icons-material/Security';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SaveIcon from '@mui/icons-material/Save';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CloseIcon from '@mui/icons-material/Close';
 
-type Tab = 'calendar' | 'nco';
+type Tab = 'calendar' | 'nco' | 'tasks';
 
-// ==================== Day Detail Modal ====================
+interface DailyRecord {
+  date: string;
+  totalCompany: number;
+  totalDistributed: number;
+  remaining: number;
+}
+
+// ==================== Day Detail Modal (Duty) ====================
 function DayDetailModal({
   date, ncoPersonnel, shift, personnelMap, onClose,
 }: {
@@ -71,41 +80,123 @@ function DayDetailModal({
   );
 }
 
+// ==================== Task Record Modal ====================
+function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void }) {
+  const dateKey = format(date, 'yyyy-MM-dd');
+  const dateStr = format(date, 'd MMMM yyyy', { locale: th });
+  const [record, setRecord] = useState<{ totalCompany: number; totalDistributed: number; remaining: number; tasks: KanbanTask[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/records?date=${dateKey}`)
+      .then(r => r.json())
+      .then(d => { setRecord(d.record || null); })
+      .finally(() => setLoading(false));
+  }, [dateKey]);
+
+  const getTaskTotal = (t: KanbanTask) => (Number(t.countSenior) || 0) + (Number(t.countJunior) || 0) + (Number(t.count) || 0);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <AssignmentIcon fontSize="small" /> ยอดงาน {dateStr}
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-muted)' }}>กำลังโหลด...</div>
+        ) : !record ? (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-muted)' }}>
+            <AssignmentIcon style={{ fontSize: 40, opacity: 0.3, display: 'block', margin: '0 auto 8px' }} />
+            ไม่มีข้อมูลยอดงานวันนี้
+          </div>
+        ) : (
+          <>
+            {/* Summary */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
+              {[
+                { label: 'ยอดรวม', value: record.totalCompany, color: 'var(--color-text-primary)' },
+                { label: 'จ่ายแล้ว', value: record.totalDistributed, color: 'var(--color-primary-light)' },
+                { label: 'คงเหลือ', value: record.remaining, color: record.remaining < 0 ? '#ef4444' : '#10b981' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Task list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {record.tasks.filter(t => getTaskTotal(t) > 0).map(t => {
+                const s = Number(t.countSenior) || 0;
+                const j = Number(t.countJunior) || 0;
+                const total = getTaskTotal(t);
+                return (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{t.title}</div>
+                      {t.location && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>📍 {t.location}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-primary-light)' }}>{total}</div>
+                      {(s > 0 || j > 0) && (
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                          {s > 0 && <span style={{ color: 'var(--color-primary-light)' }}>พี่ {s} </span>}
+                          {j > 0 && <span style={{ color: 'var(--color-accent-light)' }}>น้อง {j}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ==================== Month Calendar ====================
 function MonthCalendar({
-  year, month, ncoByDate, shiftByDate, onSelectDay,
+  year, month, ncoByDate, shiftByDate, recordDates, mode, onSelectDay,
 }: {
   year: number;
   month: number;
-  ncoByDate: Record<string, string>; // date -> personnelId
+  ncoByDate: Record<string, string>;
   shiftByDate: Record<string, boolean>;
+  recordDates: Record<string, boolean>;
+  mode: 'duty' | 'tasks';
   onSelectDay: (date: Date) => void;
 }) {
   const firstDay = startOfMonth(new Date(year, month - 1));
   const lastDay = endOfMonth(firstDay);
   const days = eachDayOfInterval({ start: firstDay, end: lastDay });
-  const startPad = getDay(firstDay); // 0=Sun
+  const startPad = getDay(firstDay);
 
   const weekDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
   return (
     <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
-      {/* Week Headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--color-border)' }}>
         {weekDays.map(d => (
           <div key={d} style={{ textAlign: 'center', padding: '8px 0', fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 600 }}>{d}</div>
         ))}
       </div>
-      {/* Days */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-        {/* Padding */}
-        {Array.from({ length: startPad }).map((_, i) => (
-          <div key={`pad-${i}`} />
-        ))}
+        {Array.from({ length: startPad }).map((_, i) => <div key={`pad-${i}`} />)}
         {days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const hasNCO = !!ncoByDate[dateStr];
           const hasDuty = !!shiftByDate[dateStr];
+          const hasRecord = !!recordDates[dateStr];
           const todayClass = isToday(day);
 
           return (
@@ -115,8 +206,7 @@ function MonthCalendar({
               style={{
                 padding: '8px 2px 6px', border: 'none', background: 'transparent',
                 cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                minHeight: 56,
-                fontFamily: 'inherit',
+                minHeight: 56, fontFamily: 'inherit',
               }}
             >
               <div style={{
@@ -128,10 +218,10 @@ function MonthCalendar({
               }}>
                 {format(day, 'd')}
               </div>
-              {/* Event dots */}
               <div style={{ display: 'flex', gap: 2 }}>
-                {hasDuty && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
-                {hasNCO  && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />}
+                {mode === 'duty' && hasDuty && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
+                {mode === 'duty' && hasNCO  && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />}
+                {mode === 'tasks' && hasRecord && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6' }} />}
               </div>
             </button>
           );
@@ -166,17 +256,12 @@ function NCOMonthlyTable({
   const handleChange = (dateStr: string, personnelId: string) => {
     setLocalDuties(prev => {
       const existing = prev.find(d => d.date === dateStr);
-      if (personnelId === '') {
-        return prev.filter(d => d.date !== dateStr);
-      }
-      if (existing) {
-        return prev.map(d => d.date === dateStr ? { ...d, personnelId } : d);
-      }
+      if (personnelId === '') return prev.filter(d => d.date !== dateStr);
+      if (existing) return prev.map(d => d.date === dateStr ? { ...d, personnelId } : d);
       return [...prev, { id: crypto.randomUUID(), date: dateStr, personnelId }];
     });
   };
 
-  // Auto-fill: distribute evenly
   const handleAutoFill = () => {
     if (eligiblePersonnel.length === 0) return;
     const newDuties = days.map((day, i) => ({
@@ -263,7 +348,9 @@ export default function CalendarPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [ncoDuties, setNcoDuties] = useState<NCODuty[]>([]);
   const [dutyShifts, setDutyShifts] = useState<Record<string, DutyShift>>({});
+  const [recordDates, setRecordDates] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedTaskDay, setSelectedTaskDay] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast, show: showToast } = useToast();
 
@@ -271,10 +358,11 @@ export default function CalendarPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [pRes, ncoRes, dutyRes] = await Promise.allSettled([
+      const [pRes, ncoRes, dutyRes, recRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/nco?month=${monthKey}`),
         fetch('/api/duty'),
+        fetch('/api/records'),
       ]);
 
       if (pRes.status === 'fulfilled') {
@@ -292,6 +380,14 @@ export default function CalendarPage() {
           if (s.date?.startsWith(monthKey)) map[s.date] = s.shift;
         });
         setDutyShifts(map);
+      }
+      if (recRes.status === 'fulfilled') {
+        const d = await recRes.value.json();
+        const map: Record<string, boolean> = {};
+        (d.records || []).forEach((r: DailyRecord) => {
+          if (r.date?.startsWith(monthKey)) map[r.date] = true;
+        });
+        setRecordDates(map);
       }
     } catch {
       console.error('Failed to load calendar data');
@@ -332,12 +428,16 @@ export default function CalendarPage() {
 
   const monthDisplay = format(new Date(viewYear, viewMonth - 1), 'MMMM yyyy', { locale: th });
 
-  // Selected day data
   const selectedDateStr = selectedDay ? format(selectedDay, 'yyyy-MM-dd') : '';
   const selectedNCO = selectedDateStr && ncoByDate[selectedDateStr]
     ? personnelMap[ncoByDate[selectedDateStr]] || null
     : null;
   const selectedShift = selectedDateStr ? dutyShifts[selectedDateStr] || null : null;
+
+  const handleCalendarDayClick = (date: Date) => {
+    if (tab === 'tasks') setSelectedTaskDay(date);
+    else setSelectedDay(date);
+  };
 
   return (
     <div className="page-container">
@@ -354,6 +454,7 @@ export default function CalendarPage() {
       <div style={{ display: 'flex', gap: 0, background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
         {([
           { id: 'calendar', label: 'ปฏิทิน', icon: <CalendarMonthIcon fontSize="small" /> },
+          { id: 'tasks',    label: 'ยอดงาน', icon: <AssignmentIcon fontSize="small" /> },
           { id: 'nco',      label: 'สิบเวร', icon: <PersonIcon fontSize="small" /> },
         ] as { id: Tab; label: string; icon: React.ReactNode }[]).map(t => (
           <button
@@ -362,12 +463,12 @@ export default function CalendarPage() {
             style={{
               flex: 1, padding: '12px 0', border: 'none', background: 'transparent',
               color: tab === t.id ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
-              fontWeight: tab === t.id ? 700 : 400, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
+              fontWeight: tab === t.id ? 700 : 400, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
               borderBottom: tab === t.id ? '2px solid var(--color-primary)' : '2px solid transparent',
               transition: 'all 0.15s',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{t.icon} {t.label}</span>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>{t.icon} {t.label}</span>
           </button>
         ))}
       </div>
@@ -375,21 +476,30 @@ export default function CalendarPage() {
       <div className="content-area">
         {/* Legend */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />เวรยาม
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />สิบเวร
-          </div>
+          {tab !== 'tasks' && <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />เวรยาม
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />สิบเวร
+            </div>
+          </>}
+          {tab === 'tasks' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />มีบันทึกยอดงาน (กดเพื่อดูรายละเอียด)
+            </div>
+          )}
         </div>
 
-        {tab === 'calendar' && (
+        {(tab === 'calendar' || tab === 'tasks') && (
           <MonthCalendar
             year={viewYear}
             month={viewMonth}
             ncoByDate={ncoByDate}
             shiftByDate={shiftByDate}
-            onSelectDay={setSelectedDay}
+            recordDates={recordDates}
+            mode={tab === 'tasks' ? 'tasks' : 'duty'}
+            onSelectDay={handleCalendarDayClick}
           />
         )}
 
@@ -405,14 +515,22 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Day Detail Modal */}
-      {selectedDay && (
+      {/* Duty Day Modal */}
+      {selectedDay && tab === 'calendar' && (
         <DayDetailModal
           date={selectedDay}
           ncoPersonnel={selectedNCO}
           shift={selectedShift}
           personnelMap={personnelMap}
           onClose={() => setSelectedDay(null)}
+        />
+      )}
+
+      {/* Task Record Modal */}
+      {selectedTaskDay && tab === 'tasks' && (
+        <TaskRecordModal
+          date={selectedTaskDay}
+          onClose={() => setSelectedTaskDay(null)}
         />
       )}
     </div>
