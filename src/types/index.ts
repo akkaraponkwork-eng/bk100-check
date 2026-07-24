@@ -11,6 +11,20 @@ export interface Personnel {
   isNCOEligible?: boolean; // สามารถเป็นสิบเวรได้ไหม
 }
 
+export interface PunishmentEntry {
+  personnelId: string;
+  shift: number; // 1-6 specific shift to do
+  startDate: string;
+  endDate: string;
+}
+
+export interface ExceptionEntry {
+  personnelId: string;
+  reason: 'ผู้ช่วยสิบเวร' | 'ป่วย' | 'ธุระการ';
+  startDate: string;
+  endDate: string;
+}
+
 // ==================== Kanban ====================
 export interface KanbanTask {
   id: string;

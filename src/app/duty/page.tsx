@@ -6,7 +6,7 @@ import {
   isToday, parseISO, addMonths, subMonths,
 } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { Personnel, DutyShift, ShiftSlot } from '@/types';
+import type { Personnel, DutyShift, ShiftSlot, CalendarEvent, KanbanTask, PunishmentEntry, ExceptionEntry } from '@/types';
 import { useToast, Toast } from '@/hooks/useToast';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BoltIcon from '@mui/icons-material/Bolt';
@@ -39,19 +39,7 @@ const SHIFT_TIMES = [
 const SHIFT_COLORS = ['#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
 // ==================== Types ====================
-interface PunishmentEntry {
-  personnelId: string;
-  shift: number; // 1-6 specific shift to do
-  startDate: string;
-  endDate: string;
-}
 
-interface ExceptionEntry {
-  personnelId: string;
-  reason: 'ผู้ช่วยสิบเวร' | 'ป่วย' | 'ธุระการ';
-  startDate: string;
-  endDate: string;
-}
 
 // ==================== Helpers ====================
 function getCurrentShift(): number {
