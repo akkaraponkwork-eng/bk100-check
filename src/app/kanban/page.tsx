@@ -16,6 +16,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ImageIcon from '@mui/icons-material/Image';
+import html2canvas from 'html2canvas';
 
 type TaskStatus = KanbanTask['status'];
 
@@ -256,6 +258,9 @@ function PrintForm({ tasks, date, totalCompany }: { tasks: KanbanTask[], date: s
   const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
   const remaining = typeof totalCompany === 'number' ? totalCompany - totalDistributed : 0;
   
+  const isMorning = new Date().getHours() < 12;
+  const shiftText = isMorning ? 'ยอดจ่ายงานเช้า' : 'ยอดจ่ายงานบ่าย';
+  
   // Group tasks
   const routineTasks = tasks.filter(t => t.category === 'รปจ' || t.category === 'หมวดที่ 1');
   const otherTasks = tasks.filter(t => t.category === 'งานนอก/อื่นๆ' || t.category === 'หมวดที่ 2');
@@ -269,24 +274,24 @@ function PrintForm({ tasks, date, totalCompany }: { tasks: KanbanTask[], date: s
     const old = Number(t.count) || 0;
     const total = s + j + old;
     if (total === 0) return '';
-    if (s > 0 && j > 0) return `พี่ ${s} น้อง ${j} รวม ${total}`;
-    if (s > 0) return `พี่ ${s} รวม ${total}`;
-    if (j > 0) return `น้อง ${j} รวม ${total}`;
+    if (s > 0 && j > 0) return `พี่ ${s} น้อง ${j}`;
+    if (s > 0) return `พี่ ${s}`;
+    if (j > 0) return `น้อง ${j}`;
     return `${total}`;
   };
 
   return (
-    <div className="print-only" style={{ width: '100%', fontFamily: '"Sarabun", "Times New Roman", serif', color: 'black' }}>
+    <div id="print-form-container" className="print-only" style={{ width: '100%', fontFamily: '"Sarabun", "Times New Roman", serif', color: 'black' }}>
       <style>{`
         @media screen { .print-only { display: none !important; } }
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
+          @page { size: A4 portrait; margin: 10mm; }
           body { background: white !important; color: black !important; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
         }
-        .print-table { width: 100%; border-collapse: collapse; font-size: 16px; border: 2px solid black; }
-        .print-table th, .print-table td { border: 1px solid black; padding: 6px 12px; }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 14px; border: 2px solid black; }
+        .print-table th, .print-table td { border: 1px solid black; padding: 4px 8px; }
         .print-table th { font-weight: bold; text-align: center; }
         .print-text-center { text-align: center; }
         .print-text-left { text-align: left; }
@@ -301,10 +306,10 @@ function PrintForm({ tasks, date, totalCompany }: { tasks: KanbanTask[], date: s
             <th colSpan={4} style={{ padding: '8px', borderTop: 'none', borderBottom: 'none' }}>ประจำวันที่ {dateDisplay}</th>
           </tr>
           <tr>
-            <th colSpan={4} style={{ padding: '8px', borderTop: 'none' }}>ยอดรวมกองร้อย {totalCompany === '' ? '.......................' : totalCompany} นาย</th>
+            <th colSpan={4} style={{ padding: '6px', borderTop: 'none' }}>ยอดรวมกองร้อย {totalCompany === '' ? '.......................' : totalCompany} นาย</th>
           </tr>
           <tr>
-            <th colSpan={4} style={{ padding: '8px', background: '#f0f0f0' }}>ยอดจ่ายงานเช้า</th>
+            <th colSpan={4} style={{ padding: '6px', background: '#f0f0f0' }}>{shiftText}</th>
           </tr>
           <tr>
             <th style={{ width: '25%' }}>รูปแบบงาน</th>
@@ -372,6 +377,45 @@ export default function DutyCheckPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
   const { toast, show: showToast } = useToast();
+
+  const handleDownloadImage = async () => {
+    const element = document.getElementById('print-form-container');
+    if (!element) return;
+    
+    // Backup original styles
+    const originalDisplay = element.style.display;
+    const originalPosition = element.style.position;
+    const originalLeft = element.style.left;
+    const originalWidth = element.style.width;
+    
+    // Force show element off-screen for rendering
+    element.style.setProperty('display', 'block', 'important');
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    element.style.width = '800px'; 
+    element.style.background = 'white';
+    
+    try {
+      showToast('กำลังสร้างรูปภาพ...', 'success');
+      // Adding a small delay to ensure rendering is updated
+      await new Promise(r => setTimeout(r, 100));
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      
+      const link = document.createElement('a');
+      link.download = `ยอดกำลังพล_${today}.jpg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      showToast('ไม่สามารถสร้างรูปภาพได้', 'error');
+    } finally {
+      element.style.display = originalDisplay;
+      element.style.position = originalPosition;
+      element.style.left = originalLeft;
+      element.style.width = originalWidth;
+      element.style.background = '';
+    }
+  };
 
   const loadLatest = useCallback(async () => {
     setLoading(true);
@@ -458,6 +502,9 @@ export default function DutyCheckPage() {
             <h1 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><AssignmentIcon /> ยอดกำลังพล</h1>
             <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{todayDisplay}</div>
           </div>
+          <button className="btn btn-ghost btn-sm" onClick={handleDownloadImage} title="แชร์เป็นรูปภาพ" style={{ padding: '0 8px' }}>
+            <ImageIcon fontSize="small" />
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={() => window.print()} title="พิมพ์แบบฟอร์ม PDF" style={{ padding: '0 8px' }}>
             <PictureAsPdfIcon fontSize="small" />
           </button>
