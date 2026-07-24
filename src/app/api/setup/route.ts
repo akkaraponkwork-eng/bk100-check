@@ -6,6 +6,7 @@ const REQUIRED_SHEETS = [
   { name: 'Personnel', headers: ['ID', 'Rank', 'FirstName', 'LastName', 'Batch', 'Phone', 'Status', 'DutyCount', 'IsNCOEligible'] },
   { name: 'Duty', headers: ['Date', 'Location', 'ShiftJSON'] },
   { name: 'NCO', headers: ['ID', 'Date', 'PersonnelID', 'Remark'] },
+  { name: 'DutyMeta', headers: ['Type', 'DataJSON'] },
 ];
 
 function getSheetAuth() {

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import Link from 'next/link';
-import type { Personnel, DutyShift, NCODuty, KanbanTask } from '@/types';
+import type { Personnel, DutyShift, NCODuty, KanbanTask, ExceptionEntry } from '@/types';
 import HomeIcon from '@mui/icons-material/Home';
 import GroupIcon from '@mui/icons-material/Group';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -245,9 +245,11 @@ export default function DashboardPage() {
   const [todayShift, setTodayShift] = useState<DutyShift | null>(null);
   const [todayNCO, setTodayNCO] = useState<NCODuty | null>(null);
   const [lastRecord, setLastRecord] = useState<{ date: string; totalCompany: number; tasks: KanbanTask[] } | null>(null);
+  const [exceptions, setExceptions] = useState<ExceptionEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedAt, setLoadedAt] = useState<string>('');
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
+  const [showNCOModal, setShowNCOModal] = useState(false);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayDisplay = format(new Date(), 'd MMMM yyyy', { locale: th });
@@ -261,11 +263,12 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, dRes, ncoRes, recRes] = await Promise.allSettled([
+      const [pRes, dRes, ncoRes, recRes, metaRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/duty?date=${todayStr}`),
         fetch(`/api/nco?month=${currentMonth}`),
         fetch('/api/records?latest=true'),
+        fetch('/api/duty-meta'),
       ]);
 
       if (pRes.status === 'fulfilled') {
@@ -291,6 +294,10 @@ export default function DashboardPage() {
             tasks: data.record.tasks || []
           });
         }
+      }
+      if (metaRes.status === 'fulfilled') {
+        const data = await metaRes.value.json();
+        setExceptions(data.exceptions || []);
       }
       setLoadedAt(format(new Date(), 'HH:mm'));
     } catch (e) {
@@ -325,6 +332,11 @@ export default function DashboardPage() {
   const ncoPersonnel = todayNCO
     ? personnel.find(p => p.id === todayNCO.personnelId)
     : null;
+
+  const todayAssistants = exceptions
+    .filter(e => e.reason === 'ผู้ช่วยสิบเวร' && e.startDate <= todayStr && e.endDate >= todayStr)
+    .map(e => personnel.find(p => p.id === e.personnelId))
+    .filter(Boolean);
 
   return (
     <div className="page-container">
@@ -377,10 +389,11 @@ export default function DashboardPage() {
               accent="#10b981"
             />
             <StatCard
-              icon={<PersonIcon />} label="สิบเวรวันนี้"
+              icon={<PersonIcon />} label="สิบเวร / ผช.สิบเวร"
               value={ncoPersonnel ? `${ncoPersonnel.rank}${ncoPersonnel.firstName}` : '—'}
-              sub={ncoPersonnel?.lastName}
+              sub={todayAssistants.length > 0 ? `ผช: ${todayAssistants.map(a => `${a?.rank}${a?.firstName}`).join(', ')}` : (ncoPersonnel?.lastName || 'ไม่มีผู้ช่วย')}
               accent="#f59e0b"
+              onClick={() => setShowNCOModal(true)}
             />
             <StatCard
               icon={<BarChartIcon />} label="ยอดล่าสุด"
@@ -403,6 +416,43 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         {!loading && <QuickActions todayShift={todayShift} onExport={handleExportDuty} />}
       </div>
+
+      {/* NCO Modal */}
+      {showNCOModal && (
+        <div className="modal-overlay" onClick={() => setShowNCOModal(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <h2 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b' }}>
+              <PersonIcon fontSize="small" /> รายละเอียดสิบเวร
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ padding: 12, background: 'var(--color-surface-2)', borderRadius: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>สิบเวรประจำวัน</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>
+                  {ncoPersonnel ? `${ncoPersonnel.rank}${ncoPersonnel.firstName} ${ncoPersonnel.lastName}` : 'ยังไม่ระบุ'}
+                </div>
+              </div>
+              <div style={{ padding: 12, background: 'var(--color-surface-2)', borderRadius: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>ผู้ช่วยสิบเวร ({todayAssistants.length} นาย)</div>
+                {todayAssistants.length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 20, marginTop: 8 }}>
+                    {todayAssistants.map((a, i) => (
+                      <li key={i} style={{ fontSize: 14, fontWeight: 500, margin: '4px 0' }}>
+                        {a?.rank}{a?.firstName} {a?.lastName}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ fontSize: 14, marginTop: 4 }}>ไม่มีผู้ช่วยสิบเวร</div>
+                )}
+              </div>
+            </div>
+            <button className="btn btn-primary w-full mt-4" onClick={() => setShowNCOModal(false)}>
+              ปิด
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

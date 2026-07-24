@@ -57,7 +57,7 @@ function DayDetailModal({
           <div style={{ fontSize: 12, color: 'var(--color-danger-light)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}><SecurityIcon style={{ fontSize: 14 }} /> เวรยาม</div>
           {shift ? (
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 6 }}>📍 {shift.location}</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 6 }}>{shift.location}</div>
               {shift.timeSlots.sort((a, b) => a.order - b.order).map((slot, i) => {
                 const p = personnelMap[slot.personnelId];
                 return (
@@ -142,7 +142,7 @@ function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void })
                   <div key={t.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{t.title}</div>
-                      {t.location && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>📍 {t.location}</div>}
+                      {t.location && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{t.location}</div>}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-primary-light)' }}>{total}</div>

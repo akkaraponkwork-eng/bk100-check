@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+
+export const dynamic = 'force-dynamic';
 import type { DutyShift } from '@/types';
 
 function getSheetAuth() {

@@ -1,352 +1,963 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { format, parseISO } from 'date-fns';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
+  isToday, parseISO, addMonths, subMonths,
+} from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { Personnel, DutyShift, ShiftSlot } from '@/types';
 import { useToast, Toast } from '@/hooks/useToast';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import ShuffleIcon from '@mui/icons-material/Shuffle';
-import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import BoltIcon from '@mui/icons-material/Bolt';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
-import BarChartIcon from '@mui/icons-material/BarChart';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SecurityIcon from '@mui/icons-material/Security';
+import BlockIcon from '@mui/icons-material/Block';
+import StarIcon from '@mui/icons-material/Star';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import SearchablePersonnelSelect from '@/components/SearchablePersonnelSelect';
 
-const DEFAULT_TIME_SLOTS = [
-  { start: '18:00', end: '20:00' },
-  { start: '20:00', end: '22:00' },
-  { start: '22:00', end: '00:00' },
-  { start: '00:00', end: '02:00' },
-  { start: '02:00', end: '04:00' },
-  { start: '04:00', end: '06:00' },
+// ==================== Constants ====================
+const LOCATION = 'หน้าคลังอาวุธกองร้อยกองบังคับการ';
+
+const SHIFT_TIMES = [
+  { shift: 1, label: 'ผลัด 1', start: '18:00', end: '20:00' },
+  { shift: 2, label: 'ผลัด 2', start: '20:00', end: '22:00' },
+  { shift: 3, label: 'ผลัด 3', start: '22:00', end: '00:00' },
+  { shift: 4, label: 'ผลัด 4', start: '00:00', end: '02:00' },
+  { shift: 5, label: 'ผลัด 5', start: '02:00', end: '04:00' },
+  { shift: 6, label: 'ผลัด 6', start: '04:00', end: '06:00' },
 ];
 
-function getCurrentSlotIndex(): number {
+const SHIFT_COLORS = ['#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
+
+// ==================== Types ====================
+interface PunishmentEntry {
+  personnelId: string;
+  shift: number; // 1-6 specific shift to do
+  startDate: string;
+  endDate: string;
+}
+
+interface ExceptionEntry {
+  personnelId: string;
+  reason: 'ผู้ช่วยสิบเวร' | 'ป่วย' | 'ธุระการ';
+  startDate: string;
+  endDate: string;
+}
+
+// ==================== Helpers ====================
+function getCurrentShift(): number {
   const now = new Date();
-  const h = now.getHours();
-  const m = now.getMinutes();
-  const total = h * 60 + m;
-  if (total >= 18 * 60) return Math.floor((total - 18 * 60) / 120);
-  if (total < 6 * 60) return Math.floor((total + 6 * 60) / 120);
+  const total = now.getHours() * 60 + now.getMinutes();
+  if (total >= 18 * 60) return Math.floor((total - 18 * 60) / 120) + 1;
+  if (total < 6 * 60) return Math.floor((total + 6 * 60) / 120) + 1;
   return -1;
 }
 
-// ==================== Auto-schedule ====================
-function autoSchedule(
-  personnel: Personnel[],
-  slotCount: number,
-  batchMode: 'mixed' | 'batch_only',
-  targetBatch?: number,
-): string[] {
-  let pool = personnel.filter(p => p.status !== 'sick' && p.status !== 'leave');
-  if (batchMode === 'batch_only' && targetBatch) {
-    pool = pool.filter(p => p.batch === targetBatch);
-  }
-  // Sort by dutyCount asc, then by name
-  pool.sort((a, b) => a.dutyCount - b.dutyCount || `${a.firstName}${a.lastName}`.localeCompare(`${b.firstName}${b.lastName}`));
-
-  const result: string[] = [];
-  for (let i = 0; i < slotCount; i++) {
-    result.push(pool[i % pool.length]?.id || '');
-  }
-  return result;
+function isPersonnelAvailable(
+  p: Personnel,
+  date: string,
+  exceptions: ExceptionEntry[],
+): boolean {
+  if (p.status === 'sick' || p.status === 'leave') return false;
+  const ex = exceptions.find(
+    e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date
+  );
+  return !ex;
 }
 
-export default function DutyPage() {
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [date, setDate] = useState(today);
-  const [location, setLocation] = useState('หน้าคลังอาวุธ');
-  const [batchMode, setBatchMode] = useState<'mixed' | 'batch_only'>('mixed');
-  const [targetBatch, setTargetBatch] = useState<number>(169);
-  const [slots, setSlots] = useState<ShiftSlot[]>([]);
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
-  const [batches, setBatches] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
+function buildShift(date: string, slotPersonnelIds: string[]): DutyShift {
+  const timeSlots: ShiftSlot[] = SHIFT_TIMES.map((st, i) => ({
+    id: crypto.randomUUID(),
+    start: st.start,
+    end: st.end,
+    personnelId: slotPersonnelIds[i] || '',
+    order: i + 1,
+  }));
+  return { id: crypto.randomUUID(), date, location: LOCATION, timeSlots, batchMode: false };
+}
+
+function formatCopyText(
+  date: string,
+  shift: DutyShift,
+  personnelMap: Record<string, Personnel>,
+  exceptions: ExceptionEntry[],
+): string {
+  const d = parseISO(date);
+  const formattedDate = `${format(d, 'd MMM', { locale: th })} ${(d.getFullYear() + 543).toString().slice(-2)}`;
+  
+  const assistants = exceptions
+    .filter(e => e.reason === 'ผู้ช่วยสิบเวร' && e.startDate <= date && e.endDate >= date)
+    .map(e => personnelMap[e.personnelId])
+    .filter(Boolean);
+
+  let text = `ขออนุญาตแจ้งเวรหน้าคลังอาวุธประจำวันที่ ${formattedDate}\n`;
+  if (assistants.length > 0) {
+    text += `ผู้ช่วยสิบเวร: ${assistants.map(p => `${p!.rank}${p!.firstName}  ${p!.lastName}`).join(', ')}\n\n`;
+  }
+  shift.timeSlots
+    .sort((a, b) => a.order - b.order)
+    .forEach((slot, i) => {
+      const p = personnelMap[slot.personnelId];
+      const name = p ? `${p.rank}${p.firstName}  ${p.lastName}` : '—';
+      text += `${i + 1}.${name}\n`;
+      text += `${slot.start}-${slot.end}\n`;
+    });
+  return text.trimEnd();
+}
+
+// ==================== Punishment Manager Modal ====================
+function PunishmentModal({
+  punishments,
+  personnel,
+  onSave,
+  onClose,
+}: {
+  punishments: PunishmentEntry[];
+  personnel: Personnel[];
+  onSave: (entries: PunishmentEntry[]) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState<PunishmentEntry[]>(punishments);
+  const [form, setForm] = useState({
+    personnelId: '',
+    shift: 1,
+    startDate: format(new Date(), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+  });
   const [saving, setSaving] = useState(false);
-  const [existingShift, setExistingShift] = useState<DutyShift | null>(null);
-  const [showExport, setShowExport] = useState(false);
-  const { toast, show: showToast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
 
-  // Load personnel
-  useEffect(() => {
-    fetch('/api/personnel')
-      .then(r => r.json())
-      .then(data => {
-        const list: Personnel[] = data.personnel || [];
-        setPersonnel(list);
-        const bList = [...new Set(list.map(p => p.batch))].sort((a, b) => a - b);
-        setBatches(bList);
-        if (bList.length > 0) setTargetBatch(bList[bList.length - 1]); // ผลัดล่าสุด
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Load existing shift for date
-  useEffect(() => {
-    fetch(`/api/duty?date=${date}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.shift) {
-          setExistingShift(data.shift);
-          setSlots(data.shift.timeSlots);
-          setLocation(data.shift.location);
-        } else {
-          setExistingShift(null);
-          setSlots([]);
-        }
-      })
-      .catch(() => {});
-  }, [date]);
-
-  const handleAutoSchedule = () => {
-    const assignedIds = autoSchedule(personnel, DEFAULT_TIME_SLOTS.length, batchMode, batchMode === 'batch_only' ? targetBatch : undefined);
-    const newSlots: ShiftSlot[] = DEFAULT_TIME_SLOTS.map((t, i) => ({
-      id: crypto.randomUUID(),
-      start: t.start,
-      end: t.end,
-      personnelId: assignedIds[i] || '',
-      order: i,
-    }));
-    setSlots(newSlots);
-    showToast('จัดเวรอัตโนมัติแล้ว');
+  const handleAdd = () => {
+    if (!form.personnelId) return;
+    const newEntry: PunishmentEntry = { ...form };
+    const updated = [...list, newEntry];
+    setList(updated);
+    setForm({ personnelId: '', shift: 1, startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd') });
+    setShowForm(false);
   };
 
-  const handleChangeSlotPerson = (slotId: string, personnelId: string) => {
-    setSlots(prev => prev.map(s => s.id === slotId ? { ...s, personnelId } : s));
+  const handleRemove = (idx: number) => setList(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(list);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet" style={{ maxHeight: '90vh' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444' }}>
+              <BlockIcon fontSize="small" /> จัดการดองเวร
+            </h2>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผลัดและวันที่สำหรับทหารเฉพาะบุคคล</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        {/* Add form toggle */}
+        <button
+          className={`btn btn-sm w-full ${showForm ? 'btn-ghost' : 'btn-primary'}`}
+          onClick={() => setShowForm(v => !v)}
+          style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {showForm ? <><CloseIcon fontSize="small" /> ยกเลิก</> : <><AddIcon fontSize="small" /> เพิ่มดองเวร</>}
+        </button>
+
+        {showForm && (
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
+                <SearchablePersonnelSelect personnel={personnel} value={form.personnelId} onChange={v => setForm(f => ({ ...f, personnelId: v }))} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ผลัดที่กำหนด</label>
+                <select className="select" style={{ width: '100%' }} value={form.shift} onChange={e => setForm(f => ({ ...f, shift: Number(e.target.value) }))}>
+                  {SHIFT_TIMES.map((st, i) => (
+                    <option key={st.shift} value={st.shift}>{st.label} ({st.start}–{st.end})</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่เริ่ม</label>
+                  <input type="date" className="select" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่สิ้นสุด</label>
+                  <input type="date" className="select" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={!form.personnelId}
+                onClick={handleAdd}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+              >
+                <AddIcon fontSize="small" /> เพิ่ม
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+          {list.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการดองเวร</div>
+          ) : list.map((entry, idx) => {
+            const p = personnelMap[entry.personnelId];
+            return (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid #ef4444` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                    {SHIFT_TIMES[entry.shift - 1]?.label} ({SHIFT_TIMES[entry.shift - 1]?.start}–{SHIFT_TIMES[entry.shift - 1]?.end})
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+                </div>
+                <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                  <DeleteIcon fontSize="small" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          className="btn btn-primary w-full mt-4"
+          onClick={handleSave}
+          disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {saving ? '...' : <><SaveIcon fontSize="small" /> บันทึกรายการดองเวร</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Exception Manager Modal ====================
+function ExceptionModal({
+  exceptions,
+  personnel,
+  onSave,
+  onClose,
+}: {
+  exceptions: ExceptionEntry[];
+  personnel: Personnel[];
+  onSave: (entries: ExceptionEntry[]) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState<ExceptionEntry[]>(exceptions);
+  const [form, setForm] = useState({
+    personnelId: '',
+    reason: 'ผู้ช่วยสิบเวร' as ExceptionEntry['reason'],
+    startDate: format(new Date(), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+  });
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
+
+  const REASON_LABELS: Record<ExceptionEntry['reason'], { label: string; color: string }> = {
+    'ผู้ช่วยสิบเวร': { label: 'ผช.สิบเวร', color: '#f59e0b' },
+    'ป่วย':         { label: 'ป่วย',       color: '#ef4444' },
+    'ธุระการ':       { label: 'ธุระการ',    color: '#3b82f6' },
+  };
+
+  const handleAdd = () => {
+    if (!form.personnelId) return;
+    setList(prev => [...prev, { ...form }]);
+    setForm({ personnelId: '', reason: 'ผู้ช่วยสิบเวร', startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd') });
+    setShowForm(false);
+  };
+
+  const handleRemove = (idx: number) => setList(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(list);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet" style={{ maxHeight: '90vh' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b' }}>
+              <StarIcon fontSize="small" /> ผู้ช่วยสิบเวร / ยกเว้น
+            </h2>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผู้ช่วย, ผู้ป่วย, ธุระการ</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        <button
+          className={`btn btn-sm w-full ${showForm ? 'btn-ghost' : 'btn-primary'}`}
+          onClick={() => setShowForm(v => !v)}
+          style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {showForm ? <><CloseIcon fontSize="small" /> ยกเลิก</> : <><AddIcon fontSize="small" /> เพิ่มรายการ</>}
+        </button>
+
+        {showForm && (
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
+                <SearchablePersonnelSelect personnel={personnel} value={form.personnelId} onChange={v => setForm(f => ({ ...f, personnelId: v }))} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ประเภท</label>
+                <select className="select" style={{ width: '100%' }} value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value as ExceptionEntry['reason'] }))}>
+                  <option value="ผู้ช่วยสิบเวร">ผู้ช่วยสิบเวร (ยกเว้นเวร)</option>
+                  <option value="ป่วย">ป่วย</option>
+                  <option value="ธุระการ">ธุระการ</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่เริ่ม</label>
+                  <input type="date" className="select" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่สิ้นสุด</label>
+                  <input type="date" className="select" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={!form.personnelId}
+                onClick={handleAdd}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+              >
+                <AddIcon fontSize="small" /> เพิ่ม
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+          {list.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการ</div>
+          ) : list.map((entry, idx) => {
+            const p = personnelMap[entry.personnelId];
+            const ri = REASON_LABELS[entry.reason];
+            return (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid ${ri.color}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+                </div>
+                <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
+                <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                  <DeleteIcon fontSize="small" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          className="btn btn-primary w-full mt-4"
+          onClick={handleSave}
+          disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {saving ? '...' : <><SaveIcon fontSize="small" /> บันทึก</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Day Detail Modal ====================
+function DayDetailModal({
+  date, shift, personnel, exceptions, punishments, onClose, onSave,
+}: {
+  date: string;
+  shift: DutyShift | null;
+  personnel: Personnel[];
+  exceptions: ExceptionEntry[];
+  punishments: PunishmentEntry[];
+  onClose: () => void;
+  onSave: (shift: DutyShift) => Promise<void>;
+}) {
+  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
+  const [slots, setSlots] = useState<string[]>(
+    shift
+      ? shift.timeSlots.sort((a, b) => a.order - b.order).map(s => s.personnelId)
+      : Array(6).fill('')
+  );
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const currentShift = isToday(parseISO(date)) ? getCurrentShift() : -1;
+  const dateDisplay = format(parseISO(date), 'd MMMM yyyy', { locale: th });
+
+  // Get daily assistants for this date
+  const dailyAssistants = exceptions
+    .filter(e => e.reason === 'ผู้ช่วยสิบเวร' && e.startDate <= date && e.endDate >= date)
+    .map(e => personnelMap[e.personnelId])
+    .filter(Boolean);
+
+  // Get punishments for this date  
+  const todayPunishments = punishments.filter(p => p.startDate <= date && p.endDate >= date);
+
+  const handleAutoFill = () => {
+    // Fill punishments first, then rotate available personnel
+    const punishedSlots = new Map<number, string>(); // shift(1-6) -> personnelId
+    todayPunishments.forEach(p => { punishedSlots.set(p.shift, p.personnelId); });
+
+    const available = personnel.filter(p => isPersonnelAvailable(p, date, exceptions))
+      .sort((a, b) => a.dutyCount - b.dutyCount);
+
+    let pointer = 0;
+    const newSlots = SHIFT_TIMES.map((st, i) => {
+      const shiftNum = i + 1;
+      if (punishedSlots.has(shiftNum)) return punishedSlots.get(shiftNum)!;
+      if (available.length === 0) return '';
+      const p = available[pointer % available.length];
+      pointer++;
+      return p.id;
+    });
+    setSlots(newSlots);
   };
 
   const handleSave = async () => {
-    if (slots.length === 0) { showToast('กรุณาจัดเวรก่อน', 'error'); return; }
     setSaving(true);
+    const newShift = buildShift(date, slots);
+    await onSave(newShift);
+    setSaving(false);
+  };
+
+  const handleCopy = () => {
+    const tempShift = buildShift(date, slots);
+    const text = formatCopyText(date, tempShift, personnelMap, exceptions);
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <SecurityIcon fontSize="small" /> ตารางเวร
+            </h2>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{dateDisplay}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        {/* Daily Assistants banner */}
+        {dailyAssistants.length > 0 && (
+          <div style={{ padding: '8px 12px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <StarIcon style={{ fontSize: 14, color: '#f59e0b' }} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>ผู้ช่วยสิบเวรประจำวัน</div>
+              <div style={{ fontSize: 12 }}>{dailyAssistants.map(p => `${p!.rank}${p!.firstName} ${p!.lastName}`).join(', ')}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Punishment warning */}
+        {todayPunishments.length > 0 && (
+          <div style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <BlockIcon style={{ fontSize: 13 }} /> มีดองเวร {todayPunishments.length} ราย
+            </div>
+            {todayPunishments.map((pm, i) => {
+              const p = personnelMap[pm.personnelId];
+              return (
+                <div key={i} style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                  {p ? `${p.rank}${p.firstName}` : pm.personnelId} → {SHIFT_TIMES[pm.shift - 1]?.label}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Auto fill */}
+        <button
+          className="btn btn-ghost btn-sm w-full"
+          onClick={handleAutoFill}
+          style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          <BoltIcon fontSize="small" /> จัดเวรอัตโนมัติ (พร้อมดองเวร)
+        </button>
+
+        {/* Shift slots */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {SHIFT_TIMES.map((st, i) => {
+            const isCurrent = (i + 1) === currentShift;
+            const isPunished = todayPunishments.find(p => p.shift === st.shift);
+            return (
+              <div
+                key={st.shift}
+                style={{
+                  display: 'grid', gridTemplateColumns: '80px 1fr',
+                  alignItems: 'center', gap: 10,
+                  padding: '7px 10px', borderRadius: 10,
+                  background: isCurrent ? 'rgba(59,130,246,0.12)' : isPunished ? 'rgba(239,68,68,0.06)' : 'var(--color-surface-2)',
+                  border: `1px solid ${isCurrent ? 'rgba(59,130,246,0.4)' : isPunished ? 'rgba(239,68,68,0.3)' : SHIFT_COLORS[i] + '33'}`,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: SHIFT_COLORS[i] }}>ผลัด {i + 1}</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{st.start}–{st.end}</div>
+                  {isCurrent && <span style={{ fontSize: 9, background: 'var(--color-primary)', color: 'white', padding: '1px 4px', borderRadius: 99, fontWeight: 700 }}>ปัจจุบัน</span>}
+                  {isPunished && <span style={{ fontSize: 9, background: '#ef4444', color: 'white', padding: '1px 4px', borderRadius: 99, fontWeight: 700 }}>ดอง</span>}
+                </div>
+                <SearchablePersonnelSelect 
+                  personnel={personnel} 
+                  value={slots[i]} 
+                  onChange={v => setSlots(prev => prev.map((val, idx) => idx === i ? v : val))} 
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <button
+            className={`btn btn-sm ${copied ? 'btn-success' : 'btn-ghost'}`}
+            onClick={handleCopy}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          >
+            {copied ? <><CheckIcon fontSize="small" /> คัดลอกแล้ว</> : <><ContentCopyIcon fontSize="small" /> คัดลอก</>}
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleSave}
+            disabled={saving}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          >
+            {saving ? '...' : <><SaveIcon fontSize="small" /> บันทึก</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Month Calendar ====================
+function MonthCalendar({
+  viewDate, shiftsMap, personnelMap, exceptions, punishments, onSelectDay, onPrev, onNext,
+}: {
+  viewDate: Date;
+  shiftsMap: Record<string, DutyShift>;
+  personnelMap: Record<string, Personnel>;
+  exceptions: ExceptionEntry[];
+  punishments: PunishmentEntry[];
+  onSelectDay: (date: string) => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const firstDay = startOfMonth(viewDate);
+  const lastDay = endOfMonth(viewDate);
+  const days = eachDayOfInterval({ start: firstDay, end: lastDay });
+  const startPad = getDay(firstDay);
+  const touchStartX = useRef(0);
+  const [swiping, setSwiping] = useState(false);
+
+  const weekDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  const monthDisplay = format(viewDate, 'MMMM yyyy', { locale: th });
+  const thaiYear = viewDate.getFullYear() + 543;
+
+  return (
+    <div
+      onTouchStart={e => { touchStartX.current = e.touches[0].clientX; setSwiping(false); }}
+      onTouchMove={e => { if (Math.abs(touchStartX.current - e.touches[0].clientX) > 30) setSwiping(true); }}
+      onTouchEnd={e => {
+        if (!swiping) return;
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (diff > 60) onNext();
+        else if (diff < -60) onPrev();
+        setSwiping(false);
+      }}
+    >
+      {/* Month nav */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+        <button className="btn-icon btn-sm" onClick={onPrev} style={{ width: 34, height: 34 }}>
+          <ChevronLeftIcon fontSize="small" />
+        </button>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{monthDisplay}</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>พ.ศ. {thaiYear}</div>
+        </div>
+        <button className="btn-icon btn-sm" onClick={onNext} style={{ width: 34, height: 34 }}>
+          <ChevronRightIcon fontSize="small" />
+        </button>
+      </div>
+
+      {/* Calendar */}
+      <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--color-border)' }}>
+          {weekDays.map((d, i) => (
+            <div key={d} style={{ textAlign: 'center', padding: '6px 0', fontSize: 11, color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : 'var(--color-text-muted)', fontWeight: 600 }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+          {Array.from({ length: startPad }).map((_, i) => <div key={`p-${i}`} style={{ minHeight: 68 }} />)}
+          {days.map(day => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const shift = shiftsMap[dateStr];
+            const todayClass = isToday(day);
+            const dow = getDay(day);
+
+            // Badges for this day
+            const hasAssistant = exceptions.some(e => e.reason === 'ผู้ช่วยสิบเวร' && e.startDate <= dateStr && e.endDate >= dateStr);
+            const hasPunishment = punishments.some(p => p.startDate <= dateStr && p.endDate >= dateStr);
+
+            const previews = shift
+              ? shift.timeSlots
+                  .sort((a, b) => a.order - b.order)
+                  .slice(0, 3)
+                  .map(s => {
+                    const p = personnelMap[s.personnelId];
+                    return p ? p.firstName.substring(0, 5) : null;
+                  })
+                  .filter(Boolean)
+              : [];
+
+            const filledCount = shift ? shift.timeSlots.filter(s => s.personnelId).length : 0;
+
+            return (
+              <button
+                key={dateStr}
+                onClick={() => onSelectDay(dateStr)}
+                style={{
+                  minHeight: 68, border: 'none', background: 'transparent', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                  padding: '3px 3px', fontFamily: 'inherit',
+                  borderTop: '1px solid var(--color-border)',
+                  borderLeft: dow !== 0 ? '1px solid var(--color-border)' : 'none',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', marginBottom: 2 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: todayClass ? 700 : 400,
+                    background: todayClass ? 'var(--color-primary)' : 'transparent',
+                    color: todayClass ? 'white' : dow === 0 ? '#ef4444' : dow === 6 ? '#60a5fa' : 'var(--color-text-primary)',
+                    flexShrink: 0,
+                  }}>
+                    {format(day, 'd')}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {hasAssistant && <div style={{ fontSize: 8, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center' }}><StarIcon style={{ fontSize: 9, marginRight: 1 }} /> ผู้ช่วย</div>}
+                    {hasPunishment && <div style={{ fontSize: 8, color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center' }}><BlockIcon style={{ fontSize: 9, marginRight: 1 }} /> ดองเวร</div>}
+                  </div>
+                </div>
+                {previews.length > 0 ? (
+                  <div style={{ width: '100%' }}>
+                    {previews.map((name, i) => (
+                      <div key={i} style={{
+                        fontSize: 8, color: 'var(--color-text-secondary)',
+                        borderLeft: `2px solid ${SHIFT_COLORS[i]}`,
+                        paddingLeft: 2, marginBottom: 1, lineHeight: 1.4,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {name}
+                      </div>
+                    ))}
+                    {filledCount > 3 && (
+                      <div style={{ fontSize: 8, color: 'var(--color-text-muted)', paddingLeft: 3 }}>+{filledCount - 3}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 8, color: 'var(--color-border-light)', paddingLeft: 3 }}>—</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+        {SHIFT_TIMES.map((st, i) => (
+          <div key={st.shift} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--color-text-muted)' }}>
+            <div style={{ width: 6, height: 6, borderRadius: 1, background: SHIFT_COLORS[i] }} />
+            ผลัด {i + 1}
+          </div>
+        ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--color-text-muted)' }}>
+            <BlockIcon style={{ fontSize: 10, color: '#ef4444' }} /> ดองเวร
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--color-text-muted)' }}>
+            <StarIcon style={{ fontSize: 10, color: '#f59e0b' }} /> ผู้ช่วยสิบเวร
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Main Page ====================
+export default function DutyPage() {
+  const [viewDate, setViewDate] = useState(new Date());
+  const [shiftsMap, setShiftsMap] = useState<Record<string, DutyShift>>({});
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [punishments, setPunishments] = useState<PunishmentEntry[]>([]);
+  const [exceptions, setExceptions] = useState<ExceptionEntry[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showPunishment, setShowPunishment] = useState(false);
+  const [showException, setShowException] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const { toast, show: showToast } = useToast();
+
+  const monthKey = format(viewDate, 'yyyy-MM');
+  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const shift: DutyShift = {
-        id: existingShift?.id || crypto.randomUUID(),
-        date, location, batchMode,
-        targetBatch: batchMode === 'batch_only' ? targetBatch : undefined,
-        timeSlots: slots,
-      };
-      await fetch('/api/duty', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shift }),
-      });
+      const [pRes, dRes, metaRes] = await Promise.all([
+        fetch('/api/personnel'),
+        fetch('/api/duty'),
+        fetch('/api/duty-meta'),
+      ]);
+      const pData = await pRes.json();
+      const dData = await dRes.json();
+      const metaData = await metaRes.json();
 
-      // Update dutyCount for personnel
-      const updatedPersonnel = personnel.map(p => {
-        const count = slots.filter(s => s.personnelId === p.id).length;
-        return count > 0 ? { ...p, dutyCount: p.dutyCount + count } : p;
-      });
-      await fetch('/api/personnel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personnel: updatedPersonnel }),
-      });
-      setPersonnel(updatedPersonnel);
+      setPersonnel(pData.personnel || []);
+      setPunishments(metaData.punishments || []);
+      setExceptions(metaData.exceptions || []);
 
-      showToast('บันทึกตารางเวรสำเร็จ');
-      setExistingShift(shift);
+      const map: Record<string, DutyShift> = {};
+      (dData.shifts || []).forEach((s: { date: string; shift: DutyShift }) => {
+        if (s.date?.startsWith(monthKey)) map[s.date] = s.shift;
+      });
+      setShiftsMap(map);
     } catch {
-      showToast('บันทึกไม่สำเร็จ', 'error');
+      showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
     } finally {
-      setSaving(false);
+      setLoading(false);
+    }
+  }, [monthKey]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleSaveDay = async (shift: DutyShift) => {
+    await fetch('/api/duty', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift }),
+    });
+    setShiftsMap(prev => ({ ...prev, [shift.date]: shift }));
+    showToast('บันทึกตารางเวรสำเร็จ');
+    setSelectedDate(null);
+  };
+
+  const handleSavePunishments = async (entries: PunishmentEntry[]) => {
+    await fetch('/api/duty-meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'punishment', data: entries }),
+    });
+    setPunishments(entries);
+    showToast('บันทึกรายการดองเวรสำเร็จ');
+  };
+
+  const handleSaveExceptions = async (entries: ExceptionEntry[]) => {
+    await fetch('/api/duty-meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'exception', data: entries }),
+    });
+    setExceptions(entries);
+    showToast('บันทึกรายการยกเว้นสำเร็จ');
+  };
+
+  // Auto-generate full month with punishment support
+  const handleGenerateMonth = async () => {
+    if (!confirm(`สร้างตารางเวรทั้งเดือน ${format(viewDate, 'MMMM yyyy', { locale: th })} อัตโนมัติ?\n(จะเขียนทับข้อมูลเดิม)`)) return;
+    setGenerating(true);
+    try {
+      const firstDay = startOfMonth(viewDate);
+      const lastDay = endOfMonth(viewDate);
+      const days = eachDayOfInterval({ start: firstDay, end: lastDay });
+
+      const allPersonnel = [...personnel].sort((a, b) => a.dutyCount - b.dutyCount);
+      let pointer = 0;
+      const newMap: Record<string, DutyShift> = {};
+
+      for (const day of days) {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const todayPunishments = punishments.filter(p => p.startDate <= dateStr && p.endDate >= dateStr);
+        const punishedSlots = new Map<number, string>();
+        todayPunishments.forEach(p => punishedSlots.set(p.shift, p.personnelId));
+
+        const available = allPersonnel.filter(p => isPersonnelAvailable(p, dateStr, exceptions));
+        const ids: string[] = [];
+
+        for (let shiftNum = 1; shiftNum <= 6; shiftNum++) {
+          if (punishedSlots.has(shiftNum)) {
+            ids.push(punishedSlots.get(shiftNum)!);
+          } else {
+            if (available.length > 0) {
+              ids.push(available[pointer % available.length].id);
+              pointer++;
+            } else {
+              ids.push('');
+            }
+          }
+        }
+
+        const shift = buildShift(dateStr, ids);
+        newMap[dateStr] = shift;
+
+        await fetch('/api/duty', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shift }),
+        });
+      }
+
+      setShiftsMap(prev => ({ ...prev, ...newMap }));
+      showToast(`สร้างเวรทั้งเดือนสำเร็จ! ${days.length} วัน`);
+    } catch {
+      showToast('เกิดข้อผิดพลาด', 'error');
+    } finally {
+      setGenerating(false);
     }
   };
 
-  // Export text
-  const exportText = () => {
-    const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
-    const dateDisplay = format(parseISO(date), 'd MMM yy', { locale: th });
-    const lines: string[] = [`ขออนุญาตแจ้งเวร${location}ประจำวันที่ ${dateDisplay}`];
-    slots.sort((a, b) => a.order - b.order).forEach((slot, i) => {
-      const p = personnelMap[slot.personnelId];
-      const name = p ? `${p.rank}${p.firstName}  ${p.lastName}` : 'ไม่ระบุ';
-      lines.push(`${i + 1}.${name}`);
-      lines.push(`${slot.start}-${slot.end}`);
-    });
-    return lines.join('\n');
-  };
-
-  const handleCopyExport = () => {
-    navigator.clipboard.writeText(exportText());
-    showToast('คัดลอกข้อความเวรแล้ว!');
-    setShowExport(false);
-  };
-
-  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
-  const currentSlot = getCurrentSlotIndex();
-  const dateDisplay = format(parseISO(date), 'd MMMM yyyy', { locale: th });
+  const selectedShift = selectedDate ? shiftsMap[selectedDate] || null : null;
 
   return (
-    <div className="page-container">
+    <div style={{ paddingBottom: 'calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)' }}>
       <Toast toast={toast} />
 
+      {/* Header */}
       <div className="page-header">
-        <h1 style={{ fontSize: 16, fontWeight: 700, flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}><AccessTimeIcon /> จัดเวรยาม</h1>
-        {slots.length > 0 && (
-          <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setShowExport(true)}><AssignmentIcon fontSize="small" /> Copy</button>
-        )}
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <AccessTimeIcon fontSize="small" /> จัดตารางเวร
+          </h1>
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{LOCATION}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowPunishment(true)}
+            style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
+            title="จัดการดองเวร"
+          >
+            <BlockIcon style={{ fontSize: 16, color: '#ef4444' }} />
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowException(true)}
+            style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
+            title="ผู้ช่วยสิบเวร/ยกเว้น"
+          >
+            <StarIcon style={{ fontSize: 16, color: '#f59e0b' }} />
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleGenerateMonth}
+            disabled={generating || loading}
+            style={{ display: 'flex', alignItems: 'center', gap: 3 }}
+          >
+            {generating ? '...' : <><BoltIcon fontSize="small" /> ออโต้</>}
+          </button>
+        </div>
       </div>
+
+      {/* Badge summary */}
+      {(punishments.length > 0 || exceptions.length > 0) && (
+        <div style={{ display: 'flex', gap: 8, padding: '6px 16px', background: 'var(--color-surface)' }}>
+          {punishments.length > 0 && (
+            <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: '#ef4444' }}>
+              <BlockIcon style={{ fontSize: 12 }} /> ดองเวร {punishments.length} ราย
+            </div>
+          )}
+          {exceptions.length > 0 && (
+            <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: '#f59e0b' }}>
+              <StarIcon style={{ fontSize: 12 }} /> ยกเว้น {exceptions.length} ราย
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="content-area">
-        {/* Date */}
-        <div className="form-group">
-          <label className="label">วันที่</label>
-          <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>{dateDisplay}</div>
-        </div>
-
-        {/* Location */}
-        <div className="form-group">
-          <label className="label">สถานที่</label>
-          <input className="input" value={location} onChange={e => setLocation(e.target.value)} placeholder="หน้าคลังอาวุธ" />
-        </div>
-
-        {/* Batch Mode */}
-        <div className="form-group">
-          <label className="label">โหมดผลัด</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              className={`btn btn-sm ${batchMode === 'mixed' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setBatchMode('mixed')} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}
-            ><ShuffleIcon fontSize="small" /> รวมทุกผลัด</button>
-            <button
-              className={`btn btn-sm ${batchMode === 'batch_only' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setBatchMode('batch_only')} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}
-            ><TrackChangesIcon fontSize="small" /> เฉพาะผลัด</button>
-          </div>
-        </div>
-
-        {batchMode === 'batch_only' && (
-          <div className="form-group">
-            <label className="label">เลือกผลัด</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {batches.map(b => (
-                <button
-                  key={b}
-                  className={`btn btn-sm ${targetBatch === b ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setTargetBatch(b)}
-                >ผลัด {b}</button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Auto Schedule Button */}
-        <button className="btn btn-success w-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={handleAutoSchedule} disabled={loading}>
-          <BoltIcon fontSize="small" /> จัดเวรอัตโนมัติ
-        </button>
-
-        {existingShift && (
-          <div style={{ fontSize: 12, color: 'var(--color-warning-light)', textAlign: 'center', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <WarningAmberIcon fontSize="small" /> มีตารางเวรวันนี้อยู่แล้ว การบันทึกจะเพิ่ม record ใหม่
-          </div>
-        )}
-
-        {/* Slots */}
-        {slots.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <h3 style={{ fontSize: 14, marginBottom: 10 }}>ตารางเวร — {location}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {slots.sort((a, b) => a.order - b.order).map((slot, i) => {
-                const p = personnelMap[slot.personnelId];
-                const isCurrent = i === currentSlot && date === today;
-                return (
-                  <div key={slot.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 12px', borderRadius: 10,
-                    background: isCurrent ? 'rgba(59,130,246,0.15)' : 'var(--color-surface-2)',
-                    border: isCurrent ? '1px solid rgba(59,130,246,0.4)' : '1px solid var(--color-border)',
-                  }}>
-                    <div style={{ minWidth: 28, width: 28, height: 28, borderRadius: '50%', background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--color-primary-light)' }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', minWidth: 90 }}>
-                      {slot.start}–{slot.end}
-                    </div>
-                    <select
-                      className="select"
-                      style={{ flex: 1, height: 36, fontSize: 13 }}
-                      value={slot.personnelId}
-                      onChange={e => handleChangeSlotPerson(slot.id, e.target.value)}
-                    >
-                      <option value="">— เลือกชื่อ —</option>
-                      <optgroup label="หมวดพลทหาร">
-                        {personnel
-                          .filter(p => p.rank === 'พลฯ' && (batchMode === 'mixed' || p.batch === targetBatch))
-                          .map(p => (
-                            <option key={p.id} value={p.id}>{p.rank}{p.firstName} {p.lastName} (เวร {p.dutyCount})</option>
-                          ))
-                        }
-                      </optgroup>
-                      <optgroup label="หมวดนายสิบ/พล.อส.">
-                        {personnel
-                          .filter(p => p.rank !== 'พลฯ' && (batchMode === 'mixed' || p.batch === targetBatch))
-                          .map(p => (
-                            <option key={p.id} value={p.id}>{p.rank}{p.firstName} {p.lastName} (เวร {p.dutyCount})</option>
-                          ))
-                        }
-                      </optgroup>
-                    </select>
-                    {isCurrent && <span style={{ fontSize: 10, background: 'var(--color-primary)', color: 'white', padding: '2px 6px', borderRadius: 99, fontWeight: 700, whiteSpace: 'nowrap' }}>ปัจจุบัน</span>}
-                  </div>
-                );
-              })}
-            </div>
-
-            <button className="btn btn-primary w-full mt-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={handleSave} disabled={saving}>
-              {saving ? 'กำลังบันทึก...' : <><SaveIcon fontSize="small" /> บันทึกตารางเวร</>}
-            </button>
-          </div>
-        )}
-
-        {/* Fairness chart */}
-        {personnel.length > 0 && (
-          <div className="card mt-4">
-            <h3 style={{ fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><BarChartIcon fontSize="small" /> เวรสะสม (Fairness)</h3>
-            {[...personnel]
-              .sort((a, b) => b.dutyCount - a.dutyCount)
-              .slice(0, 10)
-              .map(p => {
-                const max = Math.max(...personnel.map(x => x.dutyCount), 1);
-                return (
-                  <div key={p.id} style={{ marginBottom: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>{p.rank}{p.firstName} {p.lastName}</span>
-                      <span style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{p.dutyCount} ครั้ง</span>
-                    </div>
-                    <div style={{ height: 6, borderRadius: 99, background: 'var(--color-surface-2)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${(p.dutyCount / max) * 100}%`, background: 'var(--color-primary)', borderRadius: 99, transition: 'width 0.5s' }} />
-                    </div>
-                  </div>
-                );
-              })
-            }
-          </div>
+        {loading ? (
+          <div className="skeleton" style={{ height: 420, borderRadius: 12 }} />
+        ) : (
+          <MonthCalendar
+            viewDate={viewDate}
+            shiftsMap={shiftsMap}
+            personnelMap={personnelMap}
+            exceptions={exceptions}
+            punishments={punishments}
+            onSelectDay={setSelectedDate}
+            onPrev={() => setViewDate(d => subMonths(d, 1))}
+            onNext={() => setViewDate(d => addMonths(d, 1))}
+          />
         )}
       </div>
 
-      {/* Export Modal */}
-      {showExport && (
-        <div className="modal-overlay" onClick={() => setShowExport(false)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-            <div className="modal-handle" />
-            <h2 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}><AssignmentIcon fontSize="small" /> ข้อความแจ้งเวร</h2>
-            <pre style={{
-              background: 'var(--color-surface-2)', borderRadius: 10, padding: 16,
-              fontSize: 14, lineHeight: 1.8, color: 'var(--color-text-primary)',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              border: '1px solid var(--color-border)',
-            }}>
-              {exportText()}
-            </pre>
-            <button className="btn btn-primary w-full mt-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={handleCopyExport}>
-              <AssignmentIcon fontSize="small" /> คัดลอกข้อความ
-            </button>
-          </div>
-        </div>
+      {/* Modals */}
+      {selectedDate && (
+        <DayDetailModal
+          date={selectedDate}
+          shift={selectedShift}
+          personnel={personnel}
+          exceptions={exceptions}
+          punishments={punishments}
+          onClose={() => setSelectedDate(null)}
+          onSave={handleSaveDay}
+        />
+      )}
+      {showPunishment && (
+        <PunishmentModal
+          punishments={punishments}
+          personnel={personnel}
+          onSave={handleSavePunishments}
+          onClose={() => setShowPunishment(false)}
+        />
+      )}
+      {showException && (
+        <ExceptionModal
+          exceptions={exceptions}
+          personnel={personnel}
+          onSave={handleSaveExceptions}
+          onClose={() => setShowException(false)}
+        />
       )}
     </div>
   );
