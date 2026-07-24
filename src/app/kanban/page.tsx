@@ -262,8 +262,8 @@ function PrintForm({ tasks, date, totalCompany }: { tasks: KanbanTask[], date: s
   const shiftText = isMorning ? 'ยอดจ่ายงานเช้า' : 'ยอดจ่ายงานบ่าย';
   
   // Group tasks
-  const routineTasks = tasks.filter(t => t.category === 'รปจ' || t.category === 'หมวดที่ 1');
-  const otherTasks = tasks.filter(t => t.category === 'งานนอก/อื่นๆ' || t.category === 'หมวดที่ 2');
+  const routineTasks = tasks.filter(t => t.category === 'รปจ' || (t.category as string) === 'หมวดที่ 1');
+  const otherTasks = tasks.filter(t => t.category === 'งานนอก/อื่นๆ' || (t.category as string) === 'หมวดที่ 2');
 
   const emptyRowsNeeded = Math.max(0, 3 - otherTasks.length);
   const emptyRows = Array.from({ length: emptyRowsNeeded }, (_, i) => i);
