@@ -291,7 +291,14 @@ function PersonnelPageInner() {
   const [editPerson, setEditPerson] = useState<Personnel | null | 'new'>(null);
   const [filterBatch, setFilterBatch] = useState<number | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterRankType, setFilterRankType] = useState<'all' | 'private' | 'nco'>('all');
   const [searchText, setSearchText] = useState('');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterBatch, filterStatus, filterRankType, searchText]);
   const { toast, show: showToast } = useToast();
 
   const loadPersonnel = useCallback(async () => {
@@ -329,6 +336,8 @@ function PersonnelPageInner() {
   const batches = [...new Set(personnel.map(p => p.batch))].sort((a, b) => a - b);
 
   const filtered = personnel.filter(p => {
+    if (filterRankType === 'private' && p.rank !== 'พลฯ') return false;
+    if (filterRankType === 'nco' && p.rank === 'พลฯ') return false;
     if (filterBatch !== 'all' && p.batch !== filterBatch) return false;
     if (filterStatus !== 'all' && p.status !== filterStatus) return false;
     if (searchText) {
@@ -337,6 +346,10 @@ function PersonnelPageInner() {
     }
     return true;
   });
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
 
   const handleAdd = async (form: Omit<Personnel, 'id'>) => {
     const newP: Personnel = { ...form, id: crypto.randomUUID() };
@@ -393,6 +406,22 @@ function PersonnelPageInner() {
           style={{ marginBottom: 10 }}
         />
 
+        {/* Rank Type Filter */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <button
+            className={`btn btn-sm ${filterRankType === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFilterRankType('all')} style={{ flex: 1 }}
+          >ทั้งหมด</button>
+          <button
+            className={`btn btn-sm ${filterRankType === 'private' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFilterRankType('private')} style={{ flex: 1 }}
+          >พลทหาร</button>
+          <button
+            className={`btn btn-sm ${filterRankType === 'nco' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFilterRankType('nco')} style={{ flex: 1 }}
+          >นายสิบ/พล.อส.</button>
+        </div>
+
         {/* Filters */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
           <button
@@ -434,9 +463,11 @@ function PersonnelPageInner() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {filtered.map((p, i) => (
+            {paginated.map((p, i) => (
               <div key={p.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
-                <div style={{ minWidth: 24, fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>{i + 1}</div>
+                <div style={{ minWidth: 24, fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                  {(page - 1) * ITEMS_PER_PAGE + i + 1}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: 'var(--color-primary-light)' }}>{p.rank}</span>
@@ -463,6 +494,28 @@ function PersonnelPageInner() {
                 ><DeleteIcon fontSize="small" /></button>
               </div>
             ))}
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 16, paddingBottom: 12 }}>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  disabled={page === 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  ก่อนหน้า
+                </button>
+                <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                  หน้า {page} / {totalPages}
+                </span>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  disabled={page === totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                >
+                  ถัดไป
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

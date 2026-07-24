@@ -355,6 +355,12 @@ textarea {
   -webkit-backdrop-filter: blur(16px);
 }
 
+@media print {
+  .bottom-nav {
+    display: none !important;
+  }
+}
+
 .bottom-nav-items {
   display: flex;
   width: 100%;

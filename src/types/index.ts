@@ -15,9 +15,11 @@ export interface Personnel {
 export interface KanbanTask {
   id: string;
   title: string;         // ชื่องาน เช่น บก.ร้อย, คลังผ้า
-  category: 'หมวดที่ 1' | 'หมวดที่ 2';
+  category: 'รปจ' | 'งานนอก/อื่นๆ';
   location: string;
-  count: number | '';    // จำนวนคน
+  count: number | '';    // จำนวนคน (legacy)
+  countSenior?: number | ''; // ยอดพี่
+  countJunior?: number | ''; // ยอดน้อง
   status: 'todo' | 'in_progress' | 'done';
   date: string;          // yyyy-MM-dd
   remark?: string;
@@ -93,7 +95,7 @@ export interface ExcelRow {
 // ==================== Legacy (backward compat) ====================
 export interface Task {
   id: string;
-  category: 'หมวดที่ 1' | 'หมวดที่ 2';
+  category: 'รปจ' | 'งานนอก/อื่นๆ';
   taskName: string;
   location: string;
   count: number | '';

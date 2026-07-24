@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import Link from 'next/link';
-import type { Personnel, DutyShift, NCODuty } from '@/types';
+import type { Personnel, DutyShift, NCODuty, KanbanTask } from '@/types';
 import HomeIcon from '@mui/icons-material/Home';
 import GroupIcon from '@mui/icons-material/Group';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -117,45 +117,87 @@ function DutyTimeline({
   );
 }
 
-// ==================== Status Donut ====================
+// ==================== Status Bar ====================
 function StatusBar({ personnel }: { personnel: Personnel[] }) {
-  const total = personnel.length;
-  if (total === 0) return null;
-  const counts = {
-    available: personnel.filter(p => p.status === 'available').length,
-    on_duty: personnel.filter(p => p.status === 'on_duty').length,
-    leave: personnel.filter(p => p.status === 'leave').length,
-    sick: personnel.filter(p => p.status === 'sick').length,
+  if (personnel.length === 0) return null;
+
+  const renderStatusRow = (title: string, list: Personnel[]) => {
+    if (list.length === 0) return null;
+    const counts = {
+      available: list.filter(p => p.status === 'available').length,
+      on_duty: list.filter(p => p.status === 'on_duty').length,
+      leave: list.filter(p => p.status === 'leave').length,
+      sick: list.filter(p => p.status === 'sick').length,
+    };
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+          <span>{title}</span>
+          <span>{list.length} นาย</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+          {[
+            { label: 'ว่าง', count: counts.available, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+            { label: 'เวร', count: counts.on_duty, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+            { label: 'ลา', count: counts.leave, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+            { label: 'ป่วย', count: counts.sick, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+          ].map(s => (
+            <div key={s.label} style={{
+              textAlign: 'center', padding: '6px 0',
+              background: s.bg, borderRadius: 8, border: `1px solid ${s.color}40`,
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: s.color }}>{s.count}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ height: 4, borderRadius: 99, background: 'var(--color-surface-2)', marginTop: 8, overflow: 'hidden', display: 'flex' }}>
+          {counts.available > 0 && <div style={{ flex: counts.available, background: '#10b981' }} />}
+          {counts.on_duty > 0 && <div style={{ flex: counts.on_duty, background: '#3b82f6' }} />}
+          {counts.leave > 0 && <div style={{ flex: counts.leave, background: '#f59e0b' }} />}
+          {counts.sick > 0 && <div style={{ flex: counts.sick, background: '#ef4444' }} />}
+        </div>
+      </div>
+    );
   };
+
+  const privates = personnel.filter(p => p.rank === 'พลฯ');
+  const ncos = personnel.filter(p => p.rank !== 'พลฯ');
 
   return (
     <div className="card" style={{ marginTop: 12 }}>
-      <h3 style={{ fontSize: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: '4px' }}><GroupIcon fontSize="small" /> สถานะกำลังพล</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-        {[
-          { label: 'ว่าง', count: counts.available, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-          { label: 'เวร', count: counts.on_duty, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-          { label: 'ลา', count: counts.leave, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-          { label: 'ป่วย', count: counts.sick, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-        ].map(s => (
-          <div key={s.label} style={{
-            textAlign: 'center', padding: '10px 0',
-            background: s.bg, borderRadius: 8, border: `1px solid ${s.color}40`,
-          }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.count}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{s.label}</div>
+      <h3 style={{ fontSize: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: '4px' }}><GroupIcon fontSize="small" /> สถานะกำลังพล</h3>
+      {renderStatusRow('หมวดพลทหาร', privates)}
+      {renderStatusRow('หมวดนายสิบ/พล.อส.', ncos)}
+    </div>
+  );
+}
+
+// ==================== Task Distribution ====================
+function TaskDistribution({ tasks, recordDate }: { tasks: KanbanTask[], recordDate: string }) {
+  const activeTasks = tasks.filter(t => (Number(t.count) || 0) > 0);
+  if (activeTasks.length === 0) return null;
+  const totalInTasks = activeTasks.reduce((sum, t) => sum + (Number(t.count) || 0), 0);
+  
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <div className="flex-between mb-3">
+        <h3 style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <AssignmentIcon fontSize="small" /> ยอดจ่ายงานล่าสุด
+        </h3>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{format(parseISO(recordDate), 'd MMM', { locale: th })}</span>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {activeTasks.map(t => (
+          <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 6 }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-primary)' }} className="truncate" title={t.title}>{t.title}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary-light)' }}>{t.count}</span>
           </div>
         ))}
       </div>
-      {/* Progress bar */}
-      <div style={{ height: 6, borderRadius: 99, background: 'var(--color-surface-2)', marginTop: 12, overflow: 'hidden', display: 'flex' }}>
-        {counts.available > 0 && <div style={{ flex: counts.available, background: '#10b981' }} />}
-        {counts.on_duty > 0 && <div style={{ flex: counts.on_duty, background: '#3b82f6' }} />}
-        {counts.leave > 0 && <div style={{ flex: counts.leave, background: '#f59e0b' }} />}
-        {counts.sick > 0 && <div style={{ flex: counts.sick, background: '#ef4444' }} />}
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6, textAlign: 'right' }}>
-        ทั้งหมด {total} นาย
+      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 10, textAlign: 'right' }}>
+        รวมจ่ายงาน: <strong style={{ color: 'var(--color-text-primary)' }}>{totalInTasks}</strong> นาย
       </div>
     </div>
   );
@@ -188,7 +230,7 @@ export default function DashboardPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [todayShift, setTodayShift] = useState<DutyShift | null>(null);
   const [todayNCO, setTodayNCO] = useState<NCODuty | null>(null);
-  const [lastRecord, setLastRecord] = useState<{ date: string; totalCompany: number } | null>(null);
+  const [lastRecord, setLastRecord] = useState<{ date: string; totalCompany: number; tasks: KanbanTask[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadedAt, setLoadedAt] = useState<string>('');
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
@@ -229,7 +271,11 @@ export default function DashboardPage() {
       if (recRes.status === 'fulfilled') {
         const data = await recRes.value.json();
         if (data.record) {
-          setLastRecord({ date: data.record.date, totalCompany: data.record.totalCompany });
+          setLastRecord({ 
+            date: data.record.date, 
+            totalCompany: data.record.totalCompany,
+            tasks: data.record.tasks || []
+          });
         }
       }
       setLoadedAt(format(new Date(), 'HH:mm'));
@@ -259,8 +305,8 @@ export default function DashboardPage() {
     showToast('คัดลอกข้อความเวรแล้ว!');
   };
 
-  const availableCount = personnel.filter(p => p.status === 'available').length;
-  const onDutyCount = personnel.filter(p => p.status === 'on_duty').length;
+  const privatesCount = personnel.filter(p => p.rank === 'พลฯ').length;
+  const ncosCount = personnel.filter(p => p.rank !== 'พลฯ').length;
 
   const ncoPersonnel = todayNCO
     ? personnel.find(p => p.id === todayNCO.personnelId)
@@ -307,7 +353,7 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <StatCard
               icon={<GroupIcon />} label="กำลังพลทั้งหมด" value={personnel.length}
-              sub={`ว่าง ${availableCount} | เวร ${onDutyCount}`}
+              sub={`พลฯ ${privatesCount} | นายสิบ ${ncosCount}`}
               accent="#3b82f6"
             />
             <StatCard
@@ -336,6 +382,9 @@ export default function DashboardPage() {
 
         {/* Status Bar */}
         {!loading && personnel.length > 0 && <StatusBar personnel={personnel} />}
+
+        {/* Task Distribution */}
+        {!loading && lastRecord && <TaskDistribution tasks={lastRecord.tasks} recordDate={lastRecord.date} />}
 
         {/* Quick Actions */}
         {!loading && <QuickActions todayShift={todayShift} onExport={handleExportDuty} />}

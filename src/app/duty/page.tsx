@@ -273,14 +273,22 @@ export default function DutyPage() {
                       onChange={e => handleChangeSlotPerson(slot.id, e.target.value)}
                     >
                       <option value="">— เลือกชื่อ —</option>
-                      {personnel
-                        .filter(p => batchMode === 'mixed' || p.batch === targetBatch)
-                        .map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.rank}{p.firstName} {p.lastName} (เวร {p.dutyCount})
-                          </option>
-                        ))
-                      }
+                      <optgroup label="หมวดพลทหาร">
+                        {personnel
+                          .filter(p => p.rank === 'พลฯ' && (batchMode === 'mixed' || p.batch === targetBatch))
+                          .map(p => (
+                            <option key={p.id} value={p.id}>{p.rank}{p.firstName} {p.lastName} (เวร {p.dutyCount})</option>
+                          ))
+                        }
+                      </optgroup>
+                      <optgroup label="หมวดนายสิบ/พล.อส.">
+                        {personnel
+                          .filter(p => p.rank !== 'พลฯ' && (batchMode === 'mixed' || p.batch === targetBatch))
+                          .map(p => (
+                            <option key={p.id} value={p.id}>{p.rank}{p.firstName} {p.lastName} (เวร {p.dutyCount})</option>
+                          ))
+                        }
+                      </optgroup>
                     </select>
                     {isCurrent && <span style={{ fontSize: 10, background: 'var(--color-primary)', color: 'white', padding: '2px 6px', borderRadius: 99, fontWeight: 700, whiteSpace: 'nowrap' }}>ปัจจุบัน</span>}
                   </div>

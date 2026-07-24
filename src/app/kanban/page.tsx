@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { KanbanTask } from '@/types';
 import { useToast, Toast } from '@/hooks/useToast';
@@ -15,6 +15,7 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 type TaskStatus = KanbanTask['status'];
 
@@ -24,18 +25,20 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: stri
   done:        { label: 'เสร็จแล้ว',  color: '#10b981', bg: 'rgba(16,185,129,0.1)', icon: <CheckCircleIcon fontSize="small" /> },
 };
 
+const getTaskTotal = (t: KanbanTask) => (Number(t.countSenior) || 0) + (Number(t.countJunior) || 0) + (Number(t.count) || 0);
+
 const DEFAULT_TASKS: Omit<KanbanTask, 'id' | 'date'>[] = [
-  { title: 'บก.ร้อย',         category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'คลังผ้า',          category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'คลังโยธา',         category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'รถไถ',             category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ตัดหญ้า',          category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ตัดแต่ง',          category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ทั่วไป (กองร้อย)', category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ชุดช่าง บก.พัน',   category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ป่วย',             category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'ตร.ศบบ.',          category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
-  { title: 'บ้านพัก ผบ.ศบบ.',  category: 'หมวดที่ 1', location: '',  count: '', status: 'todo', isFixed: true },
+  { title: 'บก.ร้อย',         category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'คลังผ้า',          category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'คลังโยธา',         category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'รถไถ',             category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ตัดหญ้า',          category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ตัดแต่ง',          category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ทั่วไป (กองร้อย)', category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ชุดช่าง บก.พัน',   category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ป่วย',             category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'ตร.ศบบ.',          category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
+  { title: 'บ้านพัก ผบ.ศบบ.',  category: 'รปจ', location: '',  count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true },
 ];
 
 // ==================== Task Card ====================
@@ -58,20 +61,48 @@ function TaskCard({
         </div>
         
         {/* Count Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>ยอด (คน)</span>
-          <input
-            type="number"
-            value={task.count}
-            onChange={e => onUpdate(task.id, { count: e.target.value === '' ? '' : Number(e.target.value) })}
-            placeholder="0"
-            min={0}
-            style={{
-              width: 56, height: 36, background: 'var(--color-surface-2)', border: `1px solid ${STATUS_CONFIG[task.status].color}40`,
-              borderRadius: 8, color: 'var(--color-text-primary)',
-              textAlign: 'center', fontSize: 16, fontWeight: 700, fontFamily: 'inherit',
-            }}
-          />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--color-primary-light)', fontWeight: 600 }}>ยอดพี่</span>
+            <input
+              type="number"
+              value={task.countSenior !== undefined ? task.countSenior : (task.count || '')}
+              onChange={e => onUpdate(task.id, { countSenior: e.target.value === '' ? '' : Number(e.target.value), count: '' })}
+              placeholder="0"
+              min={0}
+              style={{
+                width: 48, height: 36, background: 'var(--color-surface-2)', border: `1px solid var(--color-primary-light)40`,
+                borderRadius: 8, color: 'var(--color-text-primary)',
+                textAlign: 'center', fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--color-accent-light)', fontWeight: 600 }}>ยอดน้อง</span>
+            <input
+              type="number"
+              value={task.countJunior !== undefined ? task.countJunior : ''}
+              onChange={e => onUpdate(task.id, { countJunior: e.target.value === '' ? '' : Number(e.target.value) })}
+              placeholder="0"
+              min={0}
+              style={{
+                width: 48, height: 36, background: 'var(--color-surface-2)', border: `1px solid var(--color-accent-light)40`,
+                borderRadius: 8, color: 'var(--color-text-primary)',
+                textAlign: 'center', fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 600 }}>รวม</span>
+            <div style={{
+              width: 42, height: 36, background: 'transparent',
+              color: 'var(--color-text-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16, fontWeight: 700
+            }}>
+              {getTaskTotal(task) || '-'}
+            </div>
+          </div>
         </div>
 
         {!task.isFixed && (
@@ -135,8 +166,8 @@ function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit
           <div className="form-group">
             <label className="label">หมวด</label>
             <select className="select" value={form.category} onChange={e => set('category', e.target.value)}>
-              <option value="หมวดที่ 1">หมวดที่ 1</option>
-              <option value="หมวดที่ 2">หมวดที่ 2</option>
+              <option value="รปจ">รปจ (งานประจำ)</option>
+              <option value="งานนอก/อื่นๆ">งานนอก/อื่นๆ</option>
             </select>
           </div>
           <div className="form-group">
@@ -150,7 +181,7 @@ function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
           <button className="btn btn-ghost" onClick={onClose}>ยกเลิก</button>
-          <button className="btn btn-primary" disabled={!form.title} onClick={() => onAdd({ ...form, count: '', status: 'todo', isFixed: false })}>
+          <button className="btn btn-primary" disabled={!form.title} onClick={() => onAdd({ ...form, count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: false })}>
             เพิ่ม
           </button>
         </div>
@@ -169,7 +200,7 @@ function HeadcountFooter({
   onSave: () => void;
   saving: boolean;
 }) {
-  const totalDistributed = tasks.reduce((s, t) => s + (typeof t.count === 'number' ? t.count : 0), 0);
+  const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
   const remaining = typeof totalCompany === 'number' ? totalCompany - totalDistributed : 0;
   const isOver = remaining < 0;
 
@@ -215,6 +246,116 @@ function HeadcountFooter({
           {saving ? '...' : <><SaveIcon fontSize="small" /> บันทึก</>}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ==================== Print Form ====================
+function PrintForm({ tasks, date, totalCompany }: { tasks: KanbanTask[], date: string, totalCompany: number | '' }) {
+  const dateDisplay = format(parseISO(date), 'd MMMM yyyy', { locale: th });
+  const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
+  const remaining = typeof totalCompany === 'number' ? totalCompany - totalDistributed : 0;
+  
+  // Group tasks
+  const routineTasks = tasks.filter(t => t.category === 'รปจ' || t.category === 'หมวดที่ 1');
+  const otherTasks = tasks.filter(t => t.category === 'งานนอก/อื่นๆ' || t.category === 'หมวดที่ 2');
+
+  const emptyRowsNeeded = Math.max(0, 3 - otherTasks.length);
+  const emptyRows = Array.from({ length: emptyRowsNeeded }, (_, i) => i);
+
+  const formatCount = (t: KanbanTask) => {
+    const s = Number(t.countSenior) || 0;
+    const j = Number(t.countJunior) || 0;
+    const old = Number(t.count) || 0;
+    const total = s + j + old;
+    if (total === 0) return '';
+    if (s > 0 && j > 0) return `พี่ ${s} น้อง ${j} รวม ${total}`;
+    if (s > 0) return `พี่ ${s} รวม ${total}`;
+    if (j > 0) return `น้อง ${j} รวม ${total}`;
+    return `${total}`;
+  };
+
+  return (
+    <div className="print-only" style={{ width: '100%', fontFamily: '"Sarabun", "Times New Roman", serif', color: 'black' }}>
+      <style>{`
+        @media screen { .print-only { display: none !important; } }
+        @media print {
+          @page { size: A4 portrait; margin: 15mm; }
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+        }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 16px; border: 2px solid black; }
+        .print-table th, .print-table td { border: 1px solid black; padding: 6px 12px; }
+        .print-table th { font-weight: bold; text-align: center; }
+        .print-text-center { text-align: center; }
+        .print-text-left { text-align: left; }
+      `}</style>
+      
+      <table className="print-table">
+        <thead>
+          <tr>
+            <th colSpan={4} style={{ padding: '8px', borderBottom: 'none' }}>แบบรายชื่อการจ่ายงานตามหน้าที่ ร้อย.บก.พัน.บร.</th>
+          </tr>
+          <tr>
+            <th colSpan={4} style={{ padding: '8px', borderTop: 'none', borderBottom: 'none' }}>ประจำวันที่ {dateDisplay}</th>
+          </tr>
+          <tr>
+            <th colSpan={4} style={{ padding: '8px', borderTop: 'none' }}>ยอดรวมกองร้อย {totalCompany === '' ? '.......................' : totalCompany} นาย</th>
+          </tr>
+          <tr>
+            <th colSpan={4} style={{ padding: '8px', background: '#f0f0f0' }}>ยอดจ่ายงานเช้า</th>
+          </tr>
+          <tr>
+            <th style={{ width: '25%' }}>รูปแบบงาน</th>
+            <th style={{ width: '35%' }}>สถานที่ทำงาน/จำหน่าย</th>
+            <th style={{ width: '15%' }}>จำนวนยอด</th>
+            <th style={{ width: '25%' }}>หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {routineTasks.map(t => (
+            <tr key={t.id}>
+              <td className="print-text-left">{t.title}</td>
+              <td className="print-text-left">{t.location}</td>
+              <td className="print-text-center" style={{ fontSize: '14px' }}>{formatCount(t)}</td>
+              <td className="print-text-left">{t.remark}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="print-text-left" style={{ fontWeight: 'bold' }}>งานนอก/อื่นๆ</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          {otherTasks.map(t => (
+            <tr key={t.id}>
+              <td className="print-text-left">{t.title}</td>
+              <td className="print-text-left">{t.location}</td>
+              <td className="print-text-center" style={{ fontSize: '14px' }}>{formatCount(t)}</td>
+              <td className="print-text-left">{t.remark}</td>
+            </tr>
+          ))}
+          {emptyRows.map(i => (
+            <tr key={`empty-${i}`}>
+              <td>&nbsp;</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          ))}
+          <tr>
+            <td colSpan={2} className="print-text-left" style={{ fontWeight: 'bold' }}>รวมยอดจำหน่าย</td>
+            <td className="print-text-center" style={{ fontWeight: 'bold' }}>{totalDistributed || ''}</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colSpan={2} className="print-text-left" style={{ fontWeight: 'bold' }}>ยอดคงเหลือ</td>
+            <td className="print-text-center" style={{ fontWeight: 'bold' }}>{totalCompany === '' ? '' : remaining}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -286,7 +427,7 @@ export default function DutyCheckPage() {
     if (totalCompany === '') { showToast('กรุณากรอกยอดรวม', 'error'); return; }
     setSaving(true);
     try {
-      const totalDistributed = tasks.reduce((s, t) => s + (typeof t.count === 'number' ? t.count : 0), 0);
+      const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
       await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -306,17 +447,23 @@ export default function DutyCheckPage() {
 
   return (
     <div style={{ paddingBottom: 'calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 80px)' }}>
-      <Toast toast={toast} />
+      <PrintForm tasks={tasks} date={today} totalCompany={totalCompany} />
+      
+      <div className="no-print">
+        <Toast toast={toast} />
 
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><AssignmentIcon /> ยอดกำลังพล</h1>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{todayDisplay}</div>
+        {/* Header */}
+        <div className="page-header">
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><AssignmentIcon /> ยอดกำลังพล</h1>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{todayDisplay}</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => window.print()} title="พิมพ์แบบฟอร์ม PDF" style={{ padding: '0 8px' }}>
+            <PictureAsPdfIcon fontSize="small" />
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={loadLatest}><RefreshIcon fontSize="small" /></button>
+          <button className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 2 }} onClick={() => setShowAdd(true)}><AddIcon fontSize="small" /> งาน</button>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={loadLatest}><RefreshIcon fontSize="small" /></button>
-        <button className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 2 }} onClick={() => setShowAdd(true)}><AddIcon fontSize="small" /> งาน</button>
-      </div>
 
       <div className="content-area">
         {/* Filter Tabs */}
@@ -381,6 +528,7 @@ export default function DutyCheckPage() {
       />
 
       {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
+      </div>
     </div>
   );
 }
