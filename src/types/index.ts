@@ -9,6 +9,7 @@ export interface Personnel {
   status: 'available' | 'on_duty' | 'leave' | 'sick';
   dutyCount: number;     // จำนวนเวรสะสม (fairness)
   isNCOEligible?: boolean; // สามารถเป็นสิบเวรได้ไหม
+  num?: number;          // ลำดับคิวการเข้าเวร
 }
 
 export interface PunishmentEntry {
@@ -20,7 +21,7 @@ export interface PunishmentEntry {
 
 export interface ExceptionEntry {
   personnelId: string;
-  reason: 'ผู้ช่วยสิบเวร' | 'ป่วย' | 'ธุระการ';
+  reason: 'ผู้ช่วยสิบเวร' | 'ป่วย' | 'ธุระการ' | 'งดเวร';
   startDate: string;
   endDate: string;
 }
@@ -57,6 +58,7 @@ export interface ShiftSlot {
   end: string;           // "20:00"
   personnelId: string;
   order: number;
+  isPunishment?: boolean;
 }
 
 export interface DutyShift {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
-  isToday, parseISO, addMonths, subMonths,
+  isToday, parseISO, addMonths, subMonths, subDays
 } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { Personnel, DutyShift, ShiftSlot, CalendarEvent, KanbanTask, PunishmentEntry, ExceptionEntry } from '@/types';
@@ -56,20 +56,25 @@ function isPersonnelAvailable(
   exceptions: ExceptionEntry[],
 ): boolean {
   if (p.status === 'sick' || p.status === 'leave') return false;
+  // If there's any exception OTHER than 'ผู้ช่วยสิบเวร', they are unavailable
   const ex = exceptions.find(
-    e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date
+    e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date && e.reason !== 'ผู้ช่วยสิบเวร'
   );
   return !ex;
 }
 
-function buildShift(date: string, slotPersonnelIds: string[]): DutyShift {
-  const timeSlots: ShiftSlot[] = SHIFT_TIMES.map((st, i) => ({
-    id: crypto.randomUUID(),
-    start: st.start,
-    end: st.end,
-    personnelId: slotPersonnelIds[i] || '',
-    order: i + 1,
-  }));
+function buildShift(date: string, slotPersonnelIds: string[], punishedIds: string[] = []): DutyShift {
+  const timeSlots: ShiftSlot[] = SHIFT_TIMES.map((st, i) => {
+    const pId = slotPersonnelIds[i] || '';
+    return {
+      id: crypto.randomUUID(),
+      start: st.start,
+      end: st.end,
+      personnelId: pId,
+      order: i + 1,
+      isPunishment: punishedIds.includes(pId),
+    };
+  });
   return { id: crypto.randomUUID(), date, location: LOCATION, timeSlots, batchMode: 'mixed' };
 }
 
@@ -81,21 +86,13 @@ function formatCopyText(
 ): string {
   const d = parseISO(date);
   const formattedDate = `${format(d, 'd MMM', { locale: th })} ${(d.getFullYear() + 543).toString().slice(-2)}`;
-  
-  const assistants = exceptions
-    .filter(e => e.reason === 'ผู้ช่วยสิบเวร' && e.startDate <= date && e.endDate >= date)
-    .map(e => personnelMap[e.personnelId])
-    .filter(Boolean);
 
   let text = `ขออนุญาตแจ้งเวรหน้าคลังอาวุธประจำวันที่ ${formattedDate}\n`;
-  if (assistants.length > 0) {
-    text += `ผู้ช่วยสิบเวร: ${assistants.map(p => `${p!.rank}${p!.firstName}  ${p!.lastName}`).join(', ')}\n\n`;
-  }
   shift.timeSlots
     .sort((a, b) => a.order - b.order)
     .forEach((slot, i) => {
       const p = personnelMap[slot.personnelId];
-      const name = p ? `${p.rank}${p.firstName}  ${p.lastName}` : '—';
+      const name = p ? `${p.rank}${p.firstName}  ${p.lastName}` : (slot.personnelId || '—');
       text += `${i + 1}.${name}\n`;
       text += `${slot.start}-${slot.end}\n`;
     });
@@ -106,11 +103,13 @@ function formatCopyText(
 function PunishmentModal({
   punishments,
   personnel,
+  initialDate,
   onSave,
   onClose,
 }: {
   punishments: PunishmentEntry[];
   personnel: Personnel[];
+  initialDate?: string;
   onSave: (entries: PunishmentEntry[]) => Promise<void>;
   onClose: () => void;
 }) {
@@ -118,8 +117,8 @@ function PunishmentModal({
   const [form, setForm] = useState({
     personnelId: '',
     shift: 1,
-    startDate: format(new Date(), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
+    startDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
+    endDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
   });
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -127,10 +126,17 @@ function PunishmentModal({
 
   const handleAdd = () => {
     if (!form.personnelId) return;
-    const newEntry: PunishmentEntry = { ...form };
-    const updated = [...list, newEntry];
-    setList(updated);
-    setForm({ personnelId: '', shift: 1, startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd') });
+    const start = parseISO(form.startDate);
+    const end = parseISO(form.endDate);
+    const days = eachDayOfInterval({ start, end });
+    const newEntries = days.map(d => ({
+      ...form,
+      startDate: format(d, 'yyyy-MM-dd'),
+      endDate: format(d, 'yyyy-MM-dd')
+    }));
+
+    setList(prev => [...prev, ...newEntries]);
+    setForm({ personnelId: '', shift: 1, startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
     setShowForm(false);
   };
 
@@ -207,25 +213,30 @@ function PunishmentModal({
 
         {/* List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
-          {list.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการดองเวร</div>
-          ) : list.map((entry, idx) => {
-            const p = personnelMap[entry.personnelId];
-            return (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid #ef4444` }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                    {SHIFT_TIMES[entry.shift - 1]?.label} ({SHIFT_TIMES[entry.shift - 1]?.start}–{SHIFT_TIMES[entry.shift - 1]?.end})
+          {(() => {
+            const visibleList = list.map((entry, idx) => ({ entry, idx }))
+              .filter(({ entry }) => !initialDate || (entry.startDate <= initialDate && entry.endDate >= initialDate));
+            if (visibleList.length === 0) {
+              return <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการดองเวร</div>;
+            }
+            return visibleList.map(({ entry, idx }) => {
+              const p = personnelMap[entry.personnelId];
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid #ef4444` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      {SHIFT_TIMES[entry.shift - 1]?.label} ({SHIFT_TIMES[entry.shift - 1]?.start}–{SHIFT_TIMES[entry.shift - 1]?.end})
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                    <DeleteIcon fontSize="small" />
+                  </button>
                 </div>
-                <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                  <DeleteIcon fontSize="small" />
-                </button>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
 
         <button
@@ -245,11 +256,13 @@ function PunishmentModal({
 function ExceptionModal({
   exceptions,
   personnel,
+  initialDate,
   onSave,
   onClose,
 }: {
   exceptions: ExceptionEntry[];
   personnel: Personnel[];
+  initialDate?: string;
   onSave: (entries: ExceptionEntry[]) => Promise<void>;
   onClose: () => void;
 }) {
@@ -257,8 +270,8 @@ function ExceptionModal({
   const [form, setForm] = useState({
     personnelId: '',
     reason: 'ผู้ช่วยสิบเวร' as ExceptionEntry['reason'],
-    startDate: format(new Date(), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
+    startDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
+    endDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
   });
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -266,14 +279,24 @@ function ExceptionModal({
 
   const REASON_LABELS: Record<ExceptionEntry['reason'], { label: string; color: string }> = {
     'ผู้ช่วยสิบเวร': { label: 'ผช.สิบเวร', color: '#f59e0b' },
-    'ป่วย':         { label: 'ป่วย',       color: '#ef4444' },
-    'ธุระการ':       { label: 'ธุระการ',    color: '#3b82f6' },
+    'ป่วย': { label: 'ป่วย', color: '#ef4444' },
+    'ธุระการ': { label: 'ธุระการ', color: '#3b82f6' },
+    'งดเวร': { label: 'งดเวร', color: '#10b981' },
   };
 
   const handleAdd = () => {
     if (!form.personnelId) return;
-    setList(prev => [...prev, { ...form }]);
-    setForm({ personnelId: '', reason: 'ผู้ช่วยสิบเวร', startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd') });
+    const start = parseISO(form.startDate);
+    const end = parseISO(form.endDate);
+    const days = eachDayOfInterval({ start, end });
+    const newEntries = days.map(d => ({
+      ...form,
+      startDate: format(d, 'yyyy-MM-dd'),
+      endDate: format(d, 'yyyy-MM-dd')
+    }));
+
+    setList(prev => [...prev, ...newEntries]);
+    setForm({ personnelId: '', reason: 'ผู้ช่วยสิบเวร', startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
     setShowForm(false);
   };
 
@@ -293,9 +316,9 @@ function ExceptionModal({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, color: '#f59e0b' }}>
-              <StarIcon fontSize="small" /> ผู้ช่วยสิบเวร / ยกเว้น
+              <StarIcon fontSize="small" /> ผู้ช่วยสิบเวรประจำวัน
             </h2>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผู้ช่วย, ผู้ป่วย, ธุระการ</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผู้ช่วย</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
             <CloseIcon fontSize="small" />
@@ -320,9 +343,7 @@ function ExceptionModal({
               <div>
                 <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ประเภท</label>
                 <select className="select" style={{ width: '100%' }} value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value as ExceptionEntry['reason'] }))}>
-                  <option value="ผู้ช่วยสิบเวร">ผู้ช่วยสิบเวร (ยกเว้นเวร)</option>
-                  <option value="ป่วย">ป่วย</option>
-                  <option value="ธุระการ">ธุระการ</option>
+                  <option value="ผู้ช่วยสิบเวร">ผู้ช่วยสิบเวร</option>
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -347,25 +368,189 @@ function ExceptionModal({
           </div>
         )}
 
+        {/* List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
-          {list.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการ</div>
-          ) : list.map((entry, idx) => {
-            const p = personnelMap[entry.personnelId];
-            const ri = REASON_LABELS[entry.reason];
-            return (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid ${ri.color}` }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+          {(() => {
+            const visibleList = list.map((entry, idx) => ({ entry, idx }))
+              .filter(({ entry }) => entry.reason === 'ผู้ช่วยสิบเวร' && (!initialDate || (entry.startDate <= initialDate && entry.endDate >= initialDate)));
+            if (visibleList.length === 0) {
+              return <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการ</div>;
+            }
+            return visibleList.map(({ entry, idx }) => {
+              const p = personnelMap[entry.personnelId];
+              const ri = REASON_LABELS[entry.reason];
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid ${ri.color}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+                  </div>
+                  <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
+                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                    <DeleteIcon fontSize="small" />
+                  </button>
                 </div>
-                <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
-                <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                  <DeleteIcon fontSize="small" />
-                </button>
+              );
+            });
+          })()}
+        </div>
+
+        <button
+          className="btn btn-primary w-full mt-4"
+          onClick={handleSave}
+          disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {saving ? '...' : <><SaveIcon fontSize="small" /> บันทึก</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Exempt Manager Modal ====================
+function ExemptModal({
+  exceptions,
+  personnel,
+  initialDate,
+  onSave,
+  onClose,
+}: {
+  exceptions: ExceptionEntry[];
+  personnel: Personnel[];
+  initialDate?: string;
+  onSave: (entries: ExceptionEntry[]) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState<ExceptionEntry[]>(exceptions);
+  const [form, setForm] = useState({
+    personnelId: '',
+    reason: 'ป่วย' as ExceptionEntry['reason'],
+    startDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
+    endDate: initialDate || format(new Date(), 'yyyy-MM-dd'),
+  });
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
+
+  const REASON_LABELS: Record<ExceptionEntry['reason'], { label: string; color: string }> = {
+    'ผู้ช่วยสิบเวร': { label: 'ผช.สิบเวร', color: '#f59e0b' },
+    'ป่วย': { label: 'ป่วย', color: '#ef4444' },
+    'ธุระการ': { label: 'ธุระการ', color: '#3b82f6' },
+    'งดเวร': { label: 'งดเวร', color: '#10b981' },
+  };
+
+  const handleAdd = () => {
+    if (!form.personnelId) return;
+    const start = parseISO(form.startDate);
+    const end = parseISO(form.endDate);
+    const days = eachDayOfInterval({ start, end });
+    const newEntries = days.map(d => ({
+      ...form,
+      startDate: format(d, 'yyyy-MM-dd'),
+      endDate: format(d, 'yyyy-MM-dd')
+    }));
+
+    setList(prev => [...prev, ...newEntries]);
+    setForm({ personnelId: '', reason: 'ป่วย', startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
+    setShowForm(false);
+  };
+
+  const handleRemove = (idx: number) => setList(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(list);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet" style={{ maxHeight: '90vh' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, color: '#a855f7' }}>
+              <StarIcon fontSize="small" /> รายชื่อผู้ยกเว้นเวร
+            </h2>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนด ป่วย, ธุระการ, งดเวร</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        <button
+          className={`btn btn-sm w-full ${showForm ? 'btn-ghost' : 'btn-primary'}`}
+          onClick={() => setShowForm(v => !v)}
+          style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          {showForm ? <><CloseIcon fontSize="small" /> ยกเลิก</> : <><AddIcon fontSize="small" /> เพิ่มรายการ</>}
+        </button>
+
+        {showForm && (
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
+                <SearchablePersonnelSelect personnel={personnel} value={form.personnelId} onChange={v => setForm(f => ({ ...f, personnelId: v }))} />
               </div>
-            );
-          })}
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ประเภท</label>
+                <select className="select" style={{ width: '100%' }} value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value as ExceptionEntry['reason'] }))}>
+                  <option value="ป่วย">ป่วย</option>
+                  <option value="ธุระการ">ธุระการ</option>
+                  <option value="งดเวร">งดเวร (เฉพาะวัน)</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่เริ่ม</label>
+                  <input type="date" className="select" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>วันที่สิ้นสุด</label>
+                  <input type="date" className="select" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={!form.personnelId}
+                onClick={handleAdd}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+              >
+                <AddIcon fontSize="small" /> เพิ่ม
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+          {(() => {
+            const visibleList = list.map((entry, idx) => ({ entry, idx }))
+              .filter(({ entry }) => entry.reason !== 'ผู้ช่วยสิบเวร' && (!initialDate || (entry.startDate <= initialDate && entry.endDate >= initialDate)));
+            if (visibleList.length === 0) {
+              return <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: 13 }}>ไม่มีรายการ</div>;
+            }
+            return visibleList.map(({ entry, idx }) => {
+              const p = personnelMap[entry.personnelId];
+              const ri = REASON_LABELS[entry.reason];
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8, borderLeft: `3px solid ${ri.color}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : entry.personnelId}</div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
+                  </div>
+                  <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
+                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                    <DeleteIcon fontSize="small" />
+                  </button>
+                </div>
+              );
+            });
+          })()}
         </div>
 
         <button
@@ -383,7 +568,7 @@ function ExceptionModal({
 
 // ==================== Day Detail Modal ====================
 function DayDetailModal({
-  date, shift, personnel, exceptions, punishments, onClose, onSave,
+  date, shift, personnel, exceptions, punishments, onClose, onSave, onOpenPunishment, onOpenException, onOpenExempt, shiftsMap,
 }: {
   date: string;
   shift: DutyShift | null;
@@ -392,6 +577,10 @@ function DayDetailModal({
   punishments: PunishmentEntry[];
   onClose: () => void;
   onSave: (shift: DutyShift) => Promise<void>;
+  onOpenPunishment: () => void;
+  onOpenException: () => void;
+  onOpenExempt: () => void;
+  shiftsMap: Record<string, DutyShift>;
 }) {
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
   const [slots, setSlots] = useState<string[]>(
@@ -410,42 +599,96 @@ function DayDetailModal({
     .map(e => personnelMap[e.personnelId])
     .filter(Boolean);
 
+  // Get daily exceptions (ป่วย, ธุระการ, งดเวร) for this date
+  const dailyExceptions = exceptions
+    .filter(e => e.reason !== 'ผู้ช่วยสิบเวร' && e.startDate <= date && e.endDate >= date)
+    .map(e => {
+      const p = personnelMap[e.personnelId];
+      return p ? { p, reason: e.reason } : null;
+    })
+    .filter(Boolean);
+
   // Get punishments for this date  
   const todayPunishments = punishments.filter(p => p.startDate <= date && p.endDate >= date);
 
   const handleAutoFill = () => {
-    // Fill punishments first, then rotate available personnel
-    const punishedSlots = new Map<number, string>(); // shift(1-6) -> personnelId
-    todayPunishments.forEach(p => { punishedSlots.set(p.shift, p.personnelId); });
+    const punishedIds = Array.from(new Set(todayPunishments.map(p => p.personnelId)));
 
-    const available = personnel.filter(p => isPersonnelAvailable(p, date, exceptions))
-      .sort((a, b) => a.dutyCount - b.dutyCount);
+    const available = personnel
+      .filter(p => p.rank.includes('พลฯ'))
+      .filter(p => isPersonnelAvailable(p, date, exceptions))
+      .sort((a, b) => (a.num || 0) - (b.num || 0));
 
-    let pointer = 0;
-    const newSlots = SHIFT_TIMES.map((st, i) => {
-      const shiftNum = i + 1;
-      if (punishedSlots.has(shiftNum)) return punishedSlots.get(shiftNum)!;
-      if (available.length === 0) return '';
-      const p = available[pointer % available.length];
-      pointer++;
-      return p.id;
-    });
+    const availableNotPunished = available.filter(p => !punishedIds.includes(p.id));
+
+    const newSlots = Array(6).fill('');
+
+    let pIdx = 0;
+    for (let i = 5; i >= 0 && pIdx < punishedIds.length; i--) {
+      newSlots[i] = punishedIds[pIdx];
+      pIdx++;
+    }
+
+    // Calculate pointer by counting regular assignments in this month up to yesterday
+    const targetDate = parseISO(date);
+    const firstDay = startOfMonth(targetDate);
+    const endDay = subDays(targetDate, 1);
+    // Find last regular assigned person before this date
+    let lastAssignedId = '';
+    const pastDates = Object.keys(shiftsMap).filter(d => d < date).sort().reverse();
+    for (const d of pastDates) {
+      const shift = shiftsMap[d];
+      const sortedSlots = [...shift.timeSlots].sort((a, b) => b.order - a.order);
+      const lastSlot = sortedSlots.find(s => s.personnelId && !s.isPunishment);
+      if (lastSlot) {
+        lastAssignedId = lastSlot.personnelId;
+        break;
+      }
+    }
+
+    let aIdx = 0;
+    if (lastAssignedId) {
+      const idx = availableNotPunished.findIndex(p => p.id === lastAssignedId);
+      if (idx !== -1) aIdx = idx + 1;
+      else {
+        const lastPerson = personnel.find(p => p.id === lastAssignedId);
+        if (lastPerson) {
+          const nextIdx = availableNotPunished.findIndex(p => (p.num || 0) > (lastPerson.num || 0));
+          aIdx = nextIdx !== -1 ? nextIdx : 0;
+        }
+      }
+    }
+
+    for (let i = 0; i < 6; i++) {
+      if (newSlots[i] === '') {
+        if (availableNotPunished.length > 0) {
+          newSlots[i] = availableNotPunished[aIdx % availableNotPunished.length].id;
+          aIdx++;
+        }
+      }
+    }
     setSlots(newSlots);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const newShift = buildShift(date, slots);
+    const punishedIds = Array.from(new Set(todayPunishments.map(p => p.personnelId)));
+    const newShift = buildShift(date, slots, punishedIds);
     await onSave(newShift);
     setSaving(false);
   };
 
   const handleCopy = () => {
-    const tempShift = buildShift(date, slots);
-    const text = formatCopyText(date, tempShift, personnelMap, exceptions);
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const tempPunishedIds = Array.from(new Set(todayPunishments.map(p => p.personnelId)));
+      const tempShift = buildShift(date, slots, tempPunishedIds);
+      const text = formatCopyText(date, tempShift, personnelMap, exceptions);
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -459,9 +702,35 @@ function DayDetailModal({
             </h2>
             <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{dateDisplay}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
-            <CloseIcon fontSize="small" />
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenPunishment}
+              style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
+              title="จัดการดองเวร"
+            >
+              <BlockIcon style={{ fontSize: 16, color: '#ef4444' }} />
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenException}
+              style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
+              title="ผู้ช่วยสิบเวร"
+            >
+              <StarIcon style={{ fontSize: 16, color: '#f59e0b' }} />
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenExempt}
+              style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
+              title="ยกเว้นเวร"
+            >
+              <StarIcon style={{ fontSize: 16, color: '#a855f7' }} />
+            </button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', marginLeft: 8 }}>
+              <CloseIcon fontSize="small" />
+            </button>
+          </div>
         </div>
 
         {/* Daily Assistants banner */}
@@ -475,22 +744,33 @@ function DayDetailModal({
           </div>
         )}
 
+        {/* Daily Exceptions banner */}
+        {/* {dailyExceptions.length > 0 && (
+          <div style={{ padding: '8px 12px', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 8, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <StarIcon style={{ fontSize: 14, color: '#a855f7' }} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#a855f7' }}>รายชื่อผู้ยกเว้นเวร (ป่วย, ธุระการ, งดเวร)</div>
+              <div style={{ fontSize: 12 }}>{dailyExceptions.map(item => `${item!.p.rank}${item!.p.firstName} ${item!.p.lastName} (${item!.reason})`).join(', ')}</div>
+            </div>
+          </div>
+        )} */}
+
         {/* Punishment warning */}
-        {todayPunishments.length > 0 && (
+        {/* {todayPunishments.length > 0 && (
           <div style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, marginBottom: 10 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
               <BlockIcon style={{ fontSize: 13 }} /> มีดองเวร {todayPunishments.length} ราย
             </div>
-            {todayPunishments.map((pm, i) => {
+            {todayPunishments.map((pm, idx) => {
               const p = personnelMap[pm.personnelId];
               return (
-                <div key={i} style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                  {p ? `${p.rank}${p.firstName}` : pm.personnelId} → {SHIFT_TIMES[pm.shift - 1]?.label}
+                <div key={idx} style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                  - {p ? `${p.rank}${p.firstName}` : pm.personnelId}
                 </div>
               );
             })}
           </div>
-        )}
+        )} */}
 
         {/* Auto fill */}
         <button
@@ -505,7 +785,7 @@ function DayDetailModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {SHIFT_TIMES.map((st, i) => {
             const isCurrent = (i + 1) === currentShift;
-            const isPunished = todayPunishments.find(p => p.shift === st.shift);
+            const isPunished = todayPunishments.some(p => p.personnelId === slots[i]);
             return (
               <div
                 key={st.shift}
@@ -523,10 +803,10 @@ function DayDetailModal({
                   {isCurrent && <span style={{ fontSize: 9, background: 'var(--color-primary)', color: 'white', padding: '1px 4px', borderRadius: 99, fontWeight: 700 }}>ปัจจุบัน</span>}
                   {isPunished && <span style={{ fontSize: 9, background: '#ef4444', color: 'white', padding: '1px 4px', borderRadius: 99, fontWeight: 700 }}>ดอง</span>}
                 </div>
-                <SearchablePersonnelSelect 
-                  personnel={personnel} 
-                  value={slots[i]} 
-                  onChange={v => setSlots(prev => prev.map((val, idx) => idx === i ? v : val))} 
+                <SearchablePersonnelSelect
+                  personnel={personnel}
+                  value={slots[i]}
+                  onChange={v => setSlots(prev => prev.map((val, idx) => idx === i ? v : val))}
                 />
               </div>
             );
@@ -627,13 +907,13 @@ function MonthCalendar({
 
             const previews = shift
               ? shift.timeSlots
-                  .sort((a, b) => a.order - b.order)
-                  .slice(0, 3)
-                  .map(s => {
-                    const p = personnelMap[s.personnelId];
-                    return p ? p.firstName.substring(0, 5) : null;
-                  })
-                  .filter(Boolean)
+                .sort((a, b) => a.order - b.order)
+                .slice(0, 3)
+                .map(s => {
+                  const p = personnelMap[s.personnelId];
+                  return p ? p.firstName.substring(0, 5) : (s.personnelId ? s.personnelId.substring(0, 5) : null);
+                })
+                .filter(Boolean)
               : [];
 
             const filledCount = shift ? shift.timeSlots.filter(s => s.personnelId).length : 0;
@@ -722,6 +1002,7 @@ export default function DutyPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showPunishment, setShowPunishment] = useState(false);
   const [showException, setShowException] = useState(false);
+  const [showExempt, setShowExempt] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const { toast, show: showToast } = useToast();
@@ -747,7 +1028,7 @@ export default function DutyPage() {
 
       const map: Record<string, DutyShift> = {};
       (dData.shifts || []).forEach((s: { date: string; shift: DutyShift }) => {
-        if (s.date?.startsWith(monthKey)) map[s.date] = s.shift;
+        map[s.date] = s.shift; // Store all shifts so we can check history
       });
       setShiftsMap(map);
     } catch {
@@ -799,33 +1080,69 @@ export default function DutyPage() {
       const lastDay = endOfMonth(viewDate);
       const days = eachDayOfInterval({ start: firstDay, end: lastDay });
 
-      const allPersonnel = [...personnel].sort((a, b) => a.dutyCount - b.dutyCount);
-      let pointer = 0;
+      const allPersonnel = [...personnel]
+        .filter(p => p.rank.includes('พลฯ'))
+        .sort((a, b) => (a.num || 0) - (b.num || 0));
+
       const newMap: Record<string, DutyShift> = {};
+
+      let lastAssignedId = '';
+      const firstDateStr = format(firstDay, 'yyyy-MM-dd');
+      const pastDates = Object.keys(shiftsMap).filter(d => d < firstDateStr).sort().reverse();
+      for (const d of pastDates) {
+        const shift = shiftsMap[d];
+        const sortedSlots = [...shift.timeSlots].sort((a, b) => b.order - a.order);
+        const lastSlot = sortedSlots.find(s => s.personnelId && !s.isPunishment);
+        if (lastSlot) {
+          lastAssignedId = lastSlot.personnelId;
+          break;
+        }
+      }
 
       for (const day of days) {
         const dateStr = format(day, 'yyyy-MM-dd');
         const todayPunishments = punishments.filter(p => p.startDate <= dateStr && p.endDate >= dateStr);
-        const punishedSlots = new Map<number, string>();
-        todayPunishments.forEach(p => punishedSlots.set(p.shift, p.personnelId));
+        const punishedIds = Array.from(new Set(todayPunishments.map(p => p.personnelId)));
 
-        const available = allPersonnel.filter(p => isPersonnelAvailable(p, dateStr, exceptions));
-        const ids: string[] = [];
+        const available = allPersonnel
+          .filter(p => isPersonnelAvailable(p, dateStr, exceptions))
+          .filter(p => !punishedIds.includes(p.id));
 
-        for (let shiftNum = 1; shiftNum <= 6; shiftNum++) {
-          if (punishedSlots.has(shiftNum)) {
-            ids.push(punishedSlots.get(shiftNum)!);
-          } else {
-            if (available.length > 0) {
-              ids.push(available[pointer % available.length].id);
-              pointer++;
-            } else {
-              ids.push('');
+        const ids: string[] = Array(6).fill('');
+
+        // 1. Assign punishments from shift 6 down to 1
+        let pIdx = 0;
+        for (let i = 5; i >= 0 && pIdx < punishedIds.length; i--) {
+          ids[i] = punishedIds[pIdx];
+          pIdx++;
+        }
+
+        // 2. Fill remaining slots from shift 1 up to 6 with regular available people
+        let pointer = 0;
+        if (lastAssignedId) {
+          const idx = available.findIndex(p => p.id === lastAssignedId);
+          if (idx !== -1) pointer = idx + 1;
+          else {
+            const lastPerson = allPersonnel.find(p => p.id === lastAssignedId);
+            if (lastPerson) {
+              const nextIdx = available.findIndex(p => (p.num || 0) > (lastPerson.num || 0));
+              pointer = nextIdx !== -1 ? nextIdx : 0;
             }
           }
         }
 
-        const shift = buildShift(dateStr, ids);
+        for (let i = 0; i < 6; i++) {
+          if (ids[i] === '') {
+            if (available.length > 0) {
+              const assignedP = available[pointer % available.length];
+              ids[i] = assignedP.id;
+              lastAssignedId = assignedP.id;
+              pointer++;
+            }
+          }
+        }
+
+        const shift = buildShift(dateStr, ids, punishedIds);
         newMap[dateStr] = shift;
 
         await fetch('/api/duty', {
@@ -859,22 +1176,6 @@ export default function DutyPage() {
           <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{LOCATION}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowPunishment(true)}
-            style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
-            title="จัดการดองเวร"
-          >
-            <BlockIcon style={{ fontSize: 16, color: '#ef4444' }} />
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowException(true)}
-            style={{ padding: '0 8px', display: 'flex', alignItems: 'center', gap: 3 }}
-            title="ผู้ช่วยสิบเวร/ยกเว้น"
-          >
-            <StarIcon style={{ fontSize: 16, color: '#f59e0b' }} />
-          </button>
           <button
             className="btn btn-primary btn-sm"
             onClick={handleGenerateMonth}
@@ -929,12 +1230,17 @@ export default function DutyPage() {
           punishments={punishments}
           onClose={() => setSelectedDate(null)}
           onSave={handleSaveDay}
+          onOpenPunishment={() => setShowPunishment(true)}
+          onOpenException={() => setShowException(true)}
+          onOpenExempt={() => setShowExempt(true)}
+          shiftsMap={shiftsMap}
         />
       )}
       {showPunishment && (
         <PunishmentModal
           punishments={punishments}
           personnel={personnel}
+          initialDate={selectedDate || undefined}
           onSave={handleSavePunishments}
           onClose={() => setShowPunishment(false)}
         />
@@ -943,8 +1249,18 @@ export default function DutyPage() {
         <ExceptionModal
           exceptions={exceptions}
           personnel={personnel}
+          initialDate={selectedDate || undefined}
           onSave={handleSaveExceptions}
           onClose={() => setShowException(false)}
+        />
+      )}
+      {showExempt && (
+        <ExemptModal
+          exceptions={exceptions}
+          personnel={personnel}
+          initialDate={selectedDate || undefined}
+          onSave={handleSaveExceptions}
+          onClose={() => setShowExempt(false)}
         />
       )}
     </div>

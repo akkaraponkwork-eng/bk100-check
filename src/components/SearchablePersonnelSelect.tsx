@@ -28,6 +28,7 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
   }, []);
 
   const selected = personnel.find(p => p.id === value);
+  const displayText = selected ? `${selected.rank}${selected.firstName} ${selected.lastName}` : (value || '— เลือกทหาร —');
   
   const filtered = personnel.filter(p => {
     if (!search) return true;
@@ -45,12 +46,12 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
           display: 'flex', alignItems: 'center', 
           background: 'var(--color-surface)', border: '1px solid var(--color-border)', 
           borderRadius: 8, padding: '0 10px',
-          color: selected ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+          color: (selected || value) ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
           cursor: 'pointer'
         }}
         onClick={() => setOpen(!open)}
       >
-        {selected ? `${selected.rank}${selected.firstName} ${selected.lastName}` : '— เลือกทหาร —'}
+        {displayText}
       </button>
 
       {open && (
@@ -98,8 +99,22 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
                 <span style={{ opacity: 0.7, fontSize: 10 }}>(เวร {p.dutyCount})</span>
               </button>
             ))}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !search && (
               <div style={{ padding: '12px', fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>ไม่พบรายชื่อ</div>
+            )}
+            {search && (
+              <button
+                type="button"
+                onClick={() => { onChange(search); setOpen(false); setSearch(''); }}
+                style={{ 
+                  width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 12, 
+                  border: '1px dashed var(--color-primary-light)', background: 'rgba(59, 130, 246, 0.05)', 
+                  color: 'var(--color-primary-light)', borderRadius: 4, cursor: 'pointer', marginTop: 4,
+                  fontWeight: 600
+                }}
+              >
+                + เพิ่มรายชื่อนอก: "{search}"
+              </button>
             )}
           </div>
         </div>

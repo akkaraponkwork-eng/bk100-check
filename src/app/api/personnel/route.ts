@@ -27,6 +27,7 @@ function rowToPersonnel(row: string[]): Personnel {
     status: (row[6] as Personnel['status']) || 'available',
     dutyCount: Number(row[7]) || 0,
     isNCOEligible: String(row[8]).toLowerCase() === 'true',
+    num: Number(row[9]) || 0,
   };
 }
 
@@ -35,6 +36,7 @@ function personnelToRow(p: Personnel): string[] {
     p.id, p.rank, p.firstName, p.lastName,
     String(p.batch), p.phone || '',
     p.status, String(p.dutyCount), String(p.isNCOEligible || false),
+    String(p.num || 0)
   ];
 }
 
@@ -45,7 +47,7 @@ export async function GET() {
     const sheets = google.sheets({ version: 'v4', auth });
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Personnel!A2:I', // skip header row
+      range: 'Personnel!A2:J', // skip header row
     });
     const rows = (res.data.values || []).filter(r => r[0]);
     return NextResponse.json({ personnel: rows.map(rowToPersonnel) });
@@ -67,10 +69,10 @@ export async function POST(request: Request) {
     // Clear and rewrite
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
-      range: 'Personnel!A1:I',
+      range: 'Personnel!A1:J',
     });
 
-    const header = [['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible']];
+    const header = [['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible', 'num']];
     const values = [
       ...header,
       ...personnel.map(personnelToRow),

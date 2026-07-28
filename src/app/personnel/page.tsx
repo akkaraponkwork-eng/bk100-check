@@ -152,7 +152,6 @@ function ExcelImportModal({
                   borderBottom: '1px solid var(--color-border)',
                   display: 'flex', gap: 8, alignItems: 'center',
                 }}>
-                  <span style={{ color: 'var(--color-text-muted)', minWidth: 24 }}>{i + 1}.</span>
                   <span style={{ color: 'var(--color-primary-light)', minWidth: 60 }}>{p.rank}</span>
                   <span>{p.firstName} {p.lastName}</span>
                   {p.batch > 0 && <span className="badge badge-gray">ผลัด {p.batch}</span>}
@@ -179,9 +178,10 @@ function ExcelImportModal({
 
 // ==================== Add/Edit Modal ====================
 function PersonnelModal({
-  person, onClose, onSave,
+  person, nextNum, onClose, onSave,
 }: {
   person: Partial<Personnel> | null;
+  nextNum: number;
   onClose: () => void;
   onSave: (p: Omit<Personnel, 'id'>) => void;
 }) {
@@ -194,6 +194,7 @@ function PersonnelModal({
     status: person?.status || 'available',
     dutyCount: person?.dutyCount || 0,
     isNCOEligible: person?.isNCOEligible || false,
+    num: person?.num ?? nextNum,
   });
 
   const set = (k: keyof typeof form, v: unknown) =>
@@ -251,16 +252,24 @@ function PersonnelModal({
           <input className="input" type="number" value={form.dutyCount} onChange={e => set('dutyCount', Number(e.target.value))} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
-          <input
-            type="checkbox" id="nco-eligible"
-            checked={form.isNCOEligible || false}
-            onChange={e => set('isNCOEligible', e.target.checked)}
-            style={{ width: 18, height: 18 }}
-          />
-          <label htmlFor="nco-eligible" style={{ fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <PersonIcon fontSize="small" style={{ color: '#f59e0b' }} /> สามารถเป็นสิบเวรได้
-          </label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
+            <input
+              type="checkbox" id="nco-eligible"
+              checked={form.isNCOEligible || false}
+              onChange={e => set('isNCOEligible', e.target.checked)}
+              style={{ width: 18, height: 18 }}
+            />
+            <label htmlFor="nco-eligible" style={{ fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <PersonIcon fontSize="small" style={{ color: '#f59e0b' }} /> เป็นสิบเวรได้
+            </label>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>หมายเลขคิว</span>
+            </label>
+            <input className="input" type="number" value={form.num} onChange={e => set('num', Number(e.target.value))} />
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -377,9 +386,13 @@ function PersonnelPageInner() {
   };
 
   const handleImport = async (imported: Omit<Personnel, 'id' | 'status' | 'dutyCount'>[]) => {
-    const newList: Personnel[] = imported.map(p => ({
-      ...p, id: crypto.randomUUID(), status: 'available', dutyCount: 0,
-    }));
+    let currentMaxNum = Math.max(0, ...personnel.map(p => p.num || 0));
+    const newList: Personnel[] = imported.map(p => {
+      currentMaxNum++;
+      return {
+        ...p, id: crypto.randomUUID(), status: 'available', dutyCount: 0, num: currentMaxNum
+      };
+    });
     const updated = [...personnel, ...newList];
     setPersonnel(updated);
     setShowImport(false);
@@ -399,14 +412,12 @@ function PersonnelPageInner() {
       </div>
 
       <div className="content-area">
-        {/* Search */}
         <input
           className="input" placeholder="ค้นหาชื่อ..."
           value={searchText} onChange={e => setSearchText(e.target.value)}
           style={{ marginBottom: 10 }}
         />
 
-        {/* Rank Type Filter */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           <button
             className={`btn btn-sm ${filterRankType === 'all' ? 'btn-primary' : 'btn-ghost'}`}
@@ -422,7 +433,6 @@ function PersonnelPageInner() {
           >นายสิบ/พล.อส.</button>
         </div>
 
-        {/* Filters */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${filterBatch === 'all' ? 'btn-primary' : 'btn-ghost'}`}
@@ -452,7 +462,6 @@ function PersonnelPageInner() {
           ))}
         </div>
 
-        {/* List */}
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 64 }} />)}
@@ -463,25 +472,22 @@ function PersonnelPageInner() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {paginated.map((p, i) => (
+            {paginated.map((p) => (
               <div key={p.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
-                <div style={{ minWidth: 24, fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                  {(page - 1) * ITEMS_PER_PAGE + i + 1}
-                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: 'var(--color-primary-light)' }}>{p.rank}</span>
                     <span className="truncate">{p.firstName} {p.lastName}</span>
-                    {p.isNCOEligible && <PersonIcon titleAccess="สิบเวร" style={{ fontSize: 16, color: '#f59e0b' }} />}
+                    {p.isNCOEligible && <StarIcon titleAccess="สิบเวร" style={{ fontSize: 16, color: '#f59e0b' }} />}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
+                    <span className="badge badge-gray" style={{ fontSize: 10 }}>คิวที่ {p.num || 0}</span>
                     <span className={`badge badge-${p.batch >= 169 ? 'junior' : 'senior'}`} style={{ fontSize: 10 }}>
                       ผลัด {p.batch}
                     </span>
                     <span className={`badge badge-${p.status}`} style={{ fontSize: 10 }}>
                       {STATUS_LABELS[p.status]}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>เวร {p.dutyCount} ครั้ง</span>
                   </div>
                 </div>
                 <button
@@ -520,18 +526,17 @@ function PersonnelPageInner() {
         )}
       </div>
 
-      {/* FAB */}
       <button className="fab" onClick={() => setEditPerson('new')} aria-label="เพิ่มกำลังพล">
         <AddIcon />
       </button>
 
-      {/* Modals */}
       {showImport && (
         <ExcelImportModal onClose={() => setShowImport(false)} onImport={handleImport} />
       )}
-      {(editPerson !== null) && (
+      {editPerson && (
         <PersonnelModal
           person={editPerson === 'new' ? null : editPerson}
+          nextNum={Math.max(0, ...personnel.map(p => p.num || 0)) + 1}
           onClose={() => setEditPerson(null)}
           onSave={editPerson === 'new' ? handleAdd : handleEdit}
         />

@@ -17,6 +17,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import html2canvas from 'html2canvas';
 
 type TaskStatus = KanbanTask['status'];
@@ -56,9 +57,21 @@ function TaskCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{task.title}</div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
             <span className="badge badge-gray" style={{ fontSize: 10 }}>{task.category}</span>
-            {task.location && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 2 }}><LocationOnIcon style={{ fontSize: 14 }} /> {task.location}</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: 4 }}>
+              <LocationOnIcon style={{ fontSize: 12, color: 'var(--color-text-muted)' }} />
+              <input
+                type="text"
+                value={task.location || ''}
+                onChange={e => onUpdate(task.id, { location: e.target.value })}
+                placeholder="เพิ่มสถานที่..."
+                style={{
+                  border: 'none', background: 'transparent', outline: 'none',
+                  fontSize: 11, color: 'var(--color-text-primary)', width: 90
+                }}
+              />
+            </div>
           </div>
         </div>
         
@@ -115,11 +128,16 @@ function TaskCard({
         )}
       </div>
 
-      {task.remark && (
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, background: 'var(--color-surface-2)', padding: '6px 8px', borderRadius: 6 }}>
-          <ChatIcon style={{ fontSize: 14 }} /> {task.remark}
-        </div>
-      )}
+      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-surface-2)', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--color-border)' }}>
+        <ChatIcon style={{ fontSize: 14 }} />
+        <input
+          type="text"
+          value={task.remark || ''}
+          onChange={e => onUpdate(task.id, { remark: e.target.value })}
+          placeholder="เพิ่มหมายเหตุ..."
+          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: 12, color: 'var(--color-text-primary)' }}
+        />
+      </div>
 
       {/* Status Segmented Control */}
       <div style={{ display: 'flex', marginTop: 12, background: 'var(--color-surface-2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
@@ -192,6 +210,59 @@ function AddTaskModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit
   );
 }
 
+// ==================== Summary Modal ====================
+function SummaryModal({ onClose, totalCompany, tasks }: { onClose: () => void; totalCompany: number | ''; tasks: KanbanTask[] }) {
+  const totalSenior = tasks.reduce((s, t) => s + (Number(t.countSenior) || 0), 0);
+  const totalJunior = tasks.reduce((s, t) => s + (Number(t.countJunior) || 0), 0);
+  const totalLegacy = tasks.reduce((s, t) => s + (Number(t.count) || 0), 0);
+  const totalDistributed = totalSenior + totalJunior + totalLegacy;
+  const remaining = typeof totalCompany === 'number' ? totalCompany - totalDistributed : 0;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <BarChartIcon fontSize="small" /> สรุปยอดกำลังพล
+        </h2>
+        <div style={{ padding: 16, background: 'var(--color-surface-2)', borderRadius: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 15 }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>ยอดรวมทั้งหมด</span>
+            <strong style={{ fontSize: 16 }}>{totalCompany || 0}</strong>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 15 }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>ยอดจ่ายงาน</span>
+            <strong style={{ fontSize: 16, color: 'var(--color-primary-light)' }}>{totalDistributed}</strong>
+          </div>
+          
+          <div style={{ paddingLeft: 16, fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+            <span>- รุ่นพี่</span>
+            <span style={{ fontWeight: 600 }}>{totalSenior}</span>
+          </div>
+          <div style={{ paddingLeft: 16, fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+            <span>- รุ่นน้อง</span>
+            <span style={{ fontWeight: 600 }}>{totalJunior}</span>
+          </div>
+          {totalLegacy > 0 && (
+            <div style={{ paddingLeft: 16, fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+              <span>- อื่นๆ (ไม่ระบุรุ่น)</span>
+              <span style={{ fontWeight: 600 }}>{totalLegacy}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--color-border)', fontSize: 15, fontWeight: 'bold' }}>
+            <span>ยอดคงเหลือ</span>
+            <span style={{ fontSize: 18, color: remaining < 0 ? '#ef4444' : '#10b981' }}>{remaining}</span>
+          </div>
+        </div>
+        
+        <button className="btn btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>ปิด</button>
+      </div>
+    </div>
+  );
+}
+
 // ==================== Headcount Footer ====================
 function HeadcountFooter({
   tasks, totalCompany, onChangeTotalCompany, onSave, saving,
@@ -203,6 +274,8 @@ function HeadcountFooter({
   saving: boolean;
 }) {
   const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
+  const totalSenior = tasks.reduce((s, t) => s + (Number(t.countSenior) || 0), 0);
+  const totalJunior = tasks.reduce((s, t) => s + (Number(t.countJunior) || 0), 0);
   const remaining = typeof totalCompany === 'number' ? totalCompany - totalDistributed : 0;
   const isOver = remaining < 0;
 
@@ -226,10 +299,20 @@ function HeadcountFooter({
             style={{ width: 56, height: 36, background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-primary)', textAlign: 'center', fontSize: 15, fontWeight: 700, fontFamily: 'inherit' }}
           />
         </div>
-        {/* Distributed */}
+        {/* Senior */}
+        <div style={{ textAlign: 'center', minWidth: 32 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-primary-light)' }}>พี่</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-primary-light)' }}>{totalSenior}</div>
+        </div>
+        {/* Junior */}
+        <div style={{ textAlign: 'center', minWidth: 32 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-accent-light)' }}>น้อง</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent-light)' }}>{totalJunior}</div>
+        </div>
+        {/* Total Distributed */}
         <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>จ่าย</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-primary-light)' }}>{totalDistributed}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>ยอดจ่ายรวม</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalDistributed}</div>
         </div>
         {/* Remaining */}
         <div style={{ textAlign: 'center', minWidth: 48 }}>
@@ -375,6 +458,7 @@ export default function DutyCheckPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
   const { toast, show: showToast } = useToast();
 
@@ -508,7 +592,10 @@ export default function DutyCheckPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => window.print()} title="พิมพ์แบบฟอร์ม PDF" style={{ padding: '0 8px' }}>
             <PictureAsPdfIcon fontSize="small" />
           </button>
-          <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={loadLatest}><RefreshIcon fontSize="small" /></button>
+          <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={loadLatest} title="โหลดข้อมูลล่าสุด"><RefreshIcon fontSize="small" /></button>
+          <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 8px' }} onClick={() => setShowSummary(true)}>
+            <BarChartIcon fontSize="small" /> สรุป
+          </button>
           <button className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 2 }} onClick={() => setShowAdd(true)}><AddIcon fontSize="small" /> งาน</button>
         </div>
 
@@ -575,6 +662,7 @@ export default function DutyCheckPage() {
       />
 
       {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
+      {showSummary && <SummaryModal onClose={() => setShowSummary(false)} totalCompany={totalCompany} tasks={tasks} />}
       </div>
     </div>
   );
