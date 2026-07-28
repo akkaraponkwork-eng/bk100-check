@@ -13,6 +13,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import StarIcon from '@mui/icons-material/Star';
 
 const RANK_OPTIONS = ['พลฯ', 'ส.ต.', 'จ.ส.ต.', 'ส.อ.', 'จ.ส.อ.', 'พล.อส.', 'ส.ต.อ.', 'อื่นๆ'];
 const STATUS_LABELS: Record<Personnel['status'], string> = {
