@@ -23,7 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SearchablePersonnelSelect from '@/components/SearchablePersonnelSelect';
-
+import EditIcon from '@mui/icons-material/Edit';
 // ==================== Constants ====================
 const LOCATION = 'หน้าคลังอาวุธกองร้อยกองบังคับการ';
 
@@ -122,7 +122,20 @@ function PunishmentModal({
   });
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
+
+  const handleEdit = (idx: number) => {
+    const entry = list[idx];
+    setForm({
+      personnelId: entry.personnelId,
+      shift: entry.shift,
+      startDate: entry.startDate,
+      endDate: entry.endDate,
+    });
+    setEditIndex(idx);
+    setShowForm(true);
+  };
 
   const handleAdd = () => {
     if (!form.personnelId) return;
@@ -135,7 +148,17 @@ function PunishmentModal({
       endDate: format(d, 'yyyy-MM-dd')
     }));
 
-    setList(prev => [...prev, ...newEntries]);
+    if (editIndex !== null) {
+      setList(prev => {
+        const copy = [...prev];
+        copy.splice(editIndex, 1, ...newEntries);
+        return copy;
+      });
+      setEditIndex(null);
+    } else {
+      setList(prev => [...prev, ...newEntries]);
+    }
+
     setForm({ personnelId: '', shift: 1, startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
     setShowForm(false);
   };
@@ -168,7 +191,15 @@ function PunishmentModal({
         {/* Add form toggle */}
         <button
           className={`btn btn-sm w-full ${showForm ? 'btn-ghost' : 'btn-primary'}`}
-          onClick={() => setShowForm(v => !v)}
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditIndex(null);
+              setForm({ personnelId: '', shift: 1, startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
+            } else {
+              setShowForm(true);
+            }
+          }}
           style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
         >
           {showForm ? <><CloseIcon fontSize="small" /> ยกเลิก</> : <><AddIcon fontSize="small" /> เพิ่มดองเวร</>}
@@ -205,7 +236,7 @@ function PunishmentModal({
                 onClick={handleAdd}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
               >
-                <AddIcon fontSize="small" /> เพิ่ม
+                {editIndex !== null ? <><SaveIcon fontSize="small" /> บันทึกแก้ไข</> : <><AddIcon fontSize="small" /> เพิ่ม</>}
               </button>
             </div>
           </div>
@@ -230,9 +261,14 @@ function PunishmentModal({
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
                   </div>
-                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                    <DeleteIcon fontSize="small" />
-                  </button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => handleEdit(idx)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}>
+                      <EditIcon fontSize="small" />
+                    </button>
+                    <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}>
+                      <DeleteIcon fontSize="small" />
+                    </button>
+                  </div>
                 </div>
               );
             });
@@ -623,11 +659,13 @@ function DayDetailModal({
 
     const newSlots = Array(6).fill('');
 
-    let pIdx = 0;
-    for (let i = 5; i >= 0 && pIdx < punishedIds.length; i--) {
-      newSlots[i] = punishedIds[pIdx];
-      pIdx++;
-    }
+    // จัดคนดองเวรลงตามผลัดที่กำหนดไว้
+    todayPunishments.forEach(p => {
+      const shiftIdx = p.shift - 1;
+      if (shiftIdx >= 0 && shiftIdx < 6) {
+        newSlots[shiftIdx] = p.personnelId;
+      }
+    });
 
     // Calculate pointer by counting regular assignments in this month up to yesterday
     const targetDate = parseISO(date);
