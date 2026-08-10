@@ -14,6 +14,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import StarIcon from '@mui/icons-material/Star';
+import DownloadIcon from '@mui/icons-material/Download';
 
 const RANK_OPTIONS = ['พลฯ', 'ส.ต.', 'จ.ส.ต.', 'ส.อ.', 'จ.ส.อ.', 'พล.อส.', 'ส.ต.อ.', 'อื่นๆ'];
 const STATUS_LABELS: Record<Personnel['status'], string> = {
@@ -57,17 +58,37 @@ function ExcelImportModal({
     if (file) handleFile(file);
   };
 
-  const mappedPersonnel = rows.map(row => ({
-    rank: String(row[mapping.rank] || ''),
-    firstName: String(row[mapping.firstName] || ''),
-    lastName: String(row[mapping.lastName] || ''),
-    batch: Number(row[mapping.batch]) || 0,
-    phone: String(row[mapping.phone] || ''),
-    isNCOEligible: false,
-  })).filter(p => p.firstName);
+  const mappedPersonnel = rows.map(row => {
+    let r = String(row[mapping.rank] || '').trim();
+    if (!r || r === 'พลทหาร' || r === 'พล.ทหาร' || r === 'พลทหารฯ' || r === 'พล.ฯ') {
+      r = 'พลฯ';
+    }
+    return {
+      rank: r,
+      firstName: String(row[mapping.firstName] || '').trim(),
+      lastName: String(row[mapping.lastName] || '').trim(),
+      batch: Number(row[mapping.batch]) || 0,
+      phone: String(row[mapping.phone] || '').trim(),
+      isNCOEligible: r !== 'พลฯ',
+    };
+  }).filter(p => p.firstName);
 
   const fieldLabels: Record<keyof ExcelColumnMapping, string> = {
     rank: 'ยศ', firstName: 'ชื่อ', lastName: 'นามสกุล', batch: 'ผลัด', phone: 'เบอร์โทร',
+  };
+
+  const handleDownloadTemplate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ws = XLSX.utils.json_to_sheet([{
+      'ยศ': 'พลฯ',
+      'ชื่อ': 'สมชาย',
+      'นามสกุล': 'รักชาติ',
+      'ผลัด': '169',
+      'เบอร์โทร': '0812345678'
+    }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.writeFile(wb, 'personnel_template.xlsx');
   };
 
   return (
@@ -92,6 +113,7 @@ function ExcelImportModal({
         </div>
 
         {step === 'upload' && (
+          <>
           <div
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
@@ -110,6 +132,14 @@ function ExcelImportModal({
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
           </div>
+          <button
+            className="btn btn-ghost w-full mt-4"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13 }}
+            onClick={handleDownloadTemplate}
+          >
+            <DownloadIcon fontSize="small" /> ดาวน์โหลดไฟล์ต้นแบบ (Template)
+          </button>
+        </>
         )}
 
         {step === 'map' && (
@@ -389,9 +419,12 @@ function PersonnelPageInner() {
   const handleImport = async (imported: Omit<Personnel, 'id' | 'status' | 'dutyCount'>[]) => {
     let currentMaxNum = Math.max(0, ...personnel.map(p => p.num || 0));
     const newList: Personnel[] = imported.map(p => {
-      currentMaxNum++;
+      const isPrivate = p.rank === 'พลฯ';
+      if (isPrivate) {
+        currentMaxNum++;
+      }
       return {
-        ...p, id: crypto.randomUUID(), status: 'available', dutyCount: 0, num: currentMaxNum
+        ...p, id: crypto.randomUUID(), status: 'available', dutyCount: 0, num: isPrivate ? currentMaxNum : 0
       };
     });
     const updated = [...personnel, ...newList];

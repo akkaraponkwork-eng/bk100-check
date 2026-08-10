@@ -14,6 +14,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 
 // ==================== Stat Card ====================
 function StatCard({
@@ -328,6 +329,7 @@ export default function DashboardPage() {
 
   const privatesCount = personnel.filter(p => p.rank === 'พลฯ').length;
   const ncosCount = personnel.filter(p => p.rank !== 'พลฯ').length;
+  const leaveCount = personnel.filter(p => p.status === 'leave').length;
 
   const ncoPersonnel = todayNCO
     ? personnel.find(p => p.id === todayNCO.personnelId)
@@ -400,6 +402,12 @@ export default function DashboardPage() {
               value={lastRecord ? `${lastRecord.totalCompany} นาย` : '—'}
               sub={lastRecord ? format(parseISO(lastRecord.date), 'd MMM', { locale: th }) : 'ยังไม่มีข้อมูล'}
               accent="#8b5cf6"
+            />
+            <StatCard
+              icon={<DirectionsWalkIcon />} label="ทหารลา"
+              value={`${leaveCount} นาย`}
+              sub="กำลังพลที่ลาพัก"
+              accent="#ef4444"
             />
           </div>
         )}
