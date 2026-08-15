@@ -1,0 +1,10 @@
+const webpush = require('web-push');
+const vapidKeys = webpush.generateVAPIDKeys();
+const fs = require('fs');
+const envPath = '.env.local';
+let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+envContent += '\n# Web Push VAPID Keys\n';
+envContent += `NEXT_PUBLIC_VAPID_PUBLIC_KEY=${vapidKeys.publicKey}\n`;
+envContent += `VAPID_PRIVATE_KEY=${vapidKeys.privateKey}\n`;
+fs.writeFileSync(envPath, envContent);
+console.log('VAPID keys generated and saved to .env.local!');

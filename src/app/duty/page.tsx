@@ -5,9 +5,13 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   isToday, parseISO, addMonths, subMonths, subDays
 } from 'date-fns';
+import {
+  DialogTitle, DialogContent, DialogActions, Select, MenuItem,
+  Badge, Tooltip, Zoom, SwipeableDrawer, Box, Button, CircularProgress
+} from '@mui/material';
 import { th } from 'date-fns/locale';
 import type { Personnel, DutyShift, ShiftSlot, CalendarEvent, KanbanTask, PunishmentEntry, ExceptionEntry } from '@/types';
-import { useToast, Toast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/useToast';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -22,8 +26,10 @@ import StarIcon from '@mui/icons-material/Star';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import SearchablePersonnelSelect from '@/components/SearchablePersonnelSelect';
+import SearchablePersonnelSelect from '@/components/common/SearchablePersonnelSelect';
 import EditIcon from '@mui/icons-material/Edit';
+import PageHeader from '@/components/layout/PageHeader';
+import GavelIcon from '@mui/icons-material/Gavel';
 // ==================== Constants ====================
 const LOCATION = 'หน้าคลังอาวุธกองร้อยกองบังคับการ';
 
@@ -42,6 +48,26 @@ const SHIFT_COLORS = ['#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#e
 
 
 // ==================== Helpers ====================
+function sortPersonnelByBatchAndNum(a: Personnel, b: Personnel): number {
+  const batchA = a.batch || 0;
+  const batchB = b.batch || 0;
+
+  const yearA = batchA % 100;
+  const termA = Math.floor(batchA / 100);
+
+  const yearB = batchB % 100;
+  const termB = Math.floor(batchB / 100);
+
+  if (yearA !== yearB) {
+    return yearA - yearB;
+  }
+  if (termA !== termB) {
+    return termA - termB;
+  }
+
+  return (a.num || 0) - (b.num || 0);
+}
+
 function getCurrentShift(): number {
   const now = new Date();
   const total = now.getHours() * 60 + now.getMinutes();
@@ -653,7 +679,7 @@ function DayDetailModal({
     const available = personnel
       .filter(p => p.rank.includes('พลฯ'))
       .filter(p => isPersonnelAvailable(p, date, exceptions))
-      .sort((a, b) => (a.num || 0) - (b.num || 0));
+      .sort(sortPersonnelByBatchAndNum);
 
     const availableNotPunished = available.filter(p => !punishedIds.includes(p.id));
 
@@ -676,6 +702,7 @@ function DayDetailModal({
     const pastDates = Object.keys(shiftsMap).filter(d => d < date).sort().reverse();
     for (const d of pastDates) {
       const shift = shiftsMap[d];
+      if (!shift || !shift.timeSlots) continue;
       const sortedSlots = [...shift.timeSlots].sort((a, b) => b.order - a.order);
       const lastSlot = sortedSlots.find(s => s.personnelId && !s.isPunishment);
       if (lastSlot) {
@@ -968,8 +995,8 @@ function MonthCalendar({
                   borderLeft: dow !== 0 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', marginBottom: 2 }}>
-                  <div style={{
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, width: '100%', mb: 0.5 }}>
+                  <Box sx={{
                     width: 22, height: 22, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: todayClass ? 700 : 400,
@@ -978,30 +1005,48 @@ function MonthCalendar({
                     flexShrink: 0,
                   }}>
                     {format(day, 'd')}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {hasAssistant && <div style={{ fontSize: 8, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center' }}><StarIcon style={{ fontSize: 9, marginRight: 1 }} /> ผู้ช่วย</div>}
-                    {hasPunishment && <div style={{ fontSize: 8, color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center' }}><BlockIcon style={{ fontSize: 9, marginRight: 1 }} /> ดองเวร</div>}
-                  </div>
-                </div>
-                {previews.length > 0 ? (
-                  <div style={{ width: '100%' }}>
-                    {previews.map((name, i) => (
-                      <div key={i} style={{
-                        fontSize: 8, color: 'var(--color-text-secondary)',
-                        borderLeft: `2px solid ${SHIFT_COLORS[i]}`,
-                        paddingLeft: 2, marginBottom: 1, lineHeight: 1.4,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {name}
-                      </div>
-                    ))}
-                    {filledCount > 3 && (
-                      <div style={{ fontSize: 8, color: 'var(--color-text-muted)', paddingLeft: 3 }}>+{filledCount - 3}</div>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, flexWrap: 'wrap', gap: 0.5 }}>
+                    {hasAssistant && (
+                      <Box sx={{ fontSize: 8, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        <StarIcon sx={{ fontSize: 10, mr: { xs: 0, md: '1px' } }} />
+                        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>ผู้ช่วย</Box>
+                      </Box>
                     )}
-                  </div>
+                    {hasPunishment && (
+                      <Box sx={{ fontSize: 8, color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        <BlockIcon sx={{ fontSize: 10, mr: { xs: 0, md: '1px' } }} />
+                        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>ดองเวร</Box>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+
+                {filledCount > 0 ? (
+                  <>
+                    {/* Desktop View: Text Previews */}
+                    <Box sx={{ width: '100%', display: { xs: 'none', md: 'block' } }}>
+                      {previews.map((name, i) => (
+                        <div key={i} style={{
+                          fontSize: 8, color: 'var(--color-text-secondary)',
+                          borderLeft: `2px solid ${SHIFT_COLORS[i]}`,
+                          paddingLeft: 2, marginBottom: 1, lineHeight: 1.4,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {name}
+                        </div>
+                      ))}
+                      {filledCount > 3 && (
+                        <div style={{ fontSize: 8, color: 'var(--color-text-muted)', paddingLeft: 3 }}>+{filledCount - 3}</div>
+                      )}
+                    </Box>
+                    {/* Mobile View: Single Status Dot */}
+                    <Box sx={{ width: '100%', display: { xs: 'flex', md: 'none' }, justifyContent: 'center', py: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.4)' }} />
+                    </Box>
+                  </>
                 ) : (
-                  <div style={{ fontSize: 8, color: 'var(--color-border-light)', paddingLeft: 3 }}>—</div>
+                  <Box sx={{ fontSize: 8, color: 'var(--color-border-light)', pl: '3px' }}>—</Box>
                 )}
               </button>
             );
@@ -1043,7 +1088,7 @@ export default function DutyPage() {
   const [showExempt, setShowExempt] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const { toast, show: showToast } = useToast();
+  const { showToast } = useToast();
 
   const monthKey = format(viewDate, 'yyyy-MM');
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
@@ -1065,8 +1110,8 @@ export default function DutyPage() {
       setExceptions(metaData.exceptions || []);
 
       const map: Record<string, DutyShift> = {};
-      (dData.shifts || []).forEach((s: { date: string; shift: DutyShift }) => {
-        map[s.date] = s.shift; // Store all shifts so we can check history
+      (dData.shifts || []).forEach((s: any) => {
+        map[s.date] = s.shift || s; // Store all shifts so we can check history
       });
       setShiftsMap(map);
     } catch {
@@ -1120,7 +1165,7 @@ export default function DutyPage() {
 
       const allPersonnel = [...personnel]
         .filter(p => p.rank.includes('พลฯ'))
-        .sort((a, b) => (a.num || 0) - (b.num || 0));
+        .sort(sortPersonnelByBatchAndNum);
 
       const newMap: Record<string, DutyShift> = {};
 
@@ -1203,30 +1248,43 @@ export default function DutyPage() {
 
   return (
     <div style={{ paddingBottom: 'calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)' }}>
-      <Toast toast={toast} />
-
       {/* Header */}
-      <div className="page-header">
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <AccessTimeIcon fontSize="small" /> จัดตารางเวร
-          </h1>
-          <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{LOCATION}</div>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleGenerateMonth}
-            disabled={generating || loading}
-            style={{ display: 'flex', alignItems: 'center', gap: 3 }}
-          >
-            {generating ? '...' : <><BoltIcon fontSize="small" /> ออโต้</>}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="จัดเวรยาม"
+        description={`สถานที่: ${LOCATION}`}
+        action={
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleGenerateMonth}
+              disabled={generating || loading}
+              sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}
+            >
+              {generating ? <CircularProgress size={16} color="inherit" /> : <BoltIcon sx={{ mr: { xs: 0, sm: 1 } }} />}
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                {generating ? 'กำลังสร้าง...' : 'ออโต้'}
+              </Box>
+            </Button>
+            <Button onClick={() => setShowException(true)} variant="outlined" color="primary" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
+              <BlockIcon sx={{ mr: { xs: 0, sm: 1 } }} />
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>งดเวร</Box>
+            </Button>
+            <Button onClick={() => setShowExempt(true)} variant="outlined" color="warning" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
+              <StarIcon sx={{ mr: { xs: 0, sm: 1 } }} />
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>ผช.สิบเวร</Box>
+            </Button>
+            <Button onClick={() => setShowPunishment(true)} variant="contained" color="error" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
+              <GavelIcon sx={{ mr: { xs: 0, sm: 1 } }} />
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>ดองเวร</Box>
+            </Button>
+          </Box>
+        }
+      />
 
-      {/* Badge summary */}
-      {(punishments.length > 0 || exceptions.length > 0) && (
+      <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        {/* Badge summary */}
+        {/* {(punishments.length > 0 || exceptions.length > 0) && (
         <div style={{ display: 'flex', gap: 8, padding: '6px 16px', background: 'var(--color-surface)' }}>
           {punishments.length > 0 && (
             <div style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, color: '#ef4444' }}>
@@ -1239,68 +1297,69 @@ export default function DutyPage() {
             </div>
           )}
         </div>
-      )}
+      )} */}
 
-      <div className="content-area">
-        {loading ? (
-          <div className="skeleton" style={{ height: 420, borderRadius: 12 }} />
-        ) : (
-          <MonthCalendar
-            viewDate={viewDate}
-            shiftsMap={shiftsMap}
-            personnelMap={personnelMap}
+        <div className="layout-content">
+          {loading ? (
+            <div className="skeleton" style={{ height: 420, borderRadius: 12 }} />
+          ) : (
+            <MonthCalendar
+              viewDate={viewDate}
+              shiftsMap={shiftsMap}
+              personnelMap={personnelMap}
+              exceptions={exceptions}
+              punishments={punishments}
+              onSelectDay={setSelectedDate}
+              onPrev={() => setViewDate(d => subMonths(d, 1))}
+              onNext={() => setViewDate(d => addMonths(d, 1))}
+            />
+          )}
+        </div>
+
+        {/* Modals */}
+        {selectedDate && (
+          <DayDetailModal
+            date={selectedDate}
+            shift={selectedShift}
+            personnel={personnel}
             exceptions={exceptions}
             punishments={punishments}
-            onSelectDay={setSelectedDate}
-            onPrev={() => setViewDate(d => subMonths(d, 1))}
-            onNext={() => setViewDate(d => addMonths(d, 1))}
+            onClose={() => setSelectedDate(null)}
+            onSave={handleSaveDay}
+            onOpenPunishment={() => setShowPunishment(true)}
+            onOpenException={() => setShowException(true)}
+            onOpenExempt={() => setShowExempt(true)}
+            shiftsMap={shiftsMap}
           />
         )}
-      </div>
-
-      {/* Modals */}
-      {selectedDate && (
-        <DayDetailModal
-          date={selectedDate}
-          shift={selectedShift}
-          personnel={personnel}
-          exceptions={exceptions}
-          punishments={punishments}
-          onClose={() => setSelectedDate(null)}
-          onSave={handleSaveDay}
-          onOpenPunishment={() => setShowPunishment(true)}
-          onOpenException={() => setShowException(true)}
-          onOpenExempt={() => setShowExempt(true)}
-          shiftsMap={shiftsMap}
-        />
-      )}
-      {showPunishment && (
-        <PunishmentModal
-          punishments={punishments}
-          personnel={personnel}
-          initialDate={selectedDate || undefined}
-          onSave={handleSavePunishments}
-          onClose={() => setShowPunishment(false)}
-        />
-      )}
-      {showException && (
-        <ExceptionModal
-          exceptions={exceptions}
-          personnel={personnel}
-          initialDate={selectedDate || undefined}
-          onSave={handleSaveExceptions}
-          onClose={() => setShowException(false)}
-        />
-      )}
-      {showExempt && (
-        <ExemptModal
-          exceptions={exceptions}
-          personnel={personnel}
-          initialDate={selectedDate || undefined}
-          onSave={handleSaveExceptions}
-          onClose={() => setShowExempt(false)}
-        />
-      )}
+        {showPunishment && (
+          <PunishmentModal
+            punishments={punishments}
+            personnel={personnel}
+            initialDate={selectedDate || undefined}
+            onSave={handleSavePunishments}
+            onClose={() => setShowPunishment(false)}
+          />
+        )}
+        {showException && (
+          <ExceptionModal
+            exceptions={exceptions}
+            personnel={personnel}
+            initialDate={selectedDate || undefined}
+            onSave={handleSaveExceptions}
+            onClose={() => setShowException(false)}
+          />
+        )}
+        {showExempt && (
+          <ExemptModal
+            exceptions={exceptions}
+            personnel={personnel}
+            initialDate={selectedDate || undefined}
+            onSave={handleSaveExceptions}
+            onClose={() => setShowExempt(false)}
+          />
+        )}
+      </Box>
     </div>
   );
 }

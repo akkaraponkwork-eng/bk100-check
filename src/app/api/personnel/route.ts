@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 
 export const dynamic = 'force-dynamic';
@@ -40,19 +41,74 @@ function personnelToRow(p: Personnel): string[] {
   ];
 }
 
+const getCachedPersonnel = unstable_cache(
+  async () => {
+    const { auth, sheetId } = getSheetAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+    const res = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: sheetId,
+      ranges: ['Personnel!A2:J', 'Leave!A2:J', 'DutyMeta!A2:G'],
+    });
+    
+    const personnelRows = res.data.valueRanges?.[0].values || [];
+    const leaveRows = res.data.valueRanges?.[1].values || [];
+    const metaRows = res.data.valueRanges?.[2].values || [];
+
+    const personnelList = personnelRows.filter(r => r[0]).map(rowToPersonnel);
+    return { personnelList, leaveRows, metaRows };
+  },
+  ['personnel-data'],
+  { tags: ['personnel'], revalidate: 60 }
+);
+
 // GET /api/personnel
 export async function GET() {
   try {
-    const { auth, sheetId } = getSheetAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: 'Personnel!A2:J', // skip header row
-    });
-    const rows = (res.data.values || []).filter(r => r[0]);
-    return NextResponse.json({ personnel: rows.map(rowToPersonnel) });
+    const { personnelList, leaveRows, metaRows } = await getCachedPersonnel();
+    
+    // Create a deep copy to avoid mutating cached object
+    const personnelListCopy = JSON.parse(JSON.stringify(personnelList)) as Personnel[];
+    
+    // Get today in local time (UTC+7 for Thailand)
+    const d = new Date();
+    d.setHours(d.getHours() + 7);
+    const today = d.toISOString().split('T')[0];
+
+    // Compute dynamic status
+    for (const p of personnelListCopy) {
+      // Find active leave
+      const activeLeave = leaveRows.find((l: any) => 
+        l[1] === p.id && 
+        l[6] === 'approved' && 
+        l[3] <= today && l[4] >= today
+      );
+      
+      if (activeLeave) {
+        p.status = 'leave';
+        continue;
+      }
+      
+      // Find active DutyMeta exception
+      const activeMeta = metaRows.find((m: any) => 
+        m[1] === 'exception' && 
+        m[2] === p.id && 
+        m[4] <= today && m[5] >= today
+      );
+      
+      if (activeMeta) {
+        if (activeMeta[3] === 'ป่วย') p.status = 'sick';
+        else p.status = 'leave'; // ธุระการ, งดเวร
+        continue;
+      }
+      
+      // Do not overwrite native status if they are manually marked as leave or sick in the sheet.
+      if (!p.status) p.status = 'available';
+    }
+
+    return NextResponse.json({ personnel: personnelListCopy });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Error';
+    console.error('Personnel GET Error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
@@ -84,6 +140,9 @@ export async function POST(request: Request) {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values },
     });
+
+    // @ts-expect-error: Next.js types incorrectly expect 2 arguments
+    revalidateTag('personnel');
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

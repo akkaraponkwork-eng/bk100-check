@@ -56,7 +56,8 @@ export interface ShiftSlot {
   id: string;
   start: string;         // "18:00"
   end: string;           // "20:00"
-  personnelId: string;
+  personnelId: string;   // Personnel.id หรือ '' ถ้าว่าง
+  customName?: string;   // ชื่อนอกระบบ (ไม่มีใน Personnel list)
   order: number;
   isPunishment?: boolean;
 }
@@ -117,4 +118,57 @@ export interface Task {
   count: number | '';
   remark: string;
   isFixed?: boolean;
+}
+
+// ==================== Auth & Roles ====================
+export type UserRole = 'admin' | 'commander' | 'duty_officer' | 'nco' | 'personnel';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'ผู้ดูแลระบบ',
+  commander: 'ผู้บังคับบัญชา',
+  duty_officer: 'นายเวร',
+  nco: 'นายสิบเวร',
+  personnel: 'กำลังพล',
+};
+
+export interface AppUser {
+  lineUserId: string;
+  personnelId: string;
+  role: UserRole;
+  displayName: string;
+  pictureUrl?: string;
+}
+
+// ==================== Leave Management ====================
+export type LeaveType = 'เยี่ยมญาติ';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export interface LeaveRequest {
+  id: string;
+  personnelId: string;
+  type: LeaveType;
+  startDate: string;   // yyyy-MM-dd
+  endDate: string;     // yyyy-MM-dd
+  reason?: string;
+  status: LeaveStatus;
+  approvedBy?: string; // personnelId of approver
+  approvedAt?: string; // ISO datetime
+  createdAt: string;   // ISO datetime
+}
+
+export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
+  pending: 'รออนุมัติ',
+  approved: 'อนุมัติแล้ว',
+  rejected: 'ไม่อนุมัติ',
+};
+
+// ==================== Org Chart (ทำเนียบ) ====================
+export interface OrgChartMember {
+  id: string;
+  rank: string;
+  name: string;
+  position: string;
+  imageUrl?: string;
+  level: number; // 1 = Top Commander, 2 = Deputy, etc.
+  order: number; // For sorting within the same level
 }

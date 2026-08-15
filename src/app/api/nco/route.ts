@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 
 export const dynamic = 'force-dynamic';
-import type { NCODuty, NCOMonthlyRoster } from '@/types';
+import type { NCODuty } from '@/types';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -16,41 +17,48 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
+const getCachedNCORows = unstable_cache(
+  async () => {
+    const { auth, sheetId } = getSheetAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: 'NCO!A2:D', 
+    });
+    return res.data.values || [];
+  },
+  ['nco-data'],
+  { tags: ['nco'], revalidate: 60 }
+);
+
 // GET /api/nco?month=2026-08
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month'); // "2026-08"
 
-    const { auth, sheetId } = getSheetAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: 'NCO!A2:B', // Month, DutiesJSON
-    });
-    const rows = (res.data.values || []).filter(r => r[0]);
-
-    const rosters: NCOMonthlyRoster[] = rows.map(r => {
-      let duties: NCODuty[] = [];
-      try { duties = JSON.parse(r[1] || '[]'); } catch (e) {}
-      return { month: r[0], duties };
-    });
-
+    let rows = await getCachedNCORows();
+    
+    // Optional: filter by month if provided (date is YYYY-MM-DD)
     if (month) {
-      const roster = rosters.find(r => r.month === month);
-      return NextResponse.json({ duties: roster ? roster.duties : [] });
+      rows = rows.filter(r => r[1]?.startsWith(month));
     }
+    
+    const duties: NCODuty[] = rows.map(r => ({
+      id: r[0],
+      date: r[1],
+      personnelId: r[2],
+      remark: r[3] || ''
+    }));
 
-    // Return flattened duties if no month specified
-    const allDuties = rosters.flatMap(r => r.duties);
-    return NextResponse.json({ duties: allDuties });
+    return NextResponse.json({ duties });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// POST /api/nco — บันทึกตารางสิบเวรทั้งเดือน (bulk)
+// POST /api/nco — บันทึกตารางสิบเวรทั้งเดือน (bulk replace for a month)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -59,30 +67,40 @@ export async function POST(request: Request) {
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // อ่าน roster ที่มีอยู่
+    // อ่านข้อมูลที่มีอยู่
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'NCO!A2:B',
+      range: 'NCO!A2:D',
     });
-    const existingRows = (res.data.values || []).filter(r => r[0]);
-    const otherMonths = existingRows.filter(r => r[0] !== month);
+    const existingRows = res.data.values || [];
+    
+    // เก็บแถวที่ไม่ใช่เดือนนี้ไว้
+    const otherRows = existingRows.filter(r => !r[1]?.startsWith(month));
+
+    // แปลง duties ใหม่เป็นแถว
+    const newRows = duties.map(d => [d.id || crypto.randomUUID(), d.date, d.personnelId, d.remark || '']);
 
     // รวม
-    const allRows = [...otherMonths, [month, JSON.stringify(duties)]];
+    const allRows = [...otherRows, ...newRows];
 
-    // เขียนใหม่ทั้งหมด
+    // เคลียร์ของเก่า
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
-      range: 'NCO!A1:B',
+      range: 'NCO!A2:D',
     });
 
-    const header = [['Month', 'DutiesJSON']];
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: 'NCO!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [...header, ...allRows] },
-    });
+    // เขียนใหม่
+    if (allRows.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: 'NCO!A2',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: allRows },
+      });
+    }
+
+    // @ts-expect-error: Next.js types incorrectly expect 2 arguments
+    revalidateTag('nco');
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

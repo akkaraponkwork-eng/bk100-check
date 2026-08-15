@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import type { PunishmentEntry, ExceptionEntry } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,40 +16,65 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
-const RANGE = 'DutyMeta!A1:B';
+// Headers: ['id', 'type', 'personnelId', 'shift_or_reason', 'startDate', 'endDate', 'createdAt']
+const RANGE = 'DutyMeta!A2:G';
 
 // GET /api/duty-meta?type=punishment|exception
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // 'punishment' | 'exception'
+    const type = searchParams.get('type'); 
 
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Try to get data, handle sheet not existing
     let rows: string[][] = [];
+    let leaveRows: string[][] = [];
     try {
-      const res = await sheets.spreadsheets.values.get({
+      const res = await sheets.spreadsheets.values.batchGet({
         spreadsheetId: sheetId,
-        range: RANGE,
+        ranges: [RANGE, 'Leave!A2:J'],
       });
-      rows = (res.data.values || []).filter(r => r[0]);
+      rows = (res.data.valueRanges?.[0].values || []).filter((r: any) => r[0]);
+      leaveRows = (res.data.valueRanges?.[1].values || []).filter((r: any) => r[0]);
     } catch {
-      // Sheet might not exist yet
       return NextResponse.json({ punishments: [], exceptions: [] });
     }
 
-    let punishments: object[] = [];
-    let exceptions: object[] = [];
+    const punishments: PunishmentEntry[] = [];
+    const exceptions: ExceptionEntry[] = [];
 
+    // Process DutyMeta
     rows.forEach(row => {
-      if (!row[1]) return;
-      try {
-        const data = JSON.parse(row[1]);
-        if (row[0] === 'punishment') punishments = data;
-        if (row[0] === 'exception') exceptions = data;
-      } catch {}
+      const rowType = row[1];
+      if (rowType === 'punishment') {
+        punishments.push({
+          personnelId: row[2] || '',
+          shift: Number(row[3]) || 1,
+          startDate: row[4] || '',
+          endDate: row[5] || '',
+        });
+      } else if (rowType === 'exception') {
+        exceptions.push({
+          personnelId: row[2] || '',
+          reason: (row[3] as ExceptionEntry['reason']) || 'ป่วย',
+          startDate: row[4] || '',
+          endDate: row[5] || '',
+        });
+      }
+    });
+
+    // Process Leaves (append approved leaves as exceptions)
+    leaveRows.forEach(row => {
+      const status = row[6]; // 'pending', 'approved', 'rejected'
+      if (status === 'approved') {
+        exceptions.push({
+          personnelId: row[1] || '',
+          reason: 'ธุระการ', 
+          startDate: row[3] || '',
+          endDate: row[4] || '',
+        });
+      }
     });
 
     if (type === 'punishment') return NextResponse.json({ punishments });
@@ -71,7 +97,6 @@ export async function POST(request: Request) {
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Read existing
     let rows: string[][] = [];
     try {
       const res = await sheets.spreadsheets.values.get({
@@ -81,24 +106,41 @@ export async function POST(request: Request) {
       rows = (res.data.values || []).filter(r => r[0]);
     } catch {}
 
-    // Update the matching type row
-    const otherRows = rows.filter(r => r[0] !== type && r[0] !== 'Type');
-    const newRows = [...otherRows, [type, JSON.stringify(data)]];
+    // Filter out rows of the SAME type to overwrite them
+    const otherRows = rows.filter(r => r[1] !== type);
+    
+    const now = new Date().toISOString();
+    const newRows = data.map((item: any) => {
+      const shiftOrReason = type === 'punishment' ? String(item.shift) : item.reason;
+      return [
+        crypto.randomUUID(), // id
+        type,
+        item.personnelId,
+        shiftOrReason,
+        item.startDate,
+        item.endDate,
+        now
+      ];
+    });
 
-    // Clear and rewrite
+    const allDataToSave = [...otherRows, ...newRows];
+
+    // Clear and rewrite everything
     try {
       await sheets.spreadsheets.values.clear({
         spreadsheetId: sheetId,
-        range: RANGE,
+        range: 'DutyMeta!A2:G',
       });
     } catch {}
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: 'DutyMeta!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [['Type', 'DataJSON'], ...newRows] },
-    });
+    if (allDataToSave.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: 'DutyMeta!A2',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: allDataToSave },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

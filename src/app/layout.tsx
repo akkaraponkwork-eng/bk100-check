@@ -1,22 +1,29 @@
 import type { Metadata, Viewport } from 'next';
-import { Sarabun } from 'next/font/google';
+import { Noto_Sans_Thai, Inter } from 'next/font/google';
 import './globals.css';
-import BottomNav from '@/components/layout/BottomNav';
+import AppShell from '@/components/layout/AppShell';
 
-const sarabun = Sarabun({
+const notoSansThai = Noto_Sans_Thai({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['thai', 'latin'],
-  variable: '--font-sarabun',
+  variable: '--font-noto-sans-thai',
+  display: 'swap',
+});
+
+const inter = Inter({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-inter',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'BK100 — ระบบจัดการหน่วย',
-  description: 'ระบบจัดการกำลังพล เวรยาม และภารกิจประจำวัน ร้อย.บก.พัน.บร.กบร.ศบบ.',
+  description: 'ระบบ ERP สำหรับจัดการกำลังพล เวรยาม การลา และภารกิจประจำวัน',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'BK100',
   },
 };
@@ -27,17 +34,41 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#0f172a',
+  themeColor: '#0EA5E9',
 };
 
-export default function RootLayout({
+import ThemeRegistry from '@/components/ThemeRegistry';
+import { cookies } from 'next/headers';
+import type { AppUser } from '@/types';
+import { verifySessionToken } from '@/lib/session';
+import { ToastProvider } from '@/hooks/useToast';
+
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('bk100_session')?.value;
+  let user: AppUser | null = null;
+  
+  if (sessionToken) {
+    user = await verifySessionToken(sessionToken);
+  }
+
   return (
-    <html lang="th" className={sarabun.variable}>
+    <html lang="th" className={`${notoSansThai.variable} ${inter.variable}`} suppressHydrationWarning>
       <body>
-        <main>{children}</main>
-        <BottomNav />
+        <ThemeRegistry>
+          <ToastProvider>
+            <AppShell
+              userRole={user?.role || 'personnel'}
+              userName={user?.displayName || 'ไม่ได้เข้าสู่ระบบ'}
+              userRank=""
+              userPicture={user?.pictureUrl}
+            >
+              {children}
+            </AppShell>
+          </ToastProvider>
+        </ThemeRegistry>
       </body>
     </html>
   );

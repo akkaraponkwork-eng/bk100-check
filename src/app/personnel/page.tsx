@@ -3,18 +3,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import type { Personnel, ExcelColumnMapping, ExcelRow } from '@/types';
-import { useToast, Toast } from '@/hooks/useToast';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import ArticleIcon from '@mui/icons-material/Article';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
-import PersonIcon from '@mui/icons-material/Person';
-import GroupIcon from '@mui/icons-material/Group';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
-import DeleteIcon from '@mui/icons-material/Delete';
-import StarIcon from '@mui/icons-material/Star';
-import DownloadIcon from '@mui/icons-material/Download';
+import { useToast } from '@/hooks/useToast';
+import {
+  BarChart as BarChartIcon,
+  Article as ArticleIcon,
+  CheckCircle as CheckCircleIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
+  Delete as DeleteIcon,
+  Group as GroupIcon,
+  FileUpload as FileUploadIcon,
+  Download as DownloadIcon,
+  Star as StarIcon,
+  Person as PersonIcon,
+  FilterList as FilterListIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
+import { Box, Button, Pagination, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import PageHeader from '@/components/layout/PageHeader';
 
 const RANK_OPTIONS = ['พลฯ', 'ส.ต.', 'จ.ส.ต.', 'ส.อ.', 'จ.ส.อ.', 'พล.อส.', 'ส.ต.อ.', 'อื่นๆ'];
 const STATUS_LABELS: Record<Personnel['status'], string> = {
@@ -328,18 +335,19 @@ function PersonnelPageInner() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [editPerson, setEditPerson] = useState<Personnel | null | 'new'>(null);
   const [filterBatch, setFilterBatch] = useState<number | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterRankType, setFilterRankType] = useState<'all' | 'private' | 'nco'>('all');
   const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 20;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     setPage(1);
-  }, [filterBatch, filterStatus, filterRankType, searchText]);
-  const { toast, show: showToast } = useToast();
+  }, [filterBatch, filterStatus, filterRankType, searchText, rowsPerPage]);
+  const { showToast } = useToast();
 
   const loadPersonnel = useCallback(async () => {
     setLoading(true);
@@ -387,8 +395,12 @@ function PersonnelPageInner() {
     return true;
   });
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const activeFiltersCount = (filterRankType !== 'all' ? 1 : 0) 
+    + (filterBatch !== 'all' ? 1 : 0) 
+    + (filterStatus !== 'all' ? 1 : 0);
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const paginated = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
 
   const handleAdd = async (form: Omit<Personnel, 'id'>) => {
@@ -435,66 +447,43 @@ function PersonnelPageInner() {
   };
 
   return (
-    <div className="page-container">
-      <Toast toast={toast} />
+    <>
 
-      <div className="page-header">
-        <h1 style={{ fontSize: 16, fontWeight: 700, flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}><GroupIcon /> กำลังพล</h1>
-        <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setShowImport(true)}>
-          <FileUploadIcon fontSize="small" /> Import
-        </button>
-      </div>
+      <PageHeader
+        title="กำลังพล"
+        description="จัดการรายชื่อและข้อมูลกำลังพลในหน่วย"
+        action={
+          <Button onClick={() => setShowImport(true)} variant="outlined" size="small" startIcon={<FileUploadIcon />}>
+            นำเข้าบัญชี
+          </Button>
+        }
+      />
 
-      <div className="content-area">
-        <input
-          className="input" placeholder="ค้นหาชื่อ..."
-          value={searchText} onChange={e => setSearchText(e.target.value)}
-          style={{ marginBottom: 10 }}
-        />
-
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-          <button
-            className={`btn btn-sm ${filterRankType === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setFilterRankType('all')} style={{ flex: 1 }}
-          >ทั้งหมด</button>
-          <button
-            className={`btn btn-sm ${filterRankType === 'private' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setFilterRankType('private')} style={{ flex: 1 }}
-          >พลทหาร</button>
-          <button
-            className={`btn btn-sm ${filterRankType === 'nco' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setFilterRankType('nco')} style={{ flex: 1 }}
-          >นายสิบ/พล.อส.</button>
-        </div>
-
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-          <button
-            className={`btn btn-sm ${filterBatch === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setFilterBatch('all')}
-          >ทั้งหมด ({personnel.length})</button>
-          {batches.map(b => (
-            <button
-              key={b}
-              className={`btn btn-sm ${filterBatch === b ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setFilterBatch(b)}
+      <Box sx={{ maxWidth: 1200, mx: 'auto', pb: 10 }}>
+        <div className="content-area">
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <SearchIcon style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', fontSize: 20 }} />
+              <input
+                className="input" placeholder="ค้นหาชื่อ..."
+                value={searchText} onChange={e => setSearchText(e.target.value)}
+                style={{ width: '100%', paddingLeft: 40 }}
+              />
+            </div>
+            <button 
+              className={`btn ${activeFiltersCount > 0 ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setShowFilterModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px', border: activeFiltersCount > 0 ? 'none' : '1px solid var(--color-border)' }}
             >
-              ผลัด {b} ({personnel.filter(p => p.batch === b).length})
+              <FilterListIcon fontSize="small" />
+              <span style={{ display: 'inline-block' }}>ตัวกรอง</span>
+              {activeFiltersCount > 0 && (
+                <span style={{ background: 'white', color: 'var(--color-primary)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginLeft: 2 }}>
+                  {activeFiltersCount}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-          {['all', 'available', 'on_duty', 'leave', 'sick'].map(s => (
-            <button
-              key={s}
-              className={`btn btn-sm ${filterStatus === s ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setFilterStatus(s)}
-              style={{ fontSize: 12 }}
-            >
-              {s === 'all' ? 'สถานะทั้งหมด' : STATUS_LABELS[s as Personnel['status']]}
-            </button>
-          ))}
-        </div>
+          </div>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -536,25 +525,28 @@ function PersonnelPageInner() {
             ))}
 
             {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 16, paddingBottom: 12 }}>
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  disabled={page === 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                >
-                  ก่อนหน้า
-                </button>
-                <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                  หน้า {page} / {totalPages}
-                </span>
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  disabled={page === totalPages}
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                >
-                  ถัดไป
-                </button>
-              </div>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, pb: 2, flexWrap: 'wrap', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>แสดงหน้าละ:</span>
+                  <Select
+                    value={rowsPerPage.toString()}
+                    onChange={(e: SelectChangeEvent) => setRowsPerPage(Number(e.target.value))}
+                    size="small"
+                    sx={{ height: 32, fontSize: 13, '.MuiSelect-select': { py: 0.5 } }}
+                  >
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={20}>20</MenuItem>
+                    <MenuItem value={50}>50</MenuItem>
+                  </Select>
+                </Box>
+                <Pagination 
+                  count={totalPages} 
+                  page={page} 
+                  onChange={(_, value) => setPage(value)} 
+                  color="primary" 
+                  shape="rounded"
+                />
+              </Box>
             )}
           </div>
         )}
@@ -575,6 +567,60 @@ function PersonnelPageInner() {
           onSave={editPerson === 'new' ? handleAdd : handleEdit}
         />
       )}
-    </div>
+
+      {showFilterModal && (
+        <div className="modal-overlay" onClick={() => setShowFilterModal(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-handle" />
+            <div className="flex-between mb-4">
+              <h2 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <FilterListIcon fontSize="small" /> ตัวกรองกำลังพล
+              </h2>
+              <button className="btn-icon btn-sm" onClick={() => setShowFilterModal(false)}>✕</button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', paddingRight: 4, flex: 1, paddingBottom: 20 }}>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 10 }}>ประเภทกำลังพล</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className={`btn btn-sm ${filterRankType === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterRankType('all')} style={{ flex: 1 }}>ทั้งหมด</button>
+                  <button className={`btn btn-sm ${filterRankType === 'private' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterRankType('private')} style={{ flex: 1 }}>พลทหาร</button>
+                  <button className={`btn btn-sm ${filterRankType === 'nco' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterRankType('nco')} style={{ flex: 1 }}>นายสิบ/พล.อส.</button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 10 }}>ผลัด (พลทหาร)</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className={`btn btn-sm ${filterBatch === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterBatch('all')}>ทั้งหมด ({personnel.length})</button>
+                  {batches.map(b => (
+                    <button key={b} className={`btn btn-sm ${filterBatch === b ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterBatch(b)}>
+                      ผลัด {b} ({personnel.filter(p => p.batch === b).length})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 10 }}>สถานะปัจจุบัน</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['all', 'available', 'on_duty', 'leave', 'sick'].map(s => (
+                    <button key={s} className={`btn btn-sm ${filterStatus === s ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilterStatus(s)}>
+                      {s === 'all' ? 'สถานะทั้งหมด' : STATUS_LABELS[s as Personnel['status']]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid var(--color-border)', marginTop: 'auto' }}>
+              <button className="btn btn-ghost w-full" onClick={() => { setFilterRankType('all'); setFilterBatch('all'); setFilterStatus('all'); }}>ล้างตัวกรอง</button>
+              <button className="btn btn-primary w-full" onClick={() => setShowFilterModal(false)}>ดูผลลัพธ์ ({filtered.length})</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </Box>
+    </>
   );
 }

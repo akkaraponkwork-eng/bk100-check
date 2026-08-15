@@ -2,11 +2,24 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 
 const REQUIRED_SHEETS = [
-  { name: 'Records', headers: ['Date', 'TotalCompany', 'TotalDistributed', 'Remaining', 'TasksJSON'] },
-  { name: 'Personnel', headers: ['ID', 'Rank', 'FirstName', 'LastName', 'Batch', 'Phone', 'Status', 'DutyCount', 'IsNCOEligible'] },
-  { name: 'Duty', headers: ['Date', 'Location', 'ShiftJSON'] },
-  { name: 'NCO', headers: ['ID', 'Date', 'PersonnelID', 'Remark'] },
-  { name: 'DutyMeta', headers: ['Type', 'DataJSON'] },
+  // Core Data
+  { name: 'Personnel',     headers: ['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible', 'num'] },
+  
+  // Normalized Duty
+  { name: 'Duty',          headers: ['Date', 'Location'] },
+  { name: 'DutySlots',     headers: ['id', 'Date', 'start', 'end', 'personnelId', 'customName', 'order', 'isPunishment'] },
+  { name: 'DutyMeta',      headers: ['id', 'type', 'personnelId', 'shift_or_reason', 'startDate', 'endDate', 'createdAt'] },
+  { name: 'NCO',           headers: ['id', 'Date', 'personnelId', 'remark'] },
+  
+  // Normalized Records/Tasks
+  { name: 'Records',       headers: ['Date', 'TotalCompany', 'TotalDistributed', 'Remaining'] },
+  { name: 'Tasks',         headers: ['id', 'Date', 'title', 'category', 'location', 'count', 'countSenior', 'countJunior', 'status', 'remark', 'isFixed'] },
+  
+  // ERP v2
+  { name: 'Users',         headers: ['lineUserId', 'personnelId', 'role', 'displayName', 'pictureUrl'] },
+  { name: 'Leave',         headers: ['id', 'personnelId', 'type', 'startDate', 'endDate', 'reason', 'status', 'approvedBy', 'approvedAt', 'createdAt'] },
+  { name: 'Notifications', headers: ['id', 'userId', 'title', 'message', 'type', 'link', 'isRead', 'createdAt'] },
+  { name: 'OrgChart',      headers: ['id', 'rank', 'name', 'position', 'imageUrl', 'level', 'order'] },
 ];
 
 function getSheetAuth() {

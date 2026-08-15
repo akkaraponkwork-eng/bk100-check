@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { Personnel, NCODuty, DutyShift, KanbanTask } from '@/types';
-import { useToast, Toast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/useToast';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import PersonIcon from '@mui/icons-material/Person';
 import SecurityIcon from '@mui/icons-material/Security';
@@ -58,7 +58,7 @@ function DayDetailModal({
           {shift ? (
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 6 }}>{shift.location}</div>
-              {shift.timeSlots.sort((a, b) => a.order - b.order).map((slot, i) => {
+              {shift.timeSlots.slice().sort((a, b) => a.order - b.order).map((slot, i) => {
                 const p = personnelMap[slot.personnelId];
                 return (
                   <div key={slot.id} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
@@ -134,12 +134,12 @@ function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void })
 
             {/* Task list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {record.tasks.filter(t => getTaskTotal(t) > 0).map(t => {
+              {record.tasks.filter(t => getTaskTotal(t) > 0).map((t, idx) => {
                 const s = Number(t.countSenior) || 0;
                 const j = Number(t.countJunior) || 0;
                 const total = getTaskTotal(t);
                 return (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
+                  <div key={`${t.id}-${idx}`} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{t.title}</div>
                       {t.location && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{t.location}</div>}
@@ -164,16 +164,68 @@ function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void })
   );
 }
 
+// ==================== NCO Select Modal ====================
+function NCOSelectModal({
+  date, currentNCOId, personnel, onSave, onClose,
+}: {
+  date: Date;
+  currentNCOId: string | null;
+  personnel: Personnel[];
+  onSave: (personnelId: string) => void;
+  onClose: () => void;
+}) {
+  const dateStr = format(date, 'd MMMM yyyy', { locale: th });
+  const eligiblePersonnel = personnel.filter(p => p.isNCOEligible);
+
+  const [selectedId, setSelectedId] = useState(currentNCOId || '');
+
+  const handleSave = () => {
+    onSave(selectedId);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <PersonIcon fontSize="small" /> เลือกสิบเวรประจำวัน
+        </h2>
+        <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 20 }}>
+          วันที่ {dateStr}
+        </div>
+
+        <select
+          className="select w-full"
+          value={selectedId}
+          onChange={e => setSelectedId(e.target.value)}
+          style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 24 }}
+        >
+          <option value="">-- ไม่จัดสิบเวร --</option>
+          {eligiblePersonnel.map(p => (
+            <option key={p.id} value={p.id}>{p.rank}{p.firstName} {p.lastName}</option>
+          ))}
+        </select>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn btn-ghost w-full" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary w-full" onClick={handleSave}>บันทึก</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== Month Calendar ====================
 function MonthCalendar({
-  year, month, ncoByDate, shiftByDate, recordDates, mode, onSelectDay,
+  year, month, ncoByDate, shiftByDate, recordDates, mode, personnelMap, onSelectDay,
 }: {
   year: number;
   month: number;
   ncoByDate: Record<string, string>;
   shiftByDate: Record<string, boolean>;
   recordDates: Record<string, boolean>;
-  mode: 'duty' | 'tasks';
+  mode: 'duty' | 'tasks' | 'nco';
+  personnelMap?: Record<string, Personnel>;
   onSelectDay: (date: Date) => void;
 }) {
   const firstDay = startOfMonth(new Date(year, month - 1));
@@ -223,6 +275,11 @@ function MonthCalendar({
                 {mode === 'duty' && hasNCO  && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />}
                 {mode === 'tasks' && hasRecord && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6' }} />}
               </div>
+              {mode === 'nco' && hasNCO && personnelMap && (
+                <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600, marginTop: 2, textAlign: 'center', lineHeight: 1.1 }}>
+                  {personnelMap[ncoByDate[dateStr]]?.firstName || 'สิบเวร'}
+                </div>
+              )}
             </button>
           );
         })}
@@ -351,8 +408,9 @@ export default function CalendarPage() {
   const [recordDates, setRecordDates] = useState<Record<string, boolean>>({});
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedTaskDay, setSelectedTaskDay] = useState<Date | null>(null);
+  const [selectedNCODay, setSelectedNCODay] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
-  const { toast, show: showToast } = useToast();
+  const { showToast } = useToast();
 
   const monthKey = `${viewYear}-${String(viewMonth).padStart(2, '0')}`;
 
@@ -376,8 +434,9 @@ export default function CalendarPage() {
       if (dutyRes.status === 'fulfilled') {
         const d = await dutyRes.value.json();
         const map: Record<string, DutyShift> = {};
-        (d.shifts || []).forEach((s: { date: string; shift: DutyShift }) => {
-          if (s.date?.startsWith(monthKey)) map[s.date] = s.shift;
+        (d.shifts || []).forEach((s: any) => {
+          const shiftObj = s.shift || s;
+          if (shiftObj.date?.startsWith(monthKey)) map[shiftObj.date] = shiftObj;
         });
         setDutyShifts(map);
       }
@@ -396,16 +455,28 @@ export default function CalendarPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleSaveNCO = async (duties: NCODuty[]) => {
+  const handleSaveNCOModal = async (personnelId: string) => {
+    if (!selectedNCODay) return;
     setSaving(true);
     try {
+      const dateStr = format(selectedNCODay, 'yyyy-MM-dd');
+      let newDuties = [...ncoDuties];
+      const idx = newDuties.findIndex(d => d.date === dateStr);
+      if (personnelId) {
+        if (idx >= 0) newDuties[idx].personnelId = personnelId;
+        else newDuties.push({ id: `new-${Date.now()}`, date: dateStr, personnelId });
+      } else {
+        if (idx >= 0) newDuties.splice(idx, 1);
+      }
+
       await fetch('/api/nco', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: monthKey, duties }),
+        body: JSON.stringify({ month: monthKey, duties: newDuties }),
       });
-      setNcoDuties(duties);
-      showToast('บันทึกตารางสิบเวรสำเร็จ');
+      setNcoDuties(newDuties);
+      showToast('บันทึกสิบเวรสำเร็จ');
+      setSelectedNCODay(null);
     } catch {
       showToast('บันทึกไม่สำเร็จ', 'error');
     } finally {
@@ -436,12 +507,12 @@ export default function CalendarPage() {
 
   const handleCalendarDayClick = (date: Date) => {
     if (tab === 'tasks') setSelectedTaskDay(date);
+    else if (tab === 'nco') setSelectedNCODay(date);
     else setSelectedDay(date);
   };
 
   return (
     <div className="page-container">
-      <Toast toast={toast} />
 
       {/* Header */}
       <div className="page-header">
@@ -491,26 +562,16 @@ export default function CalendarPage() {
           )}
         </div>
 
-        {(tab === 'calendar' || tab === 'tasks') && (
+        {(tab === 'calendar' || tab === 'tasks' || tab === 'nco') && (
           <MonthCalendar
             year={viewYear}
             month={viewMonth}
             ncoByDate={ncoByDate}
             shiftByDate={shiftByDate}
             recordDates={recordDates}
-            mode={tab === 'tasks' ? 'tasks' : 'duty'}
+            mode={tab === 'nco' ? 'nco' : (tab === 'tasks' ? 'tasks' : 'duty')}
+            personnelMap={personnelMap}
             onSelectDay={handleCalendarDayClick}
-          />
-        )}
-
-        {tab === 'nco' && (
-          <NCOMonthlyTable
-            year={viewYear}
-            month={viewMonth}
-            duties={ncoDuties}
-            personnel={personnel}
-            onSave={handleSaveNCO}
-            saving={saving}
           />
         )}
       </div>
@@ -531,6 +592,17 @@ export default function CalendarPage() {
         <TaskRecordModal
           date={selectedTaskDay}
           onClose={() => setSelectedTaskDay(null)}
+        />
+      )}
+
+      {/* NCO Select Modal */}
+      {selectedNCODay && tab === 'nco' && (
+        <NCOSelectModal
+          date={selectedNCODay}
+          currentNCOId={ncoByDate[format(selectedNCODay, 'yyyy-MM-dd')] || null}
+          personnel={personnel}
+          onSave={handleSaveNCOModal}
+          onClose={() => setSelectedNCODay(null)}
         />
       )}
     </div>
