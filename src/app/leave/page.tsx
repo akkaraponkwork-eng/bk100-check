@@ -426,7 +426,7 @@ export default function LeavePage() {
       )}
 
       {selectedRequest && (
-        <Dialog open={!!selectedRequest} onClose={() => setSelectedRequest(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <Dialog open={!!selectedRequest} onClose={() => setSelectedRequest(null)} maxWidth="xs" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
           <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>รายละเอียดใบลา</DialogTitle>
           <DialogContent dividers sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -488,7 +488,7 @@ export default function LeavePage() {
       )}
 
       {/* Confirmation Dialog */}
-      <Dialog open={!!confirmAction} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog open={!!confirmAction} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>ยืนยันการพิจารณา</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Typography sx={{ mb: 2 }}>

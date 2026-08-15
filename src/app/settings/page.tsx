@@ -14,6 +14,9 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import GroupIcon from '@mui/icons-material/Group';
 import BadgeIcon from '@mui/icons-material/Badge';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Box, Typography, TextField, Button, CircularProgress, Paper,
   List, ListItem, ListItemAvatar, ListItemText, Avatar, Select,
@@ -39,6 +42,12 @@ export default function SettingsPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Bot Settings
+  const [botGroupId, setBotGroupId] = useState('');
+  const [botAlertTimes, setBotAlertTimes] = useState<string[]>([]);
+  const [newAlertTime, setNewAlertTime] = useState('');
+  const [savingBotSettings, setSavingBotSettings] = useState(false);
+
   const { showToast } = useToast();
 
   const filteredUsers = users.filter(u =>
@@ -56,24 +65,29 @@ export default function SettingsPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const [usersRes, orgChartRes] = await Promise.all([
+      const [usersRes, orgChartRes, botRes] = await Promise.all([
         fetch('/api/users'),
-        fetch('/api/orgchart')
+        fetch('/api/orgchart'),
+        fetch('/api/bot-settings')
       ]);
 
       if (usersRes.ok) {
         const data = await usersRes.json();
         setUsers(data.users || []);
       }
-
       if (orgChartRes.ok) {
         const orgData = await orgChartRes.json();
         setImgbbApiKey(orgData.imgbbApiKey || '');
         setImageUrl(orgData.imageUrl || '');
       }
+      if (botRes.ok) {
+        const botData = await botRes.json();
+        setBotGroupId(botData.groupId || '');
+        setBotAlertTimes(botData.alertTimes || []);
+      }
     } catch (e) {
       console.error(e);
-      showToast('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่', 'error');
+      showToast('ไม่สามารถโหลดข้อมูลได้', 'error');
     } finally {
       setLoading(false);
     }
@@ -173,6 +187,41 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveBotSettings = async () => {
+    setSavingBotSettings(true);
+    try {
+      const res = await fetch('/api/bot-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: botGroupId, alertTimes: botAlertTimes })
+      });
+      if (res.ok) {
+        showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
+      } else {
+        const data = await res.json();
+        showToast(`เกิดข้อผิดพลาด: ${data.error}`, 'error');
+      }
+    } catch (e) {
+      showToast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+    } finally {
+      setSavingBotSettings(false);
+    }
+  };
+
+  const handleAddAlertTime = () => {
+    if (!newAlertTime) return;
+    if (botAlertTimes.includes(newAlertTime)) {
+      showToast('เวลานี้ถูกตั้งไว้แล้ว', 'error');
+      return;
+    }
+    setBotAlertTimes([...botAlertTimes, newAlertTime].sort());
+    setNewAlertTime('');
+  };
+
+  const handleRemoveAlertTime = (timeToRemove: string) => {
+    setBotAlertTimes(botAlertTimes.filter(t => t !== timeToRemove));
+  };
+
   return (
     <Box sx={{ pb: 10 }}>
       <PageHeader
@@ -198,6 +247,7 @@ export default function SettingsPage() {
             <Tab icon={<AdminPanelSettingsIcon fontSize="small" />} iconPosition="start" label="จัดการสิทธิ์" />
             <Tab icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" label="ผังองค์กร" />
             <Tab icon={<CloudIcon fontSize="small" />} iconPosition="start" label="เชื่อมต่อระบบ" />
+            <Tab icon={<SmartToyIcon fontSize="small" />} iconPosition="start" label="บอทน้อง บก.ร้อย" />
           </Tabs>
         </Box>
 
@@ -384,13 +434,9 @@ export default function SettingsPage() {
             <Box sx={{ maxWidth: 800 }}>
               <Box sx={{ mb: 4, textAlign: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: 20 }}>ผังองค์กร</Typography>
-                {/* <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto' }}>
-                  อัปโหลดภาพผังโครงสร้างแนวตั้งเพื่อนำไปแสดงผลในหน้าแรกของทำเนียบกำลังพล
-                </Typography> */}
               </Box>
 
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                {/* Showcase Frame */}
                 <Box
                   sx={{
                     width: '100%',
@@ -408,7 +454,6 @@ export default function SettingsPage() {
                     minHeight: 400
                   }}
                 >
-                  {/* Subtle Grid Background Pattern */}
                   <Box
                     sx={{
                       position: 'absolute', inset: 0, opacity: 0.4,
@@ -416,7 +461,6 @@ export default function SettingsPage() {
                       backgroundSize: '16px 16px'
                     }}
                   />
-
                   <Box sx={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
                     {imageUrl ? (
                       <Box component="img" src={imageUrl} alt="Org Chart Preview" sx={{ width: '100%', height: 'auto', maxHeight: 600, objectFit: 'contain', borderRadius: 2, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }} />
@@ -429,7 +473,6 @@ export default function SettingsPage() {
                   </Box>
                 </Box>
 
-                {/* Action Area */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, width: '100%', maxWidth: 300 }}>
                   <Button
                     component="label"
@@ -475,7 +518,6 @@ export default function SettingsPage() {
                 </Typography>
               </Box>
 
-              {/* Sleek Integration Row */}
               <Box sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', bgcolor: 'background.paper' }}>
                 <Box sx={{ p: 3, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
                   <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'center' }}>
@@ -556,6 +598,119 @@ export default function SettingsPage() {
                       {savingKey ? 'Saving...' : 'Save'}
                     </Button>
                   </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* Tab 3: Bot Settings */}
+          {currentTab === 3 && (
+            <Box>
+              <Typography variant="h6" fontWeight={700} sx={{ fontSize: 18, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SmartToyIcon color="primary" /> ตั้งค่า LINE Bot "น้อง บก.ร้อย"
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 600 }}>
+                บอทสำหรับดึงเข้ากลุ่มเพื่อแจ้งเตือนเวรยามประจำวัน สรุปยอด และให้กำลังพลสามารถเช็คเวรผ่านการแชทได้
+              </Typography>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>LINE Group ID</Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    ไอดีของกลุ่ม LINE ที่บอทจะส่งข้อความเข้าไป (ระบบจะดึงค่านี้อัตโนมัติเมื่อดึงบอทเข้ากลุ่ม)
+                  </Typography>
+                  <TextField 
+                    fullWidth 
+                    size="small"
+                    value={botGroupId}
+                    disabled
+                    placeholder="ยังไม่ได้เชื่อมต่อกับกลุ่ม"
+                    sx={{ mb: 3, bgcolor: 'background.paper', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <GroupIcon fontSize="small" color={botGroupId ? 'success' : 'action'} />
+                          </InputAdornment>
+                        ),
+                      }
+                    }}
+                  />
+
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>เวลาแจ้งเตือนรายวัน (Cron Times)</Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    ตั้งเวลาที่ต้องการให้บอทสรุปตารางเวรและแจ้งเตือนเข้ากลุ่มอัตโนมัติ (เช่น 08:00 หรือ 17:30)
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+                    <TextField 
+                      type="time"
+                      size="small"
+                      value={newAlertTime}
+                      onChange={(e) => setNewAlertTime(e.target.value)}
+                      sx={{ flexGrow: 1, bgcolor: 'background.paper', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleAddAlertTime}
+                      disabled={!newAlertTime}
+                      startIcon={<AddIcon />}
+                      sx={{ borderRadius: 2, fontWeight: 600 }}
+                    >
+                      เพิ่มเวลา
+                    </Button>
+                  </Box>
+
+                  {botAlertTimes.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 4 }}>
+                      {botAlertTimes.map((time) => (
+                        <Box key={time} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, px: 2, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AccessTimeFilledIcon fontSize="small" color="primary" /> {time} น.
+                          </Typography>
+                          <IconButton size="small" color="error" onClick={() => handleRemoveAlertTime(time)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box sx={{ p: 3, mb: 4, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
+                      <Typography variant="body2" color="text.secondary">ยังไม่มีการตั้งเวลาแจ้งเตือน</Typography>
+                    </Box>
+                  )}
+
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    startIcon={savingBotSettings ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                    onClick={handleSaveBotSettings}
+                    disabled={savingBotSettings}
+                    sx={{ py: 1.5, px: 4, borderRadius: 2, fontWeight: 600, width: { xs: '100%', sm: 'auto' } }}
+                    disableElevation
+                  >
+                    {savingBotSettings ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่าบอท'}
+                  </Button>
+                </Box>
+                
+                <Box>
+                  <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: '#06C755', color: 'white' }}>
+                    <Typography variant="h6" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SmartToyIcon /> วิธีการใช้งาน
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+                      1. แอดบอท <b>"น้อง บก.ร้อย"</b> เป็นเพื่อนใน LINE
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+                      2. เชิญบอทเข้ากลุ่มกองร้อย (เมื่อบอทเข้ากลุ่มแล้ว Group ID จะปรากฏที่นี่อัตโนมัติ)
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+                      3. กำลังพลสามารถพิมพ์คำสั่ง <b>"เช็คเวร"</b> เพื่อเรียกดูตารางเวรของวันนั้นๆ ได้ทันที
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      4. ตั้งเวลาแจ้งเตือนที่หน้าต่างด้านซ้าย เพื่อให้บอทสรุปยอดส่งเข้ากลุ่มทุกวัน
+                    </Typography>
+                  </Paper>
                 </Box>
               </Box>
             </Box>
