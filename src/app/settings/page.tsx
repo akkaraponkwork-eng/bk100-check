@@ -15,6 +15,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import BadgeIcon from '@mui/icons-material/Badge';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import {
@@ -268,7 +269,7 @@ export default function SettingsPage() {
                   <Typography variant="h4" fontWeight={700} color="text.primary">{users.length}</Typography>
                   <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 1 }}>ผู้ใช้งานทั้งหมด</Typography>
                 </Box>
-                
+
                 <Box sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'warning.50', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'warning.main' }}>
@@ -278,7 +279,7 @@ export default function SettingsPage() {
                   <Typography variant="h4" fontWeight={700} color="text.primary">{users.filter(u => u.role === 'admin').length}</Typography>
                   <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 1 }}>แอดมินระบบ</Typography>
                 </Box>
-                
+
                 <Box sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'error.50', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'error.main' }}>
@@ -318,7 +319,7 @@ export default function SettingsPage() {
                 <Box sx={{ py: 6, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
                   <PersonIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
                   <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                    ไม่พบผู้ใช้งานที่ตรงกับ "{searchQuery}"
+                    ไม่พบผู้ใช้งานที่ตรงกับ &quot;{searchQuery}&quot;
                   </Typography>
                 </Box>
               ) : (
@@ -398,13 +399,13 @@ export default function SettingsPage() {
                       </Box>
                     </Box>
                   ))}
-                  
+
                   <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 1, gap: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>แสดงรายการหน้าละ:</Typography>
-                      <Select 
-                        size="small" 
-                        value={rowsPerPage} 
+                      <Select
+                        size="small"
+                        value={rowsPerPage}
                         onChange={(e) => setRowsPerPage(Number(e.target.value))}
                         sx={{ height: 32, fontSize: 13, borderRadius: 2, bgcolor: 'background.paper' }}
                       >
@@ -415,11 +416,11 @@ export default function SettingsPage() {
                       </Select>
                     </Box>
                     {pageCount > 1 && (
-                      <Pagination 
-                        count={pageCount} 
-                        page={page} 
-                        onChange={(e, v) => setPage(v)} 
-                        color="primary" 
+                      <Pagination
+                        count={pageCount}
+                        page={page}
+                        onChange={(e, v) => setPage(v)}
+                        color="primary"
                         shape="rounded"
                       />
                     )}
@@ -619,8 +620,8 @@ export default function SettingsPage() {
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
                     ไอดีของกลุ่ม LINE ที่บอทจะส่งข้อความเข้าไป (ระบบจะดึงค่านี้อัตโนมัติเมื่อดึงบอทเข้ากลุ่ม)
                   </Typography>
-                  <TextField 
-                    fullWidth 
+                  <TextField
+                    fullWidth
                     size="small"
                     value={botGroupId}
                     disabled
@@ -643,15 +644,15 @@ export default function SettingsPage() {
                   </Typography>
 
                   <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                    <TextField 
+                    <TextField
                       type="time"
                       size="small"
                       value={newAlertTime}
                       onChange={(e) => setNewAlertTime(e.target.value)}
                       sx={{ flexGrow: 1, bgcolor: 'background.paper', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                     />
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       onClick={handleAddAlertTime}
                       disabled={!newAlertTime}
                       startIcon={<AddIcon />}
@@ -680,8 +681,8 @@ export default function SettingsPage() {
                     </Box>
                   )}
 
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     color="primary"
                     startIcon={savingBotSettings ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                     onClick={handleSaveBotSettings}
@@ -692,7 +693,7 @@ export default function SettingsPage() {
                     {savingBotSettings ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่าบอท'}
                   </Button>
                 </Box>
-                
+
                 <Box>
                   <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: '#06C755', color: 'white' }}>
                     <Typography variant="h6" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>

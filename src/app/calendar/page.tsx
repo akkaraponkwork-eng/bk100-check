@@ -423,24 +423,24 @@ export default function CalendarPage() {
         fetch('/api/records'),
       ]);
 
-      if (pRes.status === 'fulfilled') {
+      if (pRes.status === 'fulfilled' && pRes.value.ok) {
         const d = await pRes.value.json();
         setPersonnel(d.personnel || []);
       }
-      if (ncoRes.status === 'fulfilled') {
+      if (ncoRes.status === 'fulfilled' && ncoRes.value.ok) {
         const d = await ncoRes.value.json();
         setNcoDuties(d.duties || []);
       }
-      if (dutyRes.status === 'fulfilled') {
+      if (dutyRes.status === 'fulfilled' && dutyRes.value.ok) {
         const d = await dutyRes.value.json();
         const map: Record<string, DutyShift> = {};
-        (d.shifts || []).forEach((s: any) => {
+        (d.shifts || d.duties || []).forEach((s: any) => {
           const shiftObj = s.shift || s;
           if (shiftObj.date?.startsWith(monthKey)) map[shiftObj.date] = shiftObj;
         });
         setDutyShifts(map);
       }
-      if (recRes.status === 'fulfilled') {
+      if (recRes.status === 'fulfilled' && recRes.value.ok) {
         const d = await recRes.value.json();
         const map: Record<string, boolean> = {};
         (d.records || []).forEach((r: DailyRecord) => {
@@ -448,8 +448,8 @@ export default function CalendarPage() {
         });
         setRecordDates(map);
       }
-    } catch {
-      console.error('Failed to load calendar data');
+    } catch (error) {
+      console.error('Failed to load calendar data:', error);
     }
   }, [monthKey]);
 
