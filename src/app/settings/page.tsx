@@ -318,7 +318,7 @@ export default function SettingsPage() {
               ) : filteredUsers.length === 0 ? (
                 <Box sx={{ py: 6, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
                   <PersonIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
-                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                     ไม่พบผู้ใช้งานที่ตรงกับ &quot;{searchQuery}&quot;
                   </Typography>
                 </Box>
@@ -607,7 +607,7 @@ export default function SettingsPage() {
           {/* Tab 3: Bot Settings */}
           {currentTab === 3 && (
             <Box>
-              <Typography variant="h6" fontWeight={700} sx={{ fontSize: 18, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SmartToyIcon color="primary" /> ตั้งค่า LINE Bot "น้อง บก.ร้อย"
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 600 }}>
@@ -616,8 +616,8 @@ export default function SettingsPage() {
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
                 <Box>
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>LINE Group ID</Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>LINE Group ID</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
                     ไอดีของกลุ่ม LINE ที่บอทจะส่งข้อความเข้าไป (ระบบจะดึงค่านี้อัตโนมัติเมื่อดึงบอทเข้ากลุ่ม)
                   </Typography>
                   <TextField
@@ -638,8 +638,8 @@ export default function SettingsPage() {
                     }}
                   />
 
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>เวลาแจ้งเตือนรายวัน (Cron Times)</Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>เวลาแจ้งเตือนรายวัน (Cron Times)</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
                     ตั้งเวลาที่ต้องการให้บอทสรุปตารางเวรและแจ้งเตือนเข้ากลุ่มอัตโนมัติ (เช่น 08:00 หรือ 17:30)
                   </Typography>
 
@@ -666,7 +666,7 @@ export default function SettingsPage() {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 4 }}>
                       {botAlertTimes.map((time) => (
                         <Box key={time} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, px: 2, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                          <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                             <AccessTimeFilledIcon fontSize="small" color="primary" /> {time} น.
                           </Typography>
                           <IconButton size="small" color="error" onClick={() => handleRemoveAlertTime(time)}>
@@ -696,7 +696,7 @@ export default function SettingsPage() {
 
                 <Box>
                   <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: '#06C755', color: 'white' }}>
-                    <Typography variant="h6" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SmartToyIcon /> วิธีการใช้งาน
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>

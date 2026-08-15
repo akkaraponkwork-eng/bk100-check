@@ -431,9 +431,9 @@ export default function LeavePage() {
           <DialogContent dividers sx={{ pt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>ผู้ยื่นขอลา</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>ผู้ยื่นขอลา</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1" fontWeight={600}>{getPersonnelName(selectedRequest.personnelId)}</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>{getPersonnelName(selectedRequest.personnelId)}</Typography>
                   {getPersonnelBatch(selectedRequest.personnelId) && (
                     <Typography variant="caption" sx={{ px: 1, py: 0.2, bgcolor: 'grey.100', borderRadius: 1, color: 'text.secondary', fontWeight: 600 }}>
                       {getPersonnelBatch(selectedRequest.personnelId)}
@@ -444,36 +444,36 @@ export default function LeavePage() {
               
               <Box sx={{ display: 'flex', gap: 4 }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>ประเภทการลา</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>ประเภทการลา</Typography>
                   <Typography variant="body2">{selectedRequest.type}</Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>สถานะ</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>สถานะ</Typography>
                   <Box sx={{ mt: 0.5 }}><StatusBadge status={selectedRequest.status} /></Box>
                 </Box>
               </Box>
               
               <Box>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>ช่วงเวลาที่ลา</Typography>
-                <Typography variant="body1" color="primary.main" fontWeight={600}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>ช่วงเวลาที่ลา</Typography>
+                <Typography variant="body1" color="primary.main" sx={{ fontWeight: 600 }}>
                   {formatDateRange(selectedRequest.startDate, selectedRequest.endDate)}
                 </Typography>
               </Box>
               
               <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>เหตุผลการลา</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>เหตุผลการลา</Typography>
                 <Typography variant="body2">{selectedRequest.reason || '-'}</Typography>
               </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">วันที่ยื่น</Typography>
-                  <Typography variant="caption" fontWeight={500}>{format(parseISO(selectedRequest.createdAt), 'd MMM yy HH:mm', { locale: th })}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>วันที่ยื่น</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 500 }}>{format(parseISO(selectedRequest.createdAt), 'd MMM yy HH:mm', { locale: th })}</Typography>
                 </Box>
                 {selectedRequest.approvedAt && (
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" color="text.secondary" display="block">พิจารณาเมื่อ</Typography>
-                    <Typography variant="caption" fontWeight={500}>{format(parseISO(selectedRequest.approvedAt), 'd MMM yy HH:mm', { locale: th })}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>พิจารณาเมื่อ</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>{format(parseISO(selectedRequest.approvedAt), 'd MMM yy HH:mm', { locale: th })}</Typography>
                   </Box>
                 )}
               </Box>
@@ -492,7 +492,7 @@ export default function LeavePage() {
         <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>ยืนยันการพิจารณา</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Typography sx={{ mb: 2 }}>
-            คุณแน่ใจหรือไม่ที่จะ <Typography component="span" fontWeight={700} color={confirmAction?.status === 'approved' ? 'success.main' : 'error.main'}>
+            คุณแน่ใจหรือไม่ที่จะ <Typography component="span" color={confirmAction?.status === 'approved' ? 'success.main' : 'error.main'} sx={{ fontWeight: 700 }}>
               {confirmAction?.status === 'approved' ? 'อนุมัติ' : 'ไม่อนุมัติ'}
             </Typography> ใบลาของ <b>{confirmAction ? getPersonnelName(confirmAction.req.personnelId) : ''}</b> {confirmAction && getPersonnelBatch(confirmAction.req.personnelId) ? `(${getPersonnelBatch(confirmAction.req.personnelId)})` : ''}?
           </Typography>
