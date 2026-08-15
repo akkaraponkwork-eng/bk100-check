@@ -266,8 +266,8 @@ export default function SettingsPage() {
                       <GroupIcon />
                     </Box>
                   </Box>
-                  <Typography variant="h4" fontWeight={700} color="text.primary">{users.length}</Typography>
-                  <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 1 }}>ผู้ใช้งานทั้งหมด</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }} color="text.primary">{users.length}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 1 }}>ผู้ใช้งานทั้งหมด</Typography>
                 </Box>
 
                 <Box sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
@@ -276,8 +276,8 @@ export default function SettingsPage() {
                       <AdminPanelSettingsIcon />
                     </Box>
                   </Box>
-                  <Typography variant="h4" fontWeight={700} color="text.primary">{users.filter(u => u.role === 'admin').length}</Typography>
-                  <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 1 }}>แอดมินระบบ</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }} color="text.primary">{users.filter(u => u.role === 'admin').length}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 1 }}>แอดมินระบบ</Typography>
                 </Box>
 
                 <Box sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
@@ -286,13 +286,13 @@ export default function SettingsPage() {
                       <BadgeIcon />
                     </Box>
                   </Box>
-                  <Typography variant="h4" fontWeight={700} color="text.primary">{users.filter(u => !u.personnelId).length}</Typography>
-                  <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 1 }}>รอผูกรหัส (ID)</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }} color="text.primary">{users.filter(u => !u.personnelId).length}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 1 }}>รอผูกรหัส (ID)</Typography>
                 </Box>
               </Box>
 
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 3, gap: 2 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ fontSize: 18 }}>รายชื่อบุคลากร <Typography component="span" variant="body2" color="text.secondary" fontWeight={500}>({filteredUsers.length})</Typography></Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18 }}>รายชื่อบุคลากร <Typography component="span" variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>({filteredUsers.length})</Typography></Typography>
                 <TextField
                   size="small"
                   placeholder="ค้นหาชื่อ หรือ ID..."
@@ -468,7 +468,7 @@ export default function SettingsPage() {
                     ) : (
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'text.disabled', gap: 2, my: 8 }}>
                         <AccountTreeIcon sx={{ fontSize: 48, opacity: 0.5 }} />
-                        <Typography variant="body2" fontWeight={500}>ยังไม่มีรูปภาพ</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>ยังไม่มีรูปภาพ</Typography>
                       </Box>
                     )}
                   </Box>
