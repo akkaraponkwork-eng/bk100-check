@@ -188,6 +188,31 @@ export async function POST(request: NextRequest) {
             text: summaryText
           }]);
         // }
+      } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
+        await replyLineMessage(replyToken, [{
+          type: 'text',
+          text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\n\nพี่ๆ สามารถพิมพ์คำว่า "เช็คเวร" เพื่อให้ผมสรุปตารางเวรของวันนี้ให้ดูได้เลยนะครับ\n\nส่วนการลางาน หรือจัดการบัญชี สามารถกดจากเมนูด้านล่างได้เลยครับ',
+          quickReply: {
+            items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '📋 เช็คเวร',
+                  text: 'เช็คเวร'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'uri',
+                  label: '🔗 จัดการบัญชี',
+                  uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/link-account` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
+                }
+              }
+            ]
+          }
+        }]);
       }
     }
 

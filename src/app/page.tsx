@@ -115,6 +115,7 @@ export default function DashboardPage() {
         lines.push(`${i + 1}.${name}`);
         lines.push(`${slot.start}-${slot.end}`);
       });
+    lines.push('ครับ');
     navigator.clipboard.writeText(lines.join('\n'));
     showToast('คัดลอกข้อความเวรแล้ว!');
   };
