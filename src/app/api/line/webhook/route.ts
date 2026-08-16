@@ -102,7 +102,13 @@ export async function POST(request: NextRequest) {
     */
     else if (event.type === 'message' && event.message.type === 'text') {
       const text = event.message.text.trim();
-      const origin = request.nextUrl.origin;
+      
+      // Fix for LINE PC image loading: ensure HTTPS and correct host when using ngrok
+      const forwardedHost = request.headers.get('x-forwarded-host');
+      const host = forwardedHost || request.headers.get('host');
+      // Always use https for LINE images unless we are absolutely sure we can't
+      const origin = host ? `https://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin);
+
 
       if (text === 'เซ็ตกลุ่ม' && event.source.type === 'group') {
         const groupId = event.source.groupId;
