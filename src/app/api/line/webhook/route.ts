@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
                   type: 'bubble',
                   hero: {
                     type: 'image',
-                    url: `${origin}/images/duty_check_carousel.png`,
+                    url: `${origin}/images/duty_check_carousel.png?v=2`,
                     size: 'full',
                     aspectRatio: '1:1',
                     aspectMode: 'cover',
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
                   type: 'bubble',
                   hero: {
                     type: 'image',
-                    url: `${origin}/images/link_account_carousel.png`,
+                    url: `${origin}/images/link_account_carousel.png?v=2`,
                     size: 'full',
                     aspectRatio: '1:1',
                     aspectMode: 'cover',
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
                   type: 'bubble',
                   hero: {
                     type: 'image',
-                    url: `${origin}/images/meterbill_carousel.jpg`,
+                    url: `${origin}/images/meterbill_carousel.jpg?v=2`,
                     size: 'full',
                     aspectRatio: '1:1',
                     aspectMode: 'cover',
