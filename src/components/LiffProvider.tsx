@@ -11,7 +11,8 @@ export default function LiffProvider({ children, hasSession = false }: { childre
     const initLiff = async () => {
       try {
         const liff = (await import('@line/liff')).default;
-        await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '2011067034-H9LnJMX7';
+        await liff.init({ liffId });
         
         if (liff.isInClient() || liff.isLoggedIn()) {
           // If already has session from Next.js server cookie, we don't need to re-login!
@@ -55,7 +56,8 @@ export default function LiffProvider({ children, hasSession = false }: { childre
       }
     };
 
-    if (process.env.NEXT_PUBLIC_LIFF_ID && typeof window !== 'undefined') {
+    const activeLiffId = process.env.NEXT_PUBLIC_LIFF_ID || '2011067034-H9LnJMX7';
+    if (activeLiffId && typeof window !== 'undefined') {
       initLiff();
     }
   }, [router, hasSession]);

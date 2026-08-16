@@ -9,48 +9,16 @@ import liff from '@line/liff';
 function LinkAccountForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [lineUserId, setLineUserId] = useState(searchParams.get('lineUserId'));
-  const [displayName, setDisplayName] = useState(searchParams.get('displayName') || '');
-  const [pictureUrl, setPictureUrl] = useState(searchParams.get('pictureUrl') || '');
-  const [liffLoading, setLiffLoading] = useState(!searchParams.get('lineUserId'));
+  const lineUserId = searchParams.get('lineUserId');
+  const displayName = searchParams.get('displayName') || '';
+  const pictureUrl = searchParams.get('pictureUrl') || '';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!searchParams.get('lineUserId')) {
-      const initLiff = async () => {
-        try {
-          await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '2011067034-H9LnJMX7' });
-          if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile();
-            setLineUserId(profile.userId);
-            setDisplayName(profile.displayName);
-            setPictureUrl(profile.pictureUrl || '');
-          } else {
-            liff.login({ redirectUri: window.location.href });
-          }
-        } catch (err) {
-          console.error('LIFF init failed', err);
-        } finally {
-          setLiffLoading(false);
-        }
-      };
-      initLiff();
-    }
-  }, [searchParams]);
-
-  if (liffLoading) {
-    return (
-      <div className="card p-6 text-center" style={{ width: '100%', maxWidth: 400 }}>
-        <p className="text-muted">กำลังโหลดข้อมูลจาก LINE...</p>
-      </div>
-    );
-  }
-
-  // If no lineUserId is provided after LIFF init
+  // If no lineUserId is provided, someone might have navigated here directly
   if (!lineUserId) {
     return (
       <div className="card p-6 text-center">
