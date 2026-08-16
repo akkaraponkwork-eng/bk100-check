@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
                   type: 'bubble',
                   hero: {
                     type: 'image',
-                    url: `${origin}/images/duty_check_carousel.jpg`,
+                    url: `${origin}/images/duty_check_carousel.png`,
                     size: 'full',
                     aspectRatio: '1:1',
                     aspectMode: 'cover',
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
                   type: 'bubble',
                   hero: {
                     type: 'image',
-                    url: `${origin}/images/link_account_carousel.jpg`,
+                    url: `${origin}/images/link_account_carousel.png`,
                     size: 'full',
                     aspectRatio: '1:1',
                     aspectMode: 'cover',
