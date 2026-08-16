@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.error('Error saving groupId:', e);
       }
+    }
     /* ปิดฟีเจอร์ 1 ไว้ชั่วคราว
     else if (event.type === 'follow') {
       // User added the bot as a friend

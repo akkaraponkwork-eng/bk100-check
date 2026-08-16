@@ -58,7 +58,7 @@ async function createRichMenu() {
   }
 }
 
-async function uploadRichMenuImage(richMenuId, imagePath) {
+async function uploadRichMenuImage(richMenuId: string, imagePath: string) {
   console.log(`Uploading image for Rich Menu ${richMenuId}...`);
   try {
     const imageBuffer = fs.readFileSync(imagePath);
@@ -83,7 +83,7 @@ async function uploadRichMenuImage(richMenuId, imagePath) {
   }
 }
 
-async function setDefaultRichMenu(richMenuId) {
+async function setDefaultRichMenu(richMenuId: string) {
   console.log(`Setting Rich Menu ${richMenuId} as default...`);
   try {
     const response = await fetch(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, {

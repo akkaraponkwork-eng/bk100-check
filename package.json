@@ -20,6 +20,7 @@
     "@mui/material": "^9.3.1",
     "@mui/material-nextjs": "^9.3.0",
     "date-fns": "^4.4.0",
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.42.2",
     "googleapis": "^173.0.0",
     "html2canvas": "^1.4.1",
@@ -29,6 +30,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.82.0",
     "recharts": "^3.10.0",
+    "sharp": "^0.35.3",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
