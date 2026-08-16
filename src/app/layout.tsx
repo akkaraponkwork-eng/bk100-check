@@ -43,7 +43,7 @@ export default async function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning>
       <body>
-        <LiffProvider>
+        <LiffProvider hasSession={!!user}>
           <ThemeRegistry>
             <ToastProvider>
               <AppShell

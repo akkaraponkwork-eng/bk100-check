@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         };
 
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); // YYYY-MM-DD
-        const allDuties = dutyData.duties || [];
+        const allDuties = dutyData.shifts || [];
         
         /* ปิดฟีเจอร์ 1 ไว้ชั่วคราว
         if (isPersonal) {

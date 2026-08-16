@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function LiffProvider({ children }: { children: React.ReactNode }) {
+export default function LiffProvider({ children, hasSession = false }: { children: React.ReactNode, hasSession?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -14,37 +14,36 @@ export default function LiffProvider({ children }: { children: React.ReactNode }
         await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
         
         if (liff.isInClient() || liff.isLoggedIn()) {
-          setLoading(true);
-          const profile = await liff.getProfile();
-          
-          // Check session by hitting our new LIFF auth endpoint
-          const res = await fetch('/api/auth/liff', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              lineUserId: profile.userId,
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl
-            })
-          });
+          // If already has session from Next.js server cookie, we don't need to re-login!
+          if (!hasSession) {
+            setLoading(true);
+            const profile = await liff.getProfile();
+            
+            // Check session by hitting our new LIFF auth endpoint
+            const res = await fetch('/api/auth/liff', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lineUserId: profile.userId,
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl
+              })
+            });
 
-          if (res.ok) {
-            // Success, session is set
-            if (window.location.pathname === '/login') {
-              const urlParams = new URLSearchParams(window.location.search);
-              const callbackUrl = urlParams.get('callbackUrl') || '/';
-              router.push(callbackUrl);
+            if (res.ok) {
+              // Success, session is set
+              if (window.location.pathname === '/login') {
+                const urlParams = new URLSearchParams(window.location.search);
+                const callbackUrl = urlParams.get('callbackUrl') || '/';
+                router.push(callbackUrl);
+              } else {
+                router.refresh();
+              }
             } else {
-              // If we are already on the target page, we just need to ensure 
-              // the page knows about the new cookie. 
-              // A full reload might be best to ensure server components get the cookie.
-              // But let's try router.refresh() first.
-              router.refresh();
-            }
-          } else {
-            // Not linked, redirect to link-account if not already there
-            if (window.location.pathname !== '/link-account') {
-              router.push('/link-account');
+              // Not linked, redirect to link-account if not already there
+              if (window.location.pathname !== '/link-account') {
+                router.push('/link-account');
+              }
             }
           }
         }
@@ -58,7 +57,7 @@ export default function LiffProvider({ children }: { children: React.ReactNode }
     if (process.env.NEXT_PUBLIC_LIFF_ID && typeof window !== 'undefined') {
       initLiff();
     }
-  }, [router]);
+  }, [router, hasSession]);
 
   return (
     <>
