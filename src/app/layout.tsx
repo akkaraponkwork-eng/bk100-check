@@ -1,21 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_Thai, Inter } from 'next/font/google';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
-
-const notoSansThai = Noto_Sans_Thai({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['thai', 'latin'],
-  variable: '--font-noto-sans-thai',
-  display: 'swap',
-});
-
-const inter = Inter({
-  weight: ['400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'BK100 — ระบบจัดการหน่วย',
@@ -56,7 +41,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="th" className={`${notoSansThai.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="th" suppressHydrationWarning>
       <body>
         <LiffProvider>
           <ThemeRegistry>
