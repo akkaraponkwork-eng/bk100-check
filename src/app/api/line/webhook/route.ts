@@ -29,7 +29,7 @@ function getSheetAuth() {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const sheetId = process.env.GOOGLE_SHEET_ID;
   if (!clientEmail || !privateKey || !sheetId) throw new Error('Missing Google credentials');
-  
+
   const auth = new google.auth.JWT({
     email: clientEmail, key: privateKey,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -40,7 +40,7 @@ function getSheetAuth() {
 async function updateGroupId(groupId: string) {
   const { auth, sheetId } = getSheetAuth();
   const sheets = google.sheets({ version: 'v4', auth });
-  
+
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
     range: 'BotSettings!A:B',
@@ -50,16 +50,16 @@ async function updateGroupId(groupId: string) {
   rows.forEach(row => {
     if (row[0] && row[1]) settings[row[0]] = row[1];
   });
-  
+
   settings['groupId'] = groupId;
-  
+
   const values = [
     ['groupId', settings['groupId'] || ''],
     ['alertTimes', settings['alertTimes'] || ''],
     ['leaveEnabled', settings['leaveEnabled'] !== undefined ? settings['leaveEnabled'] : 'true'],
     ['adminEmail', settings['adminEmail'] || '']
   ];
-  
+
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetId,
     range: 'BotSettings!A1:B4',
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     */
     else if (event.type === 'message' && event.message.type === 'text') {
       const text = event.message.text.trim();
-      
+
       // Fix for LINE PC image loading: ensure HTTPS and correct host when using ngrok
       const forwardedHost = request.headers.get('x-forwarded-host');
       const host = forwardedHost || request.headers.get('host');
@@ -274,7 +274,7 @@ export async function POST(request: NextRequest) {
                     action: {
                       type: 'uri',
                       label: 'จัดการบัญชี',
-                      uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/link-account` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
+                      uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/login` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
                     }
                   }
                 },
