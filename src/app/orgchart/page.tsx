@@ -172,7 +172,7 @@ export default function OrgChartPage() {
               <img
                 src={imageUrl}
                 alt="ทำเนียบข้าราชการ"
-                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px' }}
+                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid oklch(0 0 0 / 0.1)' }}
               />
 
               {/* <Box sx={{ 
@@ -220,7 +220,7 @@ export default function OrgChartPage() {
             <img
               src={imageUrl}
               alt="ทำเนียบข้าราชการ ขยายใหญ่"
-              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', cursor: 'zoom-out' }}
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', cursor: 'zoom-out', border: '1px solid oklch(0 0 0 / 0.1)' }}
             />
           </Box>
         </Dialog>

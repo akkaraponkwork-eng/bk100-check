@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { Personnel, DutyShift, NCODuty, KanbanTask, ExceptionEntry } from '@/types';
+import type { Personnel, DutyShift, NCODuty, KanbanTask, ExceptionEntry, Mission, MissionYearlySummary } from '@/types';
 import GroupIcon from '@mui/icons-material/Group';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PageHeader from '@/components/layout/PageHeader';
 
@@ -17,6 +18,8 @@ import DutyTimeline from '@/components/dashboard/DutyTimeline';
 import PersonnelChart from '@/components/dashboard/PersonnelChart';
 import TaskDistribution from '@/components/dashboard/TaskDistribution';
 import QuickActions from '@/components/dashboard/QuickActions';
+import MissionSummaryCard from '@/components/dashboard/MissionSummaryCard';
+import YearlyMissionModal from '@/components/dashboard/YearlyMissionModal';
 import NcoDetailModal from '@/components/dashboard/NcoDetailModal';
 import DutyDetailModal from '@/components/dashboard/DutyDetailModal';
 import LeaveDetailModal from '@/components/dashboard/LeaveDetailModal';
@@ -29,19 +32,26 @@ export default function DashboardPage() {
   const [todayNCO, setTodayNCO] = useState<NCODuty | null>(null);
   const [lastRecord, setLastRecord] = useState<{ date: string; totalCompany: number; tasks: KanbanTask[] } | null>(null);
   const [exceptions, setExceptions] = useState<ExceptionEntry[]>([]);
+  const [todayMissions, setTodayMissions] = useState<Mission[]>([]);
+  const [yearlySummary, setYearlySummary] = useState<MissionYearlySummary | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [loadedAt, setLoadedAt] = useState<string>('');
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
+
   const [showNCOModal, setShowNCOModal] = useState(false);
   const [showDutyModal, setShowDutyModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPersonnelModal, setShowPersonnelModal] = useState(false);
+  const [showYearlyMissionModal, setShowYearlyMissionModal] = useState(false);
+
   const [leaveEnabled, setLeaveEnabled] = useState(true);
   const [userRole, setUserRole] = useState<string>('personnel');
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayDisplay = format(new Date(), 'd MMMM yyyy', { locale: th });
   const currentMonth = format(new Date(), 'yyyy-MM');
+  const currentYear = new Date().getFullYear();
 
   const showToast = (msg: string) => {
     setToast({ msg, visible: true });
@@ -51,7 +61,7 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, dRes, ncoRes, recRes, metaRes, botRes, meRes] = await Promise.allSettled([
+      const [pRes, dRes, ncoRes, recRes, metaRes, botRes, meRes, misRes, misSumRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/duty?date=${todayStr}`),
         fetch(`/api/nco?month=${currentMonth}`),
@@ -59,6 +69,8 @@ export default function DashboardPage() {
         fetch('/api/duty-meta'),
         fetch('/api/bot-settings'),
         fetch('/api/auth/me'),
+        fetch(`/api/missions?date=${todayStr}`),
+        fetch(`/api/missions/summary?year=${currentYear}`),
       ]);
 
       if (pRes.status === 'fulfilled') {
@@ -97,13 +109,21 @@ export default function DashboardPage() {
         const data = await meRes.value.json();
         setUserRole(data.role || 'personnel');
       }
+      if (misRes && misRes.status === 'fulfilled') {
+        const data = await misRes.value.json();
+        setTodayMissions(data.missions || []);
+      }
+      if (misSumRes && misSumRes.status === 'fulfilled') {
+        const data = await misSumRes.value.json();
+        setYearlySummary(data.summary || null);
+      }
       setLoadedAt(format(new Date(), 'HH:mm'));
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [todayStr, currentMonth]);
+  }, [todayStr, currentMonth, currentYear]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -173,7 +193,7 @@ export default function DashboardPage() {
         {/* Summary Cards */}
         {loading ? (
           <div className="stat-cards-grid">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="skeleton" style={{ height: 90 }} />)}
+            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="skeleton" style={{ height: 90 }} />)}
           </div>
         ) : (
           <div className="stat-cards-grid">
@@ -198,10 +218,17 @@ export default function DashboardPage() {
               onClick={() => setShowNCOModal(true)}
             />
             <StatCard
+              icon={<AssignmentTurnedInIcon />} label="ภารกิจประจำปี"
+              value={yearlySummary ? `${yearlySummary.totalMissions} งาน` : `${todayMissions.length} งาน`}
+              sub={yearlySummary ? `สำเร็จ ${yearlySummary.completedMissions} งาน` : 'คลิกดูสรุปสถิติ 1 ปี'}
+              accent="#8b5cf6"
+              onClick={() => setShowYearlyMissionModal(true)}
+            />
+            <StatCard
               icon={<BarChartIcon />} label="ยอดล่าสุด"
               value={lastRecord ? `${lastRecord.totalCompany} นาย` : '—'}
               sub={lastRecord ? format(parseISO(lastRecord.date), 'd MMM', { locale: th }) : 'ยังไม่มีข้อมูล'}
-              accent="#8b5cf6"
+              accent="#06b6d4"
             />
             <StatCard
               icon={<DirectionsWalkIcon />} label="ทหารลา"
@@ -218,6 +245,13 @@ export default function DashboardPage() {
           <div className="dashboard-grid">
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <MissionSummaryCard
+                todayMissions={todayMissions}
+                personnelList={personnel}
+                yearlyTotal={yearlySummary?.totalMissions || 0}
+                completedTotal={yearlySummary?.completedMissions || 0}
+                onOpenYearlyModal={() => setShowYearlyMissionModal(true)}
+              />
               <DutyTimeline shift={todayShift} personnel={personnel} />
               <QuickActions todayShift={todayShift} onExport={handleExportDuty} />
             </div>
@@ -232,6 +266,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Modals */}
+      <YearlyMissionModal
+        open={showYearlyMissionModal}
+        onClose={() => setShowYearlyMissionModal(false)}
+      />
       <NcoDetailModal 
         open={showNCOModal} 
         onClose={() => setShowNCOModal(false)} 

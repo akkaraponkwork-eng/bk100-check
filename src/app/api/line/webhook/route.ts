@@ -236,6 +236,54 @@ export async function POST(request: NextRequest) {
           text: summaryText
         }]);
         // }
+      } else if (text === 'ภารกิจ' || text === 'เช็คภารกิจ' || text === 'ภารกิจวันนี้' || text === 'ภารกิจพรุ่งนี้') {
+        const isTomorrow = text === 'ภารกิจพรุ่งนี้';
+        const d = new Date();
+        if (isTomorrow) d.setDate(d.getDate() + 1);
+        const targetDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+
+        const [mRes, pRes] = await Promise.all([
+          fetch(`${origin}/api/missions?date=${targetDateStr}`),
+          fetch(`${origin}/api/personnel`)
+        ]);
+
+        const mData = await mRes.json();
+        const pData = await pRes.json();
+
+        const missions = mData.missions || [];
+        const personnelList = pData.personnel || [];
+        const pMap = Object.fromEntries(personnelList.map((p: any) => [p.id, `${p.rank}${p.firstName} ${p.lastName}`]));
+
+        if (missions.length === 0) {
+          await replyLineMessage(replyToken, [{
+            type: 'text',
+            text: `${isTomorrow ? 'พรุ่งนี้' : 'วันนี้'} (${targetDateStr}) ยังไม่มีบันทึกภารกิจครับ ✨`
+          }]);
+          return NextResponse.json({ status: 'ok' });
+        }
+
+        const dateDisplay = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+        let summaryText = `📋 **ภารกิจประจำวัน ${dateDisplay}**\n`;
+
+        missions.forEach((m: any, i: number) => {
+          const timeText = m.startTime ? `⏰ ${m.startTime}${m.endTime ? ' - ' + m.endTime : ''} น.` : '⏰ ตลอดวัน';
+          const locText = m.location ? `\n📍 สถานที่: ${m.location}` : '';
+          let assignedText = '';
+          if (m.assignedPersonnelIds && m.assignedPersonnelIds.length > 0) {
+            const names = m.assignedPersonnelIds.map((pid: string) => pMap[pid] || pid).join(', ');
+            assignedText = `\n👥 กำลังพล (${m.assignedPersonnelIds.length} นาย): ${names}`;
+          } else {
+            assignedText = '\n👥 กำลังพล: ภารกิจภาพรวมกองร้อย';
+          }
+          const statusText = m.status === 'completed' ? '✅ เสร็จสิ้น' : (m.status === 'in_progress' ? '⚡ กำลังดำเนินการ' : '⏳ มอบหมายแล้ว');
+
+          summaryText += `\n${i + 1}. **${m.title}** (${statusText})\n${timeText}${locText}${assignedText}\n`;
+        });
+
+        await replyLineMessage(replyToken, [{
+          type: 'text',
+          text: summaryText.trim()
+        }]);
       } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
         await replyLineMessage(replyToken, [
           {

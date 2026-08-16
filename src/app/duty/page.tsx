@@ -209,7 +209,7 @@ function PunishmentModal({
             </h2>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผลัดและวันที่สำหรับทหารเฉพาะบุคคล</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+          <button className="active:scale-[0.96] transition-transform" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
             <CloseIcon fontSize="small" />
           </button>
         </div>
@@ -232,7 +232,7 @@ function PunishmentModal({
         </button>
 
         {showForm && (
-          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
@@ -288,10 +288,10 @@ function PunishmentModal({
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button onClick={() => handleEdit(idx)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }}>
+                    <button className="active:scale-[0.96] transition-transform" onClick={() => handleEdit(idx)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
                       <EditIcon fontSize="small" />
                     </button>
-                    <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}>
+                    <button className="active:scale-[0.96] transition-transform" onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
                       <DeleteIcon fontSize="small" />
                     </button>
                   </div>
@@ -382,7 +382,7 @@ function ExceptionModal({
             </h2>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนดผู้ช่วย</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+          <button className="active:scale-[0.96] transition-transform" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
             <CloseIcon fontSize="small" />
           </button>
         </div>
@@ -396,7 +396,7 @@ function ExceptionModal({
         </button>
 
         {showForm && (
-          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
@@ -448,7 +448,7 @@ function ExceptionModal({
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
                   </div>
                   <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
-                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                  <button className="active:scale-[0.96] transition-transform" onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
                     <DeleteIcon fontSize="small" />
                   </button>
                 </div>
@@ -538,7 +538,7 @@ function ExemptModal({
             </h2>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>กำหนด ป่วย, ธุระการ, งดเวร</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+          <button className="active:scale-[0.96] transition-transform" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
             <CloseIcon fontSize="small" />
           </button>
         </div>
@@ -552,7 +552,7 @@ function ExemptModal({
         </button>
 
         {showForm && (
-          <div style={{ background: 'var(--color-surface-2)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+          <div style={{ background: 'var(--color-surface-2)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>ชื่อทหาร</label>
@@ -606,7 +606,7 @@ function ExemptModal({
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{entry.startDate} ถึง {entry.endDate}</div>
                   </div>
                   <span style={{ fontSize: 10, background: ri.color + '22', color: ri.color, padding: '2px 6px', borderRadius: 99, fontWeight: 700 }}>{ri.label}</span>
-                  <button onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                  <button className="active:scale-[0.96] transition-transform" onClick={() => handleRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}>
                     <DeleteIcon fontSize="small" />
                   </button>
                 </div>
@@ -792,7 +792,7 @@ function DayDetailModal({
             >
               <StarIcon style={{ fontSize: 16, color: '#a855f7' }} />
             </button>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', marginLeft: 8 }}>
+            <button className="active:scale-[0.96] transition-transform" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', marginLeft: 8, padding: '4px', borderRadius: '4px' }}>
               <CloseIcon fontSize="small" />
             </button>
           </div>

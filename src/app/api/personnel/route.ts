@@ -75,9 +75,16 @@ export async function GET() {
     d.setHours(d.getHours() + 7);
     const today = d.toISOString().split('T')[0];
 
-    // Set default status if empty
+    // Set default status if empty and attach leave details
+    const activeLeaves = leaveRows.filter(r => r[6] === 'approved' && r[3] <= today && r[4] >= today);
     for (const p of personnelListCopy) {
       if (!p.status) p.status = 'available';
+      
+      const activeLeave = activeLeaves.find(l => l[1] === p.id);
+      if (activeLeave) {
+        p.status = 'leave';
+        p.leaveDetails = { startDate: activeLeave[3], endDate: activeLeave[4] };
+      }
     }
 
     return NextResponse.json({ personnel: personnelListCopy });

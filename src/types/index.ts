@@ -10,6 +10,10 @@ export interface Personnel {
   dutyCount: number;     // จำนวนเวรสะสม (fairness)
   isNCOEligible?: boolean; // สามารถเป็นสิบเวรได้ไหม
   num?: number;          // ลำดับคิวการเข้าเวร
+  leaveDetails?: {
+    startDate: string;
+    endDate: string;
+  };
 }
 
 export interface PunishmentEntry {
@@ -172,3 +176,40 @@ export interface OrgChartMember {
   level: number; // 1 = Top Commander, 2 = Deputy, etc.
   order: number; // For sorting within the same level
 }
+
+// ==================== ภารกิจ (Missions / Calendar Events) ====================
+export type MissionStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export const MISSION_STATUS_LABELS: Record<MissionStatus, { label: string; color: string }> = {
+  pending: { label: 'มอบหมายแล้ว', color: '#3b82f6' },
+  in_progress: { label: 'กำลังดำเนินการ', color: '#f59e0b' },
+  completed: { label: 'เสร็จสิ้น', color: '#10b981' },
+  cancelled: { label: 'ยกเลิก', color: '#6b7280' },
+};
+
+export interface Mission {
+  id: string;
+  title: string;
+  date: string;                   // yyyy-MM-dd
+  startTime?: string;             // HH:mm
+  endTime?: string;               // HH:mm
+  location?: string;
+  assignedPersonnelIds: string[]; // ID กำลังพลที่ได้รับมอบหมาย (ว่างถ้าเป็นภารกิจกองร้อย)
+  status: MissionStatus;
+  remark?: string;
+  createdBy?: string;             // ชื่อ/ID ผู้สั่งการ
+  createdAt: string;              // ISO datetime
+  updatedAt?: string;             // ISO datetime
+}
+
+export interface MissionYearlySummary {
+  year: number;
+  totalMissions: number;
+  completedMissions: number;
+  inProgressMissions: number;
+  pendingMissions: number;
+  totalPersonnelAssigned: number;
+  monthlyBreakdown: { month: string; count: number; completed: number }[];
+  topPersonnel: { personnelId: string; rank: string; name: string; count: number }[];
+}
+

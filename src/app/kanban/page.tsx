@@ -274,7 +274,7 @@ export default function DutyCheckPage() {
             <IconButton onClick={() => setPreviewImage(null)} size="small"><CloseIcon /></IconButton>
           </DialogTitle>
           <DialogContent sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
-            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid oklch(0 0 0 / 0.1)' }} />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setPreviewImage(null)} color="inherit">ปิด</Button>

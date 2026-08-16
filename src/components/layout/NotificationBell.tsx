@@ -13,20 +13,21 @@ export default function NotificationBell() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const router = useRouter();
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch('/api/notifications');
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch('/api/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) setNotifications(data.notifications || []);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
     fetchNotifications();
+    return () => { isMounted = false; };
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

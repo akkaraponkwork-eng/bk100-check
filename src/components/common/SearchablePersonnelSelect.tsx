@@ -23,10 +23,9 @@ interface Props {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
-  height?: number;
 }
 
-export default function SearchablePersonnelSelect({ personnel, value, onChange, placeholder = 'ค้นหาชื่อ/นามสกุล...', height = 34 }: Props) {
+export default function SearchablePersonnelSelect({ personnel, value, onChange, placeholder = 'ค้นหาชื่อ/นามสกุล...' }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -56,48 +55,39 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
   });
 
   return (
-    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+    <div ref={ref} className="relative w-full">
       <button
         type="button"
-        className="select"
-        style={{ 
-          width: '100%', textAlign: 'left', minHeight: 44, fontSize: 12, 
-          display: 'flex', alignItems: 'center', 
-          background: 'var(--color-surface)', border: '1px solid var(--color-border)', 
-          borderRadius: 8, padding: '0 10px',
-          color: (selected || value) ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-          cursor: 'pointer'
-        }}
+        className={`w-full text-left min-h-[44px] text-xs flex items-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-2.5 transition-colors duration-200 cursor-pointer hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-light)] ${
+          (selected || value) ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+        }`}
         onClick={() => setOpen(!open)}
       >
         {displayText}
       </button>
 
       {open && (
-        <div style={{ 
-          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, 
-          background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', 
-          borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 9999, 
-          maxHeight: 250, display: 'flex', flexDirection: 'column' 
-        }}>
-          <div style={{ padding: 8, borderBottom: '1px solid var(--color-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface)', borderRadius: 6, padding: '6px 8px' }}>
-              <SearchIcon style={{ fontSize: 16, color: 'var(--color-text-muted)', marginRight: 6 }} />
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg shadow-lg z-[9999] max-h-[250px] flex flex-col">
+          <div className="p-2 border-b border-[var(--color-border)]">
+            <div className="flex items-center bg-[var(--color-surface)] rounded-md px-2 py-1.5 focus-within:ring-1 focus-within:ring-[var(--color-primary-light)] transition-all">
+              <SearchIcon className="text-[16px] text-[var(--color-text-muted)] mr-1.5" />
               <input
                 autoFocus
                 type="text"
                 placeholder={placeholder}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: 13, color: 'var(--color-text-primary)' }}
+                className="border-none bg-transparent outline-none w-full text-[13px] text-[var(--color-text-primary)]"
               />
             </div>
           </div>
-          <div style={{ overflowY: 'auto', padding: 4 }}>
+          <div className="overflow-y-auto p-1">
             <button
                type="button"
                onClick={() => { onChange(''); setOpen(false); setSearch(''); }}
-               style={{ width: '100%', textAlign: 'left', padding: '8px 12px', minHeight: 44, fontSize: 12, border: 'none', background: !value ? 'var(--color-primary)' : 'transparent', color: !value ? 'white' : 'var(--color-text-primary)', borderRadius: 4, cursor: 'pointer' }}
+               className={`w-full text-left px-3 py-2 min-h-[44px] text-xs border-none rounded cursor-pointer transition-colors duration-200 ${
+                 !value ? 'bg-[var(--color-primary)] text-white' : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]'
+               }`}
             >
               — ไม่ระบุ —
             </button>
@@ -110,35 +100,30 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
                   key={p.id}
                   type="button"
                   onClick={() => { onChange(p.id); setOpen(false); setSearch(''); }}
-                  style={{ 
-                    width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 12, 
-                    border: isUnavailable && !isSelected ? '1px dashed rgba(239, 68, 68, 0.3)' : 'none',
-                    background: isSelected ? 'var(--color-primary)' : isUnavailable ? 'rgba(239, 68, 68, 0.04)' : 'transparent', 
-                    color: isSelected ? 'white' : 'var(--color-text-primary)', 
-                    borderRadius: 6, cursor: 'pointer', marginTop: 2,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                  }}
+                  className={`w-full text-left px-3 py-2 text-xs rounded-md cursor-pointer mt-0.5 flex justify-between items-center transition-colors duration-200 ${
+                    isSelected ? 'bg-[var(--color-primary)] text-white' : 
+                    isUnavailable ? 'bg-red-50 text-[var(--color-text-primary)] hover:bg-red-100' : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]'
+                  } ${isUnavailable && !isSelected ? 'border border-dashed border-red-300/50' : 'border-none'}`}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="flex items-center gap-1.5">
                     <span>{p.rank}{p.firstName} {p.lastName}</span>
                     {statusLabel && (
-                      <span style={{ 
-                        fontSize: 10, padding: '1px 5px', borderRadius: 4, fontWeight: 700,
-                        background: isSelected ? 'rgba(255,255,255,0.25)' : p.status === 'sick' ? '#FEE2E2' : '#FEF3C7',
-                        color: isSelected ? 'white' : p.status === 'sick' ? '#B91C1C' : '#B45309'
-                      }}>
+                      <span className={`text-[10px] px-1.5 py-[1px] rounded font-bold ${
+                        isSelected ? 'bg-white/25 text-white' : 
+                        p.status === 'sick' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
                         {statusLabel}
                       </span>
                     )}
                   </span>
-                  <span style={{ opacity: 0.75, fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                  <span className="opacity-75 text-[10px] tabular-nums">
                     (เวร {p.dutyCount} ครั้ง)
                   </span>
                 </button>
               );
             })}
             {filtered.length === 0 && (
-              <div style={{ padding: '8px 12px', color: 'var(--color-text-muted)', textAlign: 'center', fontSize: 14 }}>
+              <div className="px-3 py-2 text-[var(--color-text-muted)] text-center text-sm">
                 ไม่พบกำลังพลที่ค้นหา
               </div>
             )}
@@ -146,14 +131,9 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
               <button
                 type="button"
                 onClick={() => { onChange(makeCustomValue(search)); setOpen(false); setSearch(''); }}
-                style={{ 
-                  width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 12, 
-                  border: '1px dashed var(--color-primary-light)', background: 'rgba(59, 130, 246, 0.05)', 
-                  color: 'var(--color-primary-light)', borderRadius: 4, cursor: 'pointer', marginTop: 4,
-                  fontWeight: 600
-                }}
+                className="w-full text-left px-3 py-2 text-xs border border-dashed border-[var(--color-primary-light)] bg-blue-500/5 text-[var(--color-primary-light)] rounded cursor-pointer mt-1 font-semibold transition-colors duration-200 hover:bg-blue-500/10"
               >
-                🔹 + เพิ่มรายชื่อนอก: "{search}"
+                🔹 + เพิ่มรายชื่อนอก: &quot;{search}&quot;
               </button>
             )}
           </div>

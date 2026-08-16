@@ -440,7 +440,7 @@ export default function SettingsPage() {
                       </div>
                       <input
                         type="text"
-                        className="w-full bg-gray-100/80 border-transparent hover:bg-gray-200/60 focus:bg-white focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-full pl-11 pr-4 py-2.5 text-sm transition-all duration-300 outline-none"
+                        className="w-full bg-gray-100/80 border-transparent hover:bg-gray-200/60 focus:bg-white focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-full pl-11 pr-4 py-2.5 text-sm transition duration-300 outline-none"
                         placeholder="ค้นหาชื่อ หรือ ID..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                         <div
                           key={u.lineUserId}
                           onClick={() => setViewingUser(u)}
-                          className="p-3.5 sm:px-5 flex flex-row items-center gap-4 rounded-[1.25rem] bg-gray-50/80 border border-transparent transition-all duration-300 hover:bg-white hover:border-gray-200 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] cursor-pointer"
+                          className="p-3.5 sm:px-5 flex flex-row items-center gap-4 rounded-[1.25rem] bg-gray-50/80 border border-transparent transition duration-300 hover:bg-white hover:border-gray-200 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] cursor-pointer"
                         >
                           <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-gray-400 border border-gray-200/50">
                             {u.pictureUrl ? (
@@ -760,7 +760,7 @@ export default function SettingsPage() {
                     <div className="w-full max-w-[540px] bg-white p-2.5 rounded-[2rem] border border-gray-200 shadow-sm relative overflow-hidden flex flex-col items-center">
                       <div className="w-full bg-gray-50/50 rounded-[1.5rem] border-2 border-dashed border-gray-200 p-6 flex flex-col justify-center items-center min-h-[400px] transition-colors hover:bg-gray-50 hover:border-gray-300">
                         {imageUrl ? (
-                          <img src={imageUrl} alt="Org Chart Preview" className="w-full h-auto max-h-[500px] object-contain rounded-xl shadow-sm" />
+                          <img src={imageUrl} alt="Org Chart Preview" className="w-full h-auto max-h-[500px] object-contain rounded-xl shadow-sm border border-black/10" />
                         ) : (
                           <div className="flex flex-col items-center text-gray-400 gap-4 my-12">
                             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-gray-300">
@@ -772,7 +772,7 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="w-full p-4 px-6 mt-1 flex flex-col items-center">
-                        <label className={`btn w-full max-w-[320px] justify-center h-12 text-[15px] font-bold rounded-xl ${uploadingImage ? 'opacity-50 pointer-events-none bg-gray-100 text-gray-400' : 'bg-gray-900 text-white hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer'}`}>
+                        <label className={`btn w-full max-w-[320px] justify-center h-12 text-[15px] font-bold rounded-xl ${uploadingImage ? 'opacity-50 pointer-events-none bg-gray-100 text-gray-400' : 'bg-gray-900 text-white hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer'}`}>
                           {uploadingImage ? (
                             <span className="flex items-center gap-2">
                               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>

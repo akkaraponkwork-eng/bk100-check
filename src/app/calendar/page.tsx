@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { Personnel, NCODuty, DutyShift, KanbanTask } from '@/types';
+import type { Personnel, NCODuty, DutyShift, KanbanTask, Mission, MissionStatus } from '@/types';
+import { MISSION_STATUS_LABELS } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import PersonIcon from '@mui/icons-material/Person';
@@ -12,6 +13,12 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import SaveIcon from '@mui/icons-material/Save';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import PlaceIcon from '@mui/icons-material/Place';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import MissionModal from '@/components/calendar/MissionModal';
 
 type Tab = 'calendar' | 'nco' | 'tasks';
 
@@ -22,27 +29,194 @@ interface DailyRecord {
   remaining: number;
 }
 
-// ==================== Day Detail Modal (Duty) ====================
+const CAN_MANAGE_ROLES = ['admin', 'commander', 'duty_officer', 'nco'];
+
+// ==================== Day Detail Modal (Duty + Missions) ====================
 function DayDetailModal({
-  date, ncoPersonnel, shift, personnelMap, onClose,
+  date,
+  ncoPersonnel,
+  shift,
+  missions,
+  personnelMap,
+  personnelList,
+  userRole,
+  onOpenAddMission,
+  onOpenEditMission,
+  onQuickToggleStatus,
+  onClose,
 }: {
   date: Date;
   ncoPersonnel: Personnel | null;
   shift: DutyShift | null;
+  missions: Mission[];
   personnelMap: Record<string, Personnel>;
+  personnelList: Personnel[];
+  userRole: string;
+  onOpenAddMission: () => void;
+  onOpenEditMission: (mission: Mission) => void;
+  onQuickToggleStatus: (mission: Mission) => void;
   onClose: () => void;
 }) {
   const dateStr = format(date, 'd MMMM yyyy', { locale: th });
+  const canManage = CAN_MANAGE_ROLES.includes(userRole);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', overflowY: 'auto' }}>
         <div className="modal-handle" />
-        <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}><CalendarMonthIcon fontSize="small" /> {dateStr}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+            <CalendarMonthIcon fontSize="small" /> {dateStr}
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+
+        {/* Missions Section */}
+        <div style={{ marginBottom: 20, background: 'var(--color-surface-2)', borderRadius: 12, padding: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, color: '#8b5cf6', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <AssignmentIcon style={{ fontSize: 16 }} /> ภารกิจประจำวัน ({missions.length})
+            </div>
+            {canManage && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={onOpenAddMission}
+                style={{ fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 2, height: 26 }}
+              >
+                <AddIcon style={{ fontSize: 14 }} /> เพิ่มภารกิจ
+              </button>
+            )}
+          </div>
+
+          {missions.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '10px 0', textAlign: 'center' }}>
+              ไม่มีบันทึกภารกิจในวันนี้
+              {canManage && (
+                <div style={{ marginTop: 4 }}>
+                  <button
+                    onClick={onOpenAddMission}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-primary-light)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    + คลิกเพื่อลงภารกิจ
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {missions.map(m => {
+                const statusConfig = MISSION_STATUS_LABELS[m.status] || { label: m.status, color: '#6b7280' };
+                const timeText = m.startTime ? `${m.startTime}${m.endTime ? ' - ' + m.endTime : ''} น.` : 'ตลอดวัน';
+                const assignedCount = m.assignedPersonnelIds?.length || 0;
+
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      background: 'var(--color-surface)',
+                      borderRadius: 8,
+                      padding: '10px',
+                      border: '1px solid var(--color-border)',
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                          {m.title}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4, fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <AccessTimeIcon style={{ fontSize: 12 }} /> {timeText}
+                          </span>
+                          {m.location && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <PlaceIcon style={{ fontSize: 12 }} /> {m.location}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Assigned personnel list */}
+                        <div style={{ marginTop: 6, fontSize: 11 }}>
+                          {assignedCount > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                              <span style={{ color: 'var(--color-text-muted)' }}>กำลังพล ({assignedCount}):</span>
+                              {m.assignedPersonnelIds.slice(0, 3).map(pid => {
+                                const p = personnelMap[pid];
+                                return (
+                                  <span key={pid} style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--color-primary-light)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                                    {p ? `${p.rank}${p.firstName}` : pid}
+                                  </span>
+                                );
+                              })}
+                              {assignedCount > 3 && (
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: 10 }}>
+                                  +{assignedCount - 3} นาย
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--color-text-muted)' }}>ภารกิจภาพรวมกองร้อย</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status badge and actions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            background: `${statusConfig.color}20`,
+                            color: statusConfig.color,
+                            fontWeight: 600,
+                            border: `1px solid ${statusConfig.color}40`,
+                          }}
+                        >
+                          {statusConfig.label}
+                        </span>
+
+                        {canManage && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              onClick={() => onQuickToggleStatus(m)}
+                              title={m.status === 'completed' ? 'ทำเครื่องหมายว่ายังไม่เสร็จ' : 'ทำเครื่องหมายว่าเสร็จแล้ว'}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: m.status === 'completed' ? '#10b981' : 'var(--color-text-muted)',
+                                cursor: 'pointer',
+                                padding: 2,
+                              }}
+                            >
+                              <CheckCircleIcon style={{ fontSize: 16 }} />
+                            </button>
+                            <button
+                              onClick={() => onOpenEditMission(m)}
+                              title="แก้ไขภารกิจ"
+                              style={{ background: 'transparent', border: 'none', color: 'var(--color-primary-light)', cursor: 'pointer', padding: 2 }}
+                            >
+                              <EditIcon style={{ fontSize: 15 }} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* NCO */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-warning-light)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}><PersonIcon style={{ fontSize: 14 }} /> สิบเวร</div>
+          <div style={{ fontSize: 12, color: 'var(--color-warning-light)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <PersonIcon style={{ fontSize: 14 }} /> สิบเวร
+          </div>
           {ncoPersonnel ? (
             <div style={{ padding: '8px 12px', background: 'rgba(245,158,11,0.1)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', fontSize: 14 }}>
               {ncoPersonnel.rank}{ncoPersonnel.firstName} {ncoPersonnel.lastName}
@@ -54,7 +228,9 @@ function DayDetailModal({
 
         {/* Duty Shifts */}
         <div>
-          <div style={{ fontSize: 12, color: 'var(--color-danger-light)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}><SecurityIcon style={{ fontSize: 14 }} /> เวรยาม</div>
+          <div style={{ fontSize: 12, color: 'var(--color-danger-light)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <SecurityIcon style={{ fontSize: 14 }} /> เวรยาม
+          </div>
           {shift ? (
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 6 }}>{shift.location}</div>
@@ -64,7 +240,7 @@ function DayDetailModal({
                   <div key={slot.id} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
                     <span style={{ fontSize: 12, color: 'var(--color-text-muted)', minWidth: 24 }}>{i + 1}.</span>
                     <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', minWidth: 90 }}>{slot.start}–{slot.end}</span>
-                    <span style={{ fontSize: 13 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : '—'}</span>
+                    <span style={{ fontSize: 13 }}>{p ? `${p.rank}${p.firstName} ${p.lastName}` : (slot.customName || '—')}</span>
                   </div>
                 );
               })}
@@ -217,13 +393,14 @@ function NCOSelectModal({
 
 // ==================== Month Calendar ====================
 function MonthCalendar({
-  year, month, ncoByDate, shiftByDate, recordDates, mode, personnelMap, onSelectDay,
+  year, month, ncoByDate, shiftByDate, recordDates, missionDates, mode, personnelMap, onSelectDay,
 }: {
   year: number;
   month: number;
   ncoByDate: Record<string, string>;
   shiftByDate: Record<string, boolean>;
   recordDates: Record<string, boolean>;
+  missionDates: Record<string, boolean>;
   mode: 'duty' | 'tasks' | 'nco';
   personnelMap?: Record<string, Personnel>;
   onSelectDay: (date: Date) => void;
@@ -249,6 +426,7 @@ function MonthCalendar({
           const hasNCO = !!ncoByDate[dateStr];
           const hasDuty = !!shiftByDate[dateStr];
           const hasRecord = !!recordDates[dateStr];
+          const hasMission = !!missionDates[dateStr];
           const todayClass = isToday(day);
 
           return (
@@ -273,6 +451,7 @@ function MonthCalendar({
               <div style={{ display: 'flex', gap: 2 }}>
                 {mode === 'duty' && hasDuty && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
                 {mode === 'duty' && hasNCO  && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />}
+                {mode === 'duty' && hasMission && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#8b5cf6' }} />}
                 {mode === 'tasks' && hasRecord && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6' }} />}
               </div>
               {mode === 'nco' && hasNCO && personnelMap && (
@@ -406,9 +585,17 @@ export default function CalendarPage() {
   const [ncoDuties, setNcoDuties] = useState<NCODuty[]>([]);
   const [dutyShifts, setDutyShifts] = useState<Record<string, DutyShift>>({});
   const [recordDates, setRecordDates] = useState<Record<string, boolean>>({});
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [userRole, setUserRole] = useState<string>('personnel');
+
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedTaskDay, setSelectedTaskDay] = useState<Date | null>(null);
   const [selectedNCODay, setSelectedNCODay] = useState<Date | null>(null);
+
+  // Mission Modal state
+  const [missionModalOpen, setMissionModalOpen] = useState(false);
+  const [editingMission, setEditingMission] = useState<Mission | null>(null);
+
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
@@ -416,11 +603,13 @@ export default function CalendarPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [pRes, ncoRes, dutyRes, recRes] = await Promise.allSettled([
+      const [pRes, ncoRes, dutyRes, recRes, misRes, meRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/nco?month=${monthKey}`),
         fetch('/api/duty'),
         fetch('/api/records'),
+        fetch(`/api/missions?month=${monthKey}`),
+        fetch('/api/auth/me'),
       ]);
 
       if (pRes.status === 'fulfilled' && pRes.value.ok) {
@@ -447,6 +636,14 @@ export default function CalendarPage() {
           if (r.date?.startsWith(monthKey)) map[r.date] = true;
         });
         setRecordDates(map);
+      }
+      if (misRes.status === 'fulfilled' && misRes.value.ok) {
+        const d = await misRes.value.json();
+        setMissions(d.missions || []);
+      }
+      if (meRes.status === 'fulfilled' && meRes.value.ok) {
+        const d = await meRes.value.json();
+        setUserRole(d.role || 'personnel');
       }
     } catch (error) {
       console.error('Failed to load calendar data:', error);
@@ -484,6 +681,63 @@ export default function CalendarPage() {
     }
   };
 
+  const handleSaveMission = async (missionData: Partial<Mission>) => {
+    try {
+      const isEdit = !!missionData.id;
+      const url = '/api/missions';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(missionData),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'บันทึกภารกิจไม่สำเร็จ');
+      }
+
+      showToast(isEdit ? 'แก้ไขภารกิจสำเร็จ' : 'เพิ่มภารกิจสำเร็จ');
+      await loadData();
+    } catch (e: any) {
+      showToast(e.message || 'เกิดข้อผิดพลาด', 'error');
+      throw e;
+    }
+  };
+
+  const handleDeleteMission = async (id: string) => {
+    try {
+      const res = await fetch(`/api/missions?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'ลบภารกิจไม่สำเร็จ');
+      }
+      showToast('ลบภารกิจสำเร็จ');
+      await loadData();
+    } catch (e: any) {
+      showToast(e.message || 'เกิดข้อผิดพลาด', 'error');
+      throw e;
+    }
+  };
+
+  const handleQuickToggleStatus = async (mission: Mission) => {
+    const nextStatus: MissionStatus = mission.status === 'completed' ? 'in_progress' : 'completed';
+    try {
+      const res = await fetch('/api/missions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: mission.id, status: nextStatus }),
+      });
+      if (res.ok) {
+        showToast(`เปลี่ยนสถานะเป็น ${MISSION_STATUS_LABELS[nextStatus].label}`);
+        await loadData();
+      }
+    } catch (e) {
+      showToast('ไม่สามารถเปลี่ยนสถานะได้', 'error');
+    }
+  };
+
   const prevMonth = () => {
     if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12); }
     else setViewMonth(m => m - 1);
@@ -495,6 +749,7 @@ export default function CalendarPage() {
 
   const ncoByDate = Object.fromEntries(ncoDuties.map(d => [d.date, d.personnelId]));
   const shiftByDate = Object.fromEntries(Object.keys(dutyShifts).map(k => [k, true]));
+  const missionDates = Object.fromEntries(missions.map(m => [m.date, true]));
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
 
   const monthDisplay = format(new Date(viewYear, viewMonth - 1), 'MMMM yyyy', { locale: th });
@@ -504,6 +759,7 @@ export default function CalendarPage() {
     ? personnelMap[ncoByDate[selectedDateStr]] || null
     : null;
   const selectedShift = selectedDateStr ? dutyShifts[selectedDateStr] || null : null;
+  const dayMissions = selectedDateStr ? missions.filter(m => m.date === selectedDateStr) : [];
 
   const handleCalendarDayClick = (date: Date) => {
     if (tab === 'tasks') setSelectedTaskDay(date);
@@ -546,13 +802,16 @@ export default function CalendarPage() {
 
       <div className="content-area">
         {/* Legend */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
           {tab !== 'tasks' && <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />เวรยาม
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />สิบเวร
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} />ภารกิจ
             </div>
           </>}
           {tab === 'tasks' && (
@@ -569,6 +828,7 @@ export default function CalendarPage() {
             ncoByDate={ncoByDate}
             shiftByDate={shiftByDate}
             recordDates={recordDates}
+            missionDates={missionDates}
             mode={tab === 'nco' ? 'nco' : (tab === 'tasks' ? 'tasks' : 'duty')}
             personnelMap={personnelMap}
             onSelectDay={handleCalendarDayClick}
@@ -576,13 +836,25 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Duty Day Modal */}
+      {/* Duty + Missions Day Modal */}
       {selectedDay && tab === 'calendar' && (
         <DayDetailModal
           date={selectedDay}
           ncoPersonnel={selectedNCO}
           shift={selectedShift}
+          missions={dayMissions}
           personnelMap={personnelMap}
+          personnelList={personnel}
+          userRole={userRole}
+          onOpenAddMission={() => {
+            setEditingMission(null);
+            setMissionModalOpen(true);
+          }}
+          onOpenEditMission={(m) => {
+            setEditingMission(m);
+            setMissionModalOpen(true);
+          }}
+          onQuickToggleStatus={handleQuickToggleStatus}
           onClose={() => setSelectedDay(null)}
         />
       )}
@@ -603,6 +875,21 @@ export default function CalendarPage() {
           personnel={personnel}
           onSave={handleSaveNCOModal}
           onClose={() => setSelectedNCODay(null)}
+        />
+      )}
+
+      {/* Mission Add/Edit Modal */}
+      {missionModalOpen && (
+        <MissionModal
+          date={selectedDateStr || format(new Date(), 'yyyy-MM-dd')}
+          mission={editingMission}
+          personnelList={personnel}
+          onClose={() => {
+            setMissionModalOpen(false);
+            setEditingMission(null);
+          }}
+          onSave={handleSaveMission}
+          onDelete={editingMission ? handleDeleteMission : undefined}
         />
       )}
     </div>
