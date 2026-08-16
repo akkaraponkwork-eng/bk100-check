@@ -270,7 +270,7 @@ export default function DutyCheckPage() {
       {previewImage && (
         <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold">แตะค้างที่รูปเพื่อบันทึกหรือส่งต่อ</Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>แตะค้างที่รูปเพื่อบันทึกหรือส่งต่อ</Typography>
             <IconButton onClick={() => setPreviewImage(null)} size="small"><CloseIcon /></IconButton>
           </DialogTitle>
           <DialogContent sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>

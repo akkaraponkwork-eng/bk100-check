@@ -189,30 +189,51 @@ export async function POST(request: NextRequest) {
         }]);
         // }
       } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
-        await replyLineMessage(replyToken, [{
-          type: 'text',
-          text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\n\nพี่ๆ สามารถพิมพ์คำว่า "เช็คเวร" เพื่อให้ผมสรุปตารางเวรของวันนี้ให้ดูได้เลยนะครับ\n\nส่วนการจัดการบัญชี สามารถกดจากเมนูด้านล่างได้เลยครับ',
-          quickReply: {
-            items: [
-              {
-                type: 'action',
-                action: {
-                  type: 'message',
-                  label: '📋 เช็คเวร',
-                  text: 'เช็คเวร'
+        await replyLineMessage(replyToken, [
+          {
+            type: 'text',
+            text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\nเลือกเมนูด้านล่างได้เลยครับ'
+          },
+          {
+            type: 'flex',
+            altText: 'เมนูหลัก น้องบก.ร้อย',
+            contents: {
+              type: 'carousel',
+              contents: [
+                {
+                  type: 'bubble',
+                  hero: {
+                    type: 'image',
+                    url: `${origin}/images/duty_check_carousel.jpg`,
+                    size: 'full',
+                    aspectRatio: '1:1',
+                    aspectMode: 'cover',
+                    action: {
+                      type: 'message',
+                      label: 'เช็คเวร',
+                      text: 'เช็คเวร'
+                    }
+                  }
+                },
+                {
+                  type: 'bubble',
+                  hero: {
+                    type: 'image',
+                    url: `${origin}/images/link_account_carousel.jpg`,
+                    size: 'full',
+                    aspectRatio: '1:1',
+                    aspectMode: 'cover',
+                    action: {
+                      type: 'uri',
+                      label: 'จัดการบัญชี',
+                      uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/link-account` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
+                    }
+                  }
                 }
-              },
-              {
-                type: 'action',
-                action: {
-                  type: 'uri',
-                  label: '🔗 จัดการบัญชี',
-                  uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/link-account` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
-                }
-              }
-            ]
+              ]
+            }
           }
-        }]);
+        ]);
       }
     }
 

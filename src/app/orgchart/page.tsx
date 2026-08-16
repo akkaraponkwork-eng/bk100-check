@@ -126,7 +126,7 @@ export default function OrgChartPage() {
     <>
       <PageHeader
         title="ทำเนียบหน่วย"
-        description="โครงสร้างสายการบังคับบัญชา กองร้อยบริการ"
+        description="โครงสร้างสายการบังคับบัญชา กองร้อยบังคับการ"
       />
 
       <Box sx={{ maxWidth: 1200, mx: 'auto', pb: 10 }}>
