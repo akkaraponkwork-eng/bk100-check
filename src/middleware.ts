@@ -32,12 +32,21 @@ export default async function middleware(request: NextRequest) {
 
   if (isPublic) return NextResponse.next();
 
+  // Allow internal server-to-server calls
+  const internalToken = request.headers.get('x-internal-token');
+  if (internalToken && internalToken === process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+    return NextResponse.next();
+  }
+
   // Check session
   const sessionToken = request.cookies.get('bk100_session')?.value;
   if (!sessionToken) {
     // Not logged in — redirect to login
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    if (request.nextUrl.pathname !== '/') {
+      url.searchParams.set('callbackUrl', request.nextUrl.pathname);
+    }
     return NextResponse.redirect(url);
   }
 
@@ -46,6 +55,9 @@ export default async function middleware(request: NextRequest) {
     // Invalid/expired session — redirect to login and clear cookie
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    if (request.nextUrl.pathname !== '/') {
+      url.searchParams.set('callbackUrl', request.nextUrl.pathname);
+    }
     const response = NextResponse.redirect(url);
     response.cookies.delete('bk100_session');
     return response;

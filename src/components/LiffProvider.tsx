@@ -31,7 +31,9 @@ export default function LiffProvider({ children }: { children: React.ReactNode }
           if (res.ok) {
             // Success, session is set
             if (window.location.pathname === '/login') {
-              router.push('/');
+              const urlParams = new URLSearchParams(window.location.search);
+              const callbackUrl = urlParams.get('callbackUrl') || '/';
+              router.push(callbackUrl);
             } else {
               // If we are already on the target page, we just need to ensure 
               // the page knows about the new cookie. 

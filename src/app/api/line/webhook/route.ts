@@ -41,12 +41,15 @@ export async function POST(request: NextRequest) {
       try {
         const origin = request.nextUrl.origin;
         // First get existing settings to preserve alertTimes
-        const getRes = await fetch(`${origin}/api/bot-settings`);
+        const getRes = await fetch(`${origin}/api/bot-settings`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } });
         const existing = await getRes.json();
         
         await fetch(`${origin}/api/bot-settings`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || ''
+          },
           body: JSON.stringify({ 
             groupId: groupId, 
             alertTimes: existing.alertTimes || [] 
@@ -119,8 +122,8 @@ export async function POST(request: NextRequest) {
         */
 
         const [dutyRes, personnelRes] = await Promise.all([
-          fetch(`${origin}/api/duty`),
-          fetch(`${origin}/api/personnel`)
+          fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } })
         ]);
         
         const dutyData = await dutyRes.json();
