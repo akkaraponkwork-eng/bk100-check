@@ -45,8 +45,6 @@ export default function SettingsPage() {
 
   // Bot Settings
   const [botGroupId, setBotGroupId] = useState('');
-  const [botAlertTimes, setBotAlertTimes] = useState<string[]>([]);
-  const [newAlertTime, setNewAlertTime] = useState('');
   const [leaveEnabled, setLeaveEnabled] = useState(true);
   const [savingBotSettings, setSavingBotSettings] = useState(false);
   const [refreshingBot, setRefreshingBot] = useState(false);
@@ -95,7 +93,6 @@ export default function SettingsPage() {
       if (botRes.ok) {
         const botData = await botRes.json();
         setBotGroupId(botData.groupId || '');
-        setBotAlertTimes(botData.alertTimes || []);
         setLeaveEnabled(botData.leaveEnabled !== false);
       }
       if (adminsRes.ok) {
@@ -259,7 +256,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, alertTimes: botAlertTimes, leaveEnabled: newVal })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled: newVal })
       });
       if (res.ok) {
         showToast(newVal ? 'เปิดใช้งานระบบลางานแล้ว' : 'ปิดใช้งานระบบลางานแล้ว', 'success');
@@ -281,7 +278,6 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setBotGroupId(data.groupId || '');
-        setBotAlertTimes(data.alertTimes || []);
         showToast('ดึงข้อมูลล่าสุดสำเร็จ', 'success');
       } else {
         showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
@@ -300,7 +296,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, alertTimes: botAlertTimes, leaveEnabled })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled })
       });
       if (res.ok) {
         showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
@@ -315,19 +311,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAddAlertTime = () => {
-    if (!newAlertTime) return;
-    if (botAlertTimes.includes(newAlertTime)) {
-      showToast('เวลานี้ถูกตั้งไว้แล้ว', 'error');
-      return;
-    }
-    setBotAlertTimes([...botAlertTimes, newAlertTime].sort());
-    setNewAlertTime('');
-  };
 
-  const handleRemoveAlertTime = (timeToRemove: string) => {
-    setBotAlertTimes(botAlertTimes.filter(t => t !== timeToRemove));
-  };
 
   const tabs = [
     { id: 0, label: 'ตั้งค่าทั่วไป', icon: <SettingsIcon fontSize="small" /> },
@@ -735,68 +719,6 @@ export default function SettingsPage() {
                           </div>
                         )}
                       </div>
-
-                      <div className="p-5 bg-white border border-[var(--color-border)] rounded-2xl mb-8 shadow-sm">
-                        <h3 className="font-bold text-[15px] mb-1 flex items-center gap-2">
-                           <AccessTimeFilledIcon fontSize="small" className="text-orange-500" />
-                           เวลาแจ้งเตือนรายวัน (Cron Times)
-                        </h3>
-                        <p className="text-xs text-[var(--color-text-secondary)] mb-4">
-                          ตั้งเวลาที่ต้องการให้บอทสรุปตารางเวรและแจ้งเตือนเข้ากลุ่มอัตโนมัติ (เช่น 08:00 หรือ 17:30)
-                        </p>
-
-                        <div className="flex gap-2 mb-4">
-                          <input
-                            type="time"
-                            className="input h-10 text-sm flex-grow bg-gray-50 border-gray-200 focus:bg-white"
-                            value={newAlertTime}
-                            onChange={(e) => setNewAlertTime(e.target.value)}
-                          />
-                          <button
-                            className="btn h-10 btn-outline whitespace-nowrap text-sm border-gray-200 hover:bg-gray-50"
-                            onClick={handleAddAlertTime}
-                            disabled={!newAlertTime}
-                          >
-                            <AddIcon fontSize="small" /> เพิ่มเวลา
-                          </button>
-                        </div>
-
-                        {botAlertTimes.length > 0 ? (
-                          <div className="flex flex-col gap-2 mb-4">
-                            {botAlertTimes.map((time) => (
-                              <div key={time} className="flex justify-between items-center p-2.5 px-4 bg-gray-50/80 rounded-xl border border-gray-100 transition-all hover:border-gray-200 hover:bg-white">
-                                <div className="flex items-center gap-2 font-semibold text-[15px]">
-                                  {time} น.
-                                </div>
-                                <button
-                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                  onClick={() => handleRemoveAlertTime(time)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-6 mb-4 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <p className="text-sm text-[var(--color-text-secondary)]">ยังไม่มีการตั้งเวลาแจ้งเตือน</p>
-                          </div>
-                        )}
-                        
-                        <div className="pt-2">
-                          <button
-                            className="btn btn-primary w-full h-11 text-[15px] font-semibold"
-                            onClick={handleSaveBotSettings}
-                            disabled={savingBotSettings}
-                          >
-                            {savingBotSettings ? (
-                              <span className="flex items-center gap-2"><svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...</span>
-                            ) : (
-                              <><SaveIcon fontSize="small" /> บันทึกการตั้งค่าเวลา</>
-                            )}
-                          </button>
-                        </div>
-                      </div>
                     </div>
 
                     <div>
@@ -819,10 +741,6 @@ export default function SettingsPage() {
                           <li className="flex items-start gap-3">
                             <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold mt-0.5">3</span>
                             <span>กำลังพลสามารถพิมพ์ <b>&quot;เช็คเวร&quot;</b> เพื่อเรียกดูตารางเวรในกลุ่มได้ทันที</span>
-                          </li>
-                          <li className="flex items-start gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold mt-0.5">4</span>
-                            <span>ตั้งเวลาแจ้งเตือนด้านซ้าย เพื่อให้บอทสรุปยอดเวรส่งเข้ากลุ่มทุกวัน</span>
                           </li>
                         </ul>
                       </div>
