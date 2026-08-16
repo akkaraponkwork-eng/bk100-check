@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   '/api/auth/line',
   '/api/auth/callback',
   '/api/auth/link',
+  '/api/auth/admin-login',
+  '/api/auth/logout',
   '/api/line', // Allow LINE Webhook & Cron
 ];
 
