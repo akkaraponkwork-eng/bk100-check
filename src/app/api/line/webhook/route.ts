@@ -8,7 +8,7 @@ async function replyLineMessage(replyToken: string, messages: any[]) {
     console.error('Missing LINE_CHANNEL_ACCESS_TOKEN');
     return;
   }
-  
+
   await fetch(LINE_API, {
     method: 'POST',
     headers: {
@@ -25,7 +25,7 @@ async function replyLineMessage(replyToken: string, messages: any[]) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Check if it's a verification request
     if (!body.events || body.events.length === 0) {
       return NextResponse.json({ status: 'ok' });
@@ -36,23 +36,23 @@ export async function POST(request: NextRequest) {
 
     if (event.type === 'join' && event.source.type === 'group') {
       const groupId = event.source.groupId;
-      
+
       // Save groupId using our own API
       try {
         const origin = request.nextUrl.origin;
         // First get existing settings to preserve alertTimes
         const getRes = await fetch(`${origin}/api/bot-settings`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } });
         const existing = await getRes.json();
-        
+
         await fetch(`${origin}/api/bot-settings`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || ''
           },
-          body: JSON.stringify({ 
-            groupId: groupId, 
-            alertTimes: existing.alertTimes || [] 
+          body: JSON.stringify({
+            groupId: groupId,
+            alertTimes: existing.alertTimes || []
           })
         });
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     else if (event.type === 'message' && event.message.type === 'text') {
       const text = event.message.text.trim();
       const origin = request.nextUrl.origin;
-      
+
       if (text === 'เช็คเวร') { // || text === 'เวรของฉัน') {
         /* ปิดฟีเจอร์ 1 ไว้ชั่วคราว
         const isPersonal = text === 'เวรของฉัน';
@@ -125,10 +125,10 @@ export async function POST(request: NextRequest) {
           fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } }),
           fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } })
         ]);
-        
+
         const dutyData = await dutyRes.json();
         const personnelData = await personnelRes.json();
-        
+
         const personnelList = personnelData.personnel || [];
         const getPersonnelName = (id: string) => {
           const p = personnelList.find((x: any) => x.id === id);
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); // YYYY-MM-DD
         const allDuties = dutyData.shifts || [];
-        
+
         /* ปิดฟีเจอร์ 1 ไว้ชั่วคราว
         if (isPersonal) {
           // Find future duties for this person
@@ -162,36 +162,36 @@ export async function POST(request: NextRequest) {
           await replyLineMessage(replyToken, [{ type: 'text', text: summaryText }]);
         } else {
         */
-          // Check Group/General Duty for today
-          const todayDuties = allDuties.filter((d: any) => d.date === todayStr);
+        // Check Group/General Duty for today
+        const todayDuties = allDuties.filter((d: any) => d.date === todayStr);
 
-          if (todayDuties.length === 0) {
-            await replyLineMessage(replyToken, [{ type: 'text', text: 'วันนี้ยังไม่มีการจัดตารางเวรครับ 😴' }]);
-            return NextResponse.json({ status: 'ok' });
-          }
+        if (todayDuties.length === 0) {
+          await replyLineMessage(replyToken, [{ type: 'text', text: 'วันนี้ยังไม่มีการจัดตารางเวรครับ 😴' }]);
+          return NextResponse.json({ status: 'ok' });
+        }
 
-          let summaryText = '';
-          todayDuties.forEach((duty: any, i: number) => {
-            const dDate = new Date(duty.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
-            summaryText += `ขออนุญาตแจ้งเวร${duty.location}ประจำวันที่ ${dDate}\n`;
-            const slots = duty.timeSlots || [];
-            slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
-              const name = slot.customName || getPersonnelName(slot.personnelId);
-              summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
-            });
-            if (i < todayDuties.length - 1) summaryText += '\n';
+        let summaryText = '';
+        todayDuties.forEach((duty: any, i: number) => {
+          const dDate = new Date(duty.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
+          summaryText += `ขออนุญาตแจ้งเวร${duty.location}ประจำวันที่ ${dDate}\n`;
+          const slots = duty.timeSlots || [];
+          slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
+            const name = slot.customName || getPersonnelName(slot.personnelId);
+            summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
           });
-          summaryText += 'ครับ';
+          if (i < todayDuties.length - 1) summaryText += '\n';
+        });
+        summaryText += 'ครับ';
 
-          await replyLineMessage(replyToken, [{
-            type: 'text',
-            text: summaryText
-          }]);
+        await replyLineMessage(replyToken, [{
+          type: 'text',
+          text: summaryText
+        }]);
         // }
       } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
         await replyLineMessage(replyToken, [{
           type: 'text',
-          text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\n\nพี่ๆ สามารถพิมพ์คำว่า "เช็คเวร" เพื่อให้ผมสรุปตารางเวรของวันนี้ให้ดูได้เลยนะครับ\n\nส่วนการลางาน หรือจัดการบัญชี สามารถกดจากเมนูด้านล่างได้เลยครับ',
+          text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\n\nพี่ๆ สามารถพิมพ์คำว่า "เช็คเวร" เพื่อให้ผมสรุปตารางเวรของวันนี้ให้ดูได้เลยนะครับ\n\nส่วนการจัดการบัญชี สามารถกดจากเมนูด้านล่างได้เลยครับ',
           quickReply: {
             items: [
               {

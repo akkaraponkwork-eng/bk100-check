@@ -5,12 +5,13 @@ import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { KanbanTask } from '@/types';
 import { useToast } from '@/hooks/useToast';
-import { Box, Typography, Button, IconButton, Chip } from '@mui/material';
+import { Box, Typography, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import html2canvas from 'html2canvas';
 
 import PageHeader from '@/components/layout/PageHeader';
@@ -35,6 +36,7 @@ export default function DutyCheckPage() {
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
   const { showToast } = useToast();
 
@@ -55,10 +57,31 @@ export default function DutyCheckPage() {
       await new Promise(r => setTimeout(r, 100));
       const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      const link = document.createElement('a');
-      link.download = `ยอดกำลังพล_${today}.jpg`;
-      link.href = dataUrl;
-      link.click();
+      
+      let shared = false;
+      try {
+        if (navigator.share) {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
+            shared = true;
+          }
+        }
+      } catch (e) {
+        console.log('Share failed or rejected', e);
+      }
+
+      if (!shared) {
+        if (/Line/i.test(navigator.userAgent) || /Mobi|Android/i.test(navigator.userAgent)) {
+          setPreviewImage(dataUrl);
+        } else {
+          const link = document.createElement('a');
+          link.download = `ยอดกำลังพล_${today}.jpg`;
+          link.href = dataUrl;
+          link.click();
+        }
+      }
     } catch {
       showToast('ไม่สามารถสร้างรูปภาพได้', 'error');
     } finally {
@@ -243,6 +266,27 @@ export default function DutyCheckPage() {
 
       {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
       {showSummary && <SummaryModal onClose={() => setShowSummary(false)} totalCompany={totalCompany} tasks={tasks} />}
+      
+      {previewImage && (
+        <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold">แตะค้างที่รูปเพื่อบันทึกหรือส่งต่อ</Typography>
+            <IconButton onClick={() => setPreviewImage(null)} size="small"><CloseIcon /></IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
+            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPreviewImage(null)} color="inherit">ปิด</Button>
+            <Button variant="contained" onClick={() => {
+              const link = document.createElement('a');
+              link.download = `ยอดกำลังพล_${today}.jpg`;
+              link.href = previewImage;
+              link.click();
+            }}>ดาวน์โหลด</Button>
+          </DialogActions>
+        </Dialog>
+      )}
       </>
     </Box>
   );
