@@ -206,13 +206,14 @@ export async function POST(request: Request) {
             return p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ระบุ';
           };
 
-          let summaryText = `📢 **มีการอัปเดตตารางเวรประจำวันที่ ${new Date(shift.date).toLocaleDateString('th-TH')}**\n`;
-          summaryText += `\n📍 ${shift.location}\n`;
+          const dDate = new Date(shift.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
+          let summaryText = `ขออนุญาตแจ้งเวร${shift.location}ประจำวันที่ ${dDate}\n`;
           const slots = shift.timeSlots || [];
-          slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any) => {
+          slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
             const name = slot.customName || getPersonnelName(slot.personnelId);
-            summaryText += `- ${slot.start}-${slot.end} : ${name}\n`;
+            summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
           });
+          summaryText += 'ครับ';
 
           await pushLineMessage(settings.groupId, [{ type: 'text', text: summaryText }]);
         }

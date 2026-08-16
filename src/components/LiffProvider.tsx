@@ -40,9 +40,10 @@ export default function LiffProvider({ children, hasSession = false }: { childre
                 router.refresh();
               }
             } else {
-              // Not linked, redirect to link-account if not already there
-              if (window.location.pathname !== '/link-account') {
-                router.push('/link-account');
+              // Not linked, redirect to link-account with profile data
+              const targetUrl = `/link-account?lineUserId=${profile.userId}&displayName=${encodeURIComponent(profile.displayName || '')}&pictureUrl=${encodeURIComponent(profile.pictureUrl || '')}`;
+              if (window.location.pathname !== '/link-account' || !new URLSearchParams(window.location.search).get('lineUserId')) {
+                router.push(targetUrl);
               }
             }
           }

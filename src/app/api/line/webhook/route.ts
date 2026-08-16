@@ -170,16 +170,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ status: 'ok' });
           }
 
-          let summaryText = `📋 **สรุปตารางเวรประจำวันที่ ${new Date().toLocaleDateString('th-TH')}**\n`;
-          
-          todayDuties.forEach((duty: any) => {
-            summaryText += `\n📍 ${duty.location}\n`;
+          let summaryText = '';
+          todayDuties.forEach((duty: any, i: number) => {
+            const dDate = new Date(duty.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
+            summaryText += `ขออนุญาตแจ้งเวร${duty.location}ประจำวันที่ ${dDate}\n`;
             const slots = duty.timeSlots || [];
-            slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any) => {
+            slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
               const name = slot.customName || getPersonnelName(slot.personnelId);
-              summaryText += `- ${slot.start}-${slot.end} : ${name}\n`;
+              summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
             });
+            if (i < todayDuties.length - 1) summaryText += '\n';
           });
+          summaryText += 'ครับ';
 
           await replyLineMessage(replyToken, [{
             type: 'text',
