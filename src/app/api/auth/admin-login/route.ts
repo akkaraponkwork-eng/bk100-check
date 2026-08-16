@@ -1,14 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSessionToken } from '@/lib/session';
 import { cookies } from 'next/headers';
+import { google } from 'googleapis';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    // Check hardcoded credentials
-    if (username !== 'bk100' || password !== 'bk100admin') {
+    const validEnvUsername = process.env.ADMIN_USERNAME || 'bk100';
+    const validEnvPassword = process.env.ADMIN_PASSWORD || 'bk100admin';
+
+    let isAuthenticated = false;
+
+    // Check Google Sheet first
+    try {
+      const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+      const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      const sheetId = process.env.GOOGLE_SHEET_ID;
+      
+      if (clientEmail && privateKey && sheetId) {
+        const auth = new google.auth.JWT({
+          email: clientEmail, key: privateKey,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheetId,
+          range: 'AdminAccounts!A:B',
+        });
+        
+        const rows = res.data.values || [];
+        const sheetUser = rows.find(r => r[0] === username && r[1] === password);
+        if (sheetUser) {
+          isAuthenticated = true;
+        }
+      }
+    } catch (e: any) {
+      console.log('AdminAccounts sheet not found or accessible, falling back to ENV.');
+    }
+
+    // Fallback to ENV if not found in sheet
+    if (!isAuthenticated && username === validEnvUsername && password === validEnvPassword) {
+      isAuthenticated = true;
+    }
+
+    if (!isAuthenticated) {
       return NextResponse.json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
     }
 

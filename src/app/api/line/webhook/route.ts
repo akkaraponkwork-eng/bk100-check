@@ -22,11 +22,56 @@ async function replyLineMessage(replyToken: string, messages: any[]) {
   });
 }
 
+import { google } from 'googleapis';
+
+function getSheetAuth() {
+  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const sheetId = process.env.GOOGLE_SHEET_ID;
+  if (!clientEmail || !privateKey || !sheetId) throw new Error('Missing Google credentials');
+  
+  const auth = new google.auth.JWT({
+    email: clientEmail, key: privateKey,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  return { auth, sheetId };
+}
+
+async function updateGroupId(groupId: string) {
+  const { auth, sheetId } = getSheetAuth();
+  const sheets = google.sheets({ version: 'v4', auth });
+  
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: sheetId,
+    range: 'BotSettings!A:B',
+  });
+  const rows = res.data.values || [];
+  const settings: Record<string, string> = {};
+  rows.forEach(row => {
+    if (row[0] && row[1]) settings[row[0]] = row[1];
+  });
+  
+  settings['groupId'] = groupId;
+  
+  const values = [
+    ['groupId', settings['groupId'] || ''],
+    ['alertTimes', settings['alertTimes'] || ''],
+    ['leaveEnabled', settings['leaveEnabled'] !== undefined ? settings['leaveEnabled'] : 'true'],
+    ['adminEmail', settings['adminEmail'] || '']
+  ];
+  
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: 'BotSettings!A1:B4',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Check if it's a verification request
     if (!body.events || body.events.length === 0) {
       return NextResponse.json({ status: 'ok' });
     }
@@ -36,26 +81,8 @@ export async function POST(request: NextRequest) {
 
     if (event.type === 'join' && event.source.type === 'group') {
       const groupId = event.source.groupId;
-
-      // Save groupId using our own API
       try {
-        const origin = request.nextUrl.origin;
-        // First get existing settings to preserve alertTimes
-        const getRes = await fetch(`${origin}/api/bot-settings`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } });
-        const existing = await getRes.json();
-
-        await fetch(`${origin}/api/bot-settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || ''
-          },
-          body: JSON.stringify({
-            groupId: groupId,
-            alertTimes: existing.alertTimes || []
-          })
-        });
-
+        await updateGroupId(groupId);
         await replyLineMessage(replyToken, [{
           type: 'text',
           text: 'สวัสดีครับ! น้องบก.ร้อย รายงานตัวครับ 🫡\n\nผมได้เชื่อมต่อกับระบบแล้ว ตั้งแต่นี้ผมจะคอยแจ้งเตือนเวรยามและสรุปยอดกำลังพลให้นะครับ\n\nพิมพ์ "เช็คเวร" เพื่อดูตารางเวรวันนี้ได้เลยครับ!'
@@ -76,6 +103,21 @@ export async function POST(request: NextRequest) {
     else if (event.type === 'message' && event.message.type === 'text') {
       const text = event.message.text.trim();
       const origin = request.nextUrl.origin;
+
+      if (text === 'เซ็ตกลุ่ม' && event.source.type === 'group') {
+        const groupId = event.source.groupId;
+        try {
+          await updateGroupId(groupId);
+          await replyLineMessage(replyToken, [{
+            type: 'text',
+            text: 'รับทราบครับ! บันทึกกลุ่มนี้เป็นกลุ่มหลักสำหรับแจ้งเตือนเรียบร้อยแล้วครับ 🫡'
+          }]);
+        } catch (e) {
+          console.error('Error setting group:', e);
+          await replyLineMessage(replyToken, [{ type: 'text', text: 'เกิดข้อผิดพลาดในการบันทึกกลุ่มครับ' }]);
+        }
+        return NextResponse.json({ status: 'ok' });
+      }
 
       if (text === 'เช็คเวร') { // || text === 'เวรของฉัน') {
         /* ปิดฟีเจอร์ 1 ไว้ชั่วคราว

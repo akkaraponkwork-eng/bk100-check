@@ -75,6 +75,100 @@ const theme = createTheme({
         },
       },
     },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(4px)',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 12,
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+          padding: 0,
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          fontWeight: 700,
+          fontSize: '1.25rem',
+          color: '#0f172a',
+          padding: '24px 24px 16px 24px',
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          position: 'relative',
+          transform: 'none',
+          fontWeight: 600,
+          fontSize: '0.875rem',
+          color: '#475569',
+          marginBottom: '6px',
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          backgroundColor: '#f8fafc',
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            backgroundColor: '#f1f5f9',
+          },
+          '&.Mui-focused': {
+            backgroundColor: '#ffffff',
+            boxShadow: '0 0 0 3px rgba(14, 165, 233, 0.15)',
+            borderColor: '#0EA5E9',
+          },
+        },
+        input: {
+          boxSizing: 'content-box',
+          padding: '12px 14px',
+          '&::placeholder': {
+            opacity: 1,
+            color: '#94a3b8',
+          },
+        },
+
+        notchedOutline: {
+          top: 0,
+          legend: {
+            display: 'none',
+          },
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          padding: '8px 24px 24px 24px',
+          '&.MuiDialogContent-dividers': {
+            borderTop: 'none',
+            borderBottom: 'none',
+          },
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: '16px 24px 24px 24px',
+          gap: '12px',
+          '& > :not(style) ~ :not(style)': {
+            marginLeft: 0,
+          },
+        },
+      },
+    },
   },
 });
 

@@ -68,7 +68,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
   }, []);
 
   const visibleNavItems = navItems.filter(item => {
-    if (!leaveEnabled && item.href === '/leave' && userRole !== 'admin' && userRole !== 'commander') return false;
+    if (!leaveEnabled && item.href === '/leave') return false;
     return !item.roles || item.roles.includes(userRole);
   });
   const visibleAdminItems = adminItems.filter(item => !item.roles || item.roles.includes(userRole));

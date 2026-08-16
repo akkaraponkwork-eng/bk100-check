@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         groupId: settings['groupId'] || '',
         alertTimes: settings['alertTimes'] ? settings['alertTimes'].split(',') : [],
-        leaveEnabled: settings['leaveEnabled'] !== 'false', // default true unless explicitly 'false'
+        leaveEnabled: String(settings['leaveEnabled']).toLowerCase() !== 'false', // default true unless explicitly 'false'
         adminEmail: settings['adminEmail'] || ''
       });
     } catch (e: any) {

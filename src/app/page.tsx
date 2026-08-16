@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPersonnelModal, setShowPersonnelModal] = useState(false);
   const [leaveEnabled, setLeaveEnabled] = useState(true);
+  const [userRole, setUserRole] = useState<string>('personnel');
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayDisplay = format(new Date(), 'd MMMM yyyy', { locale: th });
@@ -50,13 +51,14 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, dRes, ncoRes, recRes, metaRes, botRes] = await Promise.allSettled([
+      const [pRes, dRes, ncoRes, recRes, metaRes, botRes, meRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/duty?date=${todayStr}`),
         fetch(`/api/nco?month=${currentMonth}`),
         fetch(`/api/records?date=${todayStr}`),
         fetch('/api/duty-meta'),
         fetch('/api/bot-settings'),
+        fetch('/api/auth/me'),
       ]);
 
       if (pRes.status === 'fulfilled') {
@@ -90,6 +92,10 @@ export default function DashboardPage() {
       if (botRes && botRes.status === 'fulfilled') {
         const data = await botRes.value.json();
         setLeaveEnabled(data.leaveEnabled !== false);
+      }
+      if (meRes && meRes.status === 'fulfilled') {
+        const data = await meRes.value.json();
+        setUserRole(data.role || 'personnel');
       }
       setLoadedAt(format(new Date(), 'HH:mm'));
     } catch (e) {
@@ -197,15 +203,13 @@ export default function DashboardPage() {
               sub={lastRecord ? format(parseISO(lastRecord.date), 'd MMM', { locale: th }) : 'ยังไม่มีข้อมูล'}
               accent="#8b5cf6"
             />
-            {leaveEnabled && (
-              <StatCard
-                icon={<DirectionsWalkIcon />} label="ทหารลา"
-                value={`${leaveCount} นาย`}
-                sub="กำลังพลที่ลาพัก"
-                accent="#ef4444"
-                onClick={() => leaveCount > 0 && setShowLeaveModal(true)}
-              />
-            )}
+            <StatCard
+              icon={<DirectionsWalkIcon />} label="ทหารลา"
+              value={`${leaveCount} นาย`}
+              sub="กำลังพลที่ลาพัก"
+              accent="#ef4444"
+              onClick={() => leaveCount > 0 && setShowLeaveModal(true)}
+            />
           </div>
         )}
 
