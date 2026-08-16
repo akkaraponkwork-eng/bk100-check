@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   '/api/auth/line',
   '/api/auth/callback',
   '/api/auth/link',
+  '/api/line', // Allow LINE Webhook & Cron
 ];
 
 // API routes that are always public (data needed even without auth during migration)
@@ -18,7 +19,7 @@ const PUBLIC_API_PATHS = [
   '/api/migrate-nco',
 ];
 
-export default async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Allow public paths
