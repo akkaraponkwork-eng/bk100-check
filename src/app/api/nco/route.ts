@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 
 export const dynamic = 'force-dynamic';
 import type { NCODuty } from '@/types';
+import { requireRole } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -60,6 +61,10 @@ export async function GET(request: Request) {
 
 // POST /api/nco — บันทึกตารางสิบเวรทั้งเดือน (bulk replace for a month)
 export async function POST(request: Request) {
+  const nextRequest = request as any;
+  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { month, duties }: { month: string; duties: NCODuty[] } = body;

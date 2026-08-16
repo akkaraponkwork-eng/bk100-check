@@ -15,18 +15,13 @@ const PUBLIC_PATHS = [
 ];
 
 // API routes that are always public (data needed even without auth during migration)
-const PUBLIC_API_PATHS = [
-  '/api/setup',
-  '/api/migrate-db',
-  '/api/migrate-nco',
-];
+// PUBLIC_API_PATHS removed for security
 
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Allow public paths
   const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
-    || PUBLIC_API_PATHS.some(p => pathname.startsWith(p))
     || pathname.startsWith('/_next')
     || pathname.startsWith('/manifest')
     || pathname.startsWith('/icons')
@@ -36,7 +31,7 @@ export default async function proxy(request: NextRequest) {
 
   // Allow internal server-to-server calls
   const internalToken = request.headers.get('x-internal-token');
-  if (internalToken && internalToken === process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+  if (internalToken && internalToken === process.env.INTERNAL_API_SECRET) {
     return NextResponse.next();
   }
 
@@ -67,9 +62,11 @@ export default async function proxy(request: NextRequest) {
 
   // Role-based route protection
   const roleProtectedRoutes: { path: string; roles: string[] }[] = [
-    { path: '/reports',   roles: ['admin', 'commander'] },
-    { path: '/settings',  roles: ['admin'] },
-    { path: '/personnel', roles: ['admin', 'duty_officer'] },
+    { path: '/reports',      roles: ['admin', 'commander'] },
+    { path: '/settings',     roles: ['admin'] },
+    { path: '/personnel',    roles: ['admin', 'duty_officer'] },
+    { path: '/kanban',       roles: ['admin', 'duty_officer'] },
+    { path: '/leave/approve',roles: ['admin', 'commander', 'duty_officer'] },
   ];
 
   const protectedRoute = roleProtectedRoutes.find(r => pathname.startsWith(r.path));

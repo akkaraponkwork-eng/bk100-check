@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { requireRole, getUserInfo } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -13,19 +14,14 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
-function getUserInfo(request: NextRequest) {
-  return {
-    id: request.headers.get('x-user-id') || '',
-    role: request.headers.get('x-user-role') || '',
-  };
-}
+// getUserInfo is imported from auth-guard
 
 export async function GET(request: NextRequest) {
+  const { error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
+
   try {
     const user = getUserInfo(request);
-    if (user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
 
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -53,11 +49,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const { error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
+
   try {
     const user = getUserInfo(request);
-    if (user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
 
     const body = await request.json();
     const { lineUserId, newRole } = body;

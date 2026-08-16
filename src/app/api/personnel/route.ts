@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 
 export const dynamic = 'force-dynamic';
 import type { Personnel } from '@/types';
+import { requireRole } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -89,6 +90,10 @@ export async function GET() {
 
 // POST /api/personnel — เพิ่มหรืออัปเดตทั้ง array (bulk upsert)
 export async function POST(request: Request) {
+  const nextRequest = request as any;
+  const { user, error: roleError } = requireRole(nextRequest, ['admin']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { personnel }: { personnel: Personnel[] } = body;

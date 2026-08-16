@@ -170,8 +170,8 @@ export async function POST(request: NextRequest) {
         */
 
         const [dutyRes, personnelRes] = await Promise.all([
-          fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } }),
-          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.LINE_CHANNEL_ACCESS_TOKEN || '' } })
+          fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } })
         ]);
 
         const dutyData = await dutyRes.json();

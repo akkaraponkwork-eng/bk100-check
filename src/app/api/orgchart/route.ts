@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { requireRole, getUserInfo } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -15,13 +16,7 @@ function getSheetAuth() {
 }
 
 // Helper: Get user info from headers (set by middleware)
-function getUserInfo(request: NextRequest) {
-  return {
-    id: request.headers.get('x-user-id') || '',
-    role: request.headers.get('x-user-role') || '',
-    name: request.headers.get('x-user-name') || '',
-  };
-}
+// Now imported from auth-guard
 
 // GET /api/orgchart
 export async function GET(request: NextRequest) {
@@ -49,11 +44,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/orgchart
 export async function POST(request: NextRequest) {
+  const { user, error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
+
   try {
-    const { role } = getUserInfo(request);
-    if (role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
 
     const { imageUrl, imgbbApiKey } = await request.json();
     const { auth, sheetId } = getSheetAuth();

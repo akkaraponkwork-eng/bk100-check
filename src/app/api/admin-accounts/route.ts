@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { verifySessionToken } from '@/lib/session';
+import { requireRole } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -14,15 +14,11 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
-async function verifyAdmin(request: NextRequest) {
-  const sessionToken = request.cookies.get('bk100_session')?.value;
-  if (!sessionToken) return false;
-  const user = await verifySessionToken(sessionToken);
-  return user?.role === 'admin';
-}
+// requireRole is imported from auth-guard
 
 export async function GET(request: NextRequest) {
-  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const { error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
 
   try {
     const { auth, sheetId } = getSheetAuth();
@@ -53,7 +49,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const { error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
 
   try {
     const { username, password } = await request.json();
@@ -98,7 +95,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!(await verifyAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const { error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
 
   try {
     const { username } = await request.json();

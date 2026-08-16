@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 import type { KanbanTask } from '@/types';
+import { requireRole } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,6 +132,10 @@ export async function GET(request: Request) {
 
 // POST /api/records — บันทึก record ใหม่
 export async function POST(request: Request) {
+  const nextRequest = request as any;
+  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { date, totalCompany, totalDistributed, remaining, tasks } = body;

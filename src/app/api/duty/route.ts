@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 import type { DutyShift, ShiftSlot } from '@/types';
 import { pushLineMessage } from '@/lib/line';
+import { requireRole } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +118,10 @@ export async function GET(request: Request) {
 
 // POST /api/duty
 export async function POST(request: Request) {
+  const nextRequest = request as any;
+  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { shift }: { shift: DutyShift } = body;

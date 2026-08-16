@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import type { PunishmentEntry, ExceptionEntry } from '@/types';
+import { requireRole } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +91,10 @@ export async function GET(request: Request) {
 // POST /api/duty-meta
 // body: { type: 'punishment'|'exception', data: [...] }
 export async function POST(request: Request) {
+  const nextRequest = request as any;
+  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { type, data } = body;

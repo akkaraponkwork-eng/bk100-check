@@ -2,7 +2,10 @@ import { SignJWT, jwtVerify } from 'jose';
 import type { AppUser } from '@/types';
 
 function getJwtSecretKey() {
-  const secret = process.env.JWT_SECRET || process.env.LINE_CHANNEL_SECRET || 'fallback_secret_for_dev_only_12345';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not set. Refusing to start with an insecure fallback.');
+  }
   return new TextEncoder().encode(secret);
 }
 

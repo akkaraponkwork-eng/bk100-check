@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { getUserInfo } from '@/lib/auth-guard';
 
 export interface AppNotification {
   id: string;
@@ -24,12 +25,7 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
-function getUserInfo(request: NextRequest) {
-  return {
-    id: request.headers.get('x-user-id') || '',
-    role: request.headers.get('x-user-role') || '',
-  };
-}
+// getUserInfo is imported from auth-guard
 
 // GET: Fetch notifications for the current user
 export async function GET(request: NextRequest) {

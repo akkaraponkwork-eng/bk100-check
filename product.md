@@ -1,9 +1,8 @@
 # Product Requirements Document (PRD): bk100-check ERP
 
-> **เวอร์ชัน:** 2.0 (ERP Edition)  
-> **อัปเดตล่าสุด:** 2026-08-11  
-> **เป้าหมาย:** พัฒนาจากระบบจัดเวรเบื้องต้น → ระบบ ERP สำหรับหน่วยงานทหาร/ตำรวจ  
-> **Timeline:** ภายใน 1 เดือน
+> **เวอร์ชัน:** 2.1 (Current Implementation)  
+> **อัปเดตล่าสุด:** 2026-08-16  
+> **เป้าหมาย:** ระบบ ERP สำหรับหน่วยงานทหาร (จัดการกำลังพล, จัดเวร, ลาพัก, แจ้งเตือน)
 
 ---
 
@@ -12,10 +11,10 @@
 | รายการ | รายละเอียด |
 |---|---|
 | **ชื่อโปรเจกต์** | bk100-check ERP |
-| **ประเภทองค์กร** | หน่วยงานทหาร / ตำรวจ (มีระบบยศ, เวรปฏิบัติหน้าที่) |
+| **ประเภทองค์กร** | หน่วยงานทหาร (มีระบบยศ, เวรปฏิบัติหน้าที่, สายการบังคับบัญชา) |
 | **จำนวนผู้ใช้งาน** | 50 – 200 คน |
-| **ฐานข้อมูล** | Google Sheets (คงไว้, ขยาย Tab เพิ่ม) |
-| **Database Strategy** | ไม่เปลี่ยน Tech Stack — ขยาย Sheet tabs สำหรับโมดูลใหม่ |
+| **ฐานข้อมูล** | Google Sheets API (ขยาย Sheet tabs สำหรับโมดูลต่างๆ) |
+| **แพลตฟอร์ม** | Web Application / PWA รองรับ Mobile & Desktop (เชื่อมกับ LINE) |
 
 ---
 
@@ -23,165 +22,126 @@
 
 | Role | สิทธิ์ที่มี |
 |---|---|
-| **Admin** | จัดการระบบทั้งหมด, เพิ่ม/แก้ไข/ลบบุคลากร, ตั้งค่าระบบ |
-| **Commander** | อนุมัติ/ปฏิเสธการลา, ดูรายงานสรุปเวรผู้ใต้บังคับบัญชา |
-| **Duty Officer** | จัดเวร, แก้ไขตารางเวร, ใช้งาน Auto-assign |
-| **NCO / Sergeant** | ดูสถิติเวรนายสิบที่ตัวเองรับผิดชอบ |
-| **Personnel** | ดูตารางเวรตัวเอง, ยื่นคำขอลาผ่านระบบ |
+| **Admin** | จัดการระบบทั้งหมด, เพิ่ม/แก้ไขผู้ดูแลระบบ, ตั้งค่าระบบ (Settings/Bot), จัดการข้อมูลทั้งหมด |
+| **Commander** | อนุมัติ/ปฏิเสธการลา, ดูรายงานภาพรวมและสถิติของผู้ใต้บังคับบัญชา, ดูผังองค์กร |
+| **Duty Officer** | จัดเวร (Kanban/Calendar), แก้ไขตารางเวร, ใช้งาน Auto-assign |
+| **NCO / Sergeant** | ดูสถิติและรายงานเวรนายสิบที่ตัวเองรับผิดชอบ |
+| **Personnel** | ดูตารางเวรตัวเอง, ยื่นคำขอลาผ่านระบบ, รับการแจ้งเตือน |
 
-### Authentication
-- **วิธี Login:** LINE Login (OAuth ผ่าน LINE)
-- ผูก LINE Account กับ Personnel ID ในระบบ
-
----
-
-## 3. Modules & Features (โมดูลและฟีเจอร์)
-
-### Module 1: HR & Personnel Management
-**Google Sheet Tab:** `Personnel`
-
-**ข้อมูลที่เก็บ (เพิ่มเติมจากเดิม):**
-- ข้อมูลเดิม: id, rank, firstName, lastName, batch, phone, status, dutyCount, isNCOEligible, num
-- **ข้อมูลใหม่:** ประวัติการลา (ลิงก์ไปยัง Sheet `Leave`)
+### Authentication & Account Binding
+- **วิธี Login:** ระบบใช้ LINE Login (OAuth ผ่าน LINE)
+- **การผูกบัญชี (Link Account):** ผู้ใช้ต้องผูก LINE Account (UID) กับ Personnel ID ในระบบ เพื่อระบุตัวตนและรับการแจ้งเตือนส่วนบุคคล
+  - **Onboarding Flow:** สำหรับกำลังพลที่เข้าสู่ระบบครั้งแรกและยังไม่มีข้อมูลผูกบัญชี จะต้องกรอกรหัสประจำตัว (Personnel ID) และเข้าสู่สถานะ **รอให้ Admin อนุมัติ (Pending Approval)** ก่อนจึงจะสามารถดูข้อมูลตารางเวรและใช้งานระบบได้เต็มรูปแบบ เพื่อป้องกันการสวมรอยหรือผูกบัญชีผิดคน
+    - **หน้าจอระหว่างรอ:** ผู้ใช้จะถูกพาไปยังหน้า "รอการตรวจสอบ" (Pending Screen) ซึ่งแสดงสถานะปัจจุบันและเบอร์ติดต่อผู้ดูแลระบบ
+    - **การแจ้งเตือน Admin:** ระบบจะส่งข้อความแจ้งเตือน (LINE Message) ไปยัง Admin ทันทีที่มีคำขอใหม่ หากคำขอยังไม่ถูกดำเนินการภายใน 24 ชั่วโมง (Timeout) ระบบจะส่ง Daily Reminder แจ้งเตือนซ้ำ
 
 ---
 
-### Module 2: Duty & Scheduling (จัดเวร)
-**Google Sheet Tabs:** `Duty`, `DutyMeta`
+## 3. Modules & Features (โมดูลและฟีเจอร์ปัจจุบัน)
 
-**ฟีเจอร์:**
-- **Manual Mode:** Duty Officer กำหนดเวรเองผ่านหน้า UI (ลากวาง Kanban / เลือกจากปฏิทิน)
-- **Auto-assign Mode:** ระบบแนะนำชื่อโดยอัลกอริธึม Round-robin (เวียนตามลำดับ) โดยมีเงื่อนไขว่า **ต้องไม่อยู่ระหว่างลา** เท่านั้น
-- **สามารถสลับระหว่าง Manual / Auto ได้**
-- **Push Notification:** แจ้งเตือนบุคลากรผ่าน PWA เมื่อตารางเวรเปลี่ยนแปลง
+### Module 1: HR & Personnel Management (จัดการกำลังพล)
+- **ข้อมูลที่เก็บ:** ยศ, ชื่อ, นามสกุล, ผลัด, เบอร์โทร, สถานะการปฏิบัติงาน
+- **ผังองค์กร (Org Chart):** แสดงโครงสร้างสายการบังคับบัญชา (hierarchy) เพื่อดูว่าใครสังกัดหรือขึ้นตรงกับใคร
+- **Google Sheet Tab:** `Personnel`
 
----
+### Module 2: Duty & Scheduling (ระบบจัดเวร)
+- **ระบบแสดงผลตารางเวร:**
+  - **Kanban Board:** ลากวาง (Drag & Drop) เพื่อจัดเวรรายวัน/สัปดาห์
+  - **Calendar View:** ดูภาพรวมปฏิทินตารางเวรรายเดือน
+- **ฟีเจอร์จัดเวร:**
+  - **Manual Mode:** เจ้าหน้าที่จัดเวรลากวางรายชื่อเอง
+  - **Auto-assign Mode (Fairness-based):** อัลกอริธึมจัดเวรโดยคำนึงถึงความเป็นธรรม (Fairness Metric) เป็นหลัก โดยมีเงื่อนไขดังนี้:
+    - **Separate Pools:** ระบบนับเวรสะสม (Duty Count) ของนายสิบเวร (NCO) และเวรยามทั่วไป (Personnel) จะ**แยกจากกันโดยเด็ดขาด** (คนละ Pool) เนื่องจากความรับผิดชอบต่างกัน
+    1. ต้อง **ไม่อยู่ระหว่างลา** หรือติดภารกิจอื่น
+    2. จัดเรียงคิวผู้ที่เหมาะสมจาก **จำนวนเวรสะสม (Duty Count)** เพื่อให้ทุกคนได้จำนวนเวรใกล้เคียงกันที่สุด
+    3. หากจำนวนเวรสะสมเท่ากัน จะพิจารณาจาก **วันที่เข้าเวรครั้งล่าสุด (Last Duty Date)** เพื่อเว้นระยะห่างให้มากที่สุด ไม่ให้เกิดการอยู่เวรติดกันเกินไป
+- **Google Sheet Tabs:** `Duty`, `DutyMeta`
 
-### Module 3: Leave Management (ระบบลา)
-**Google Sheet Tab:** `Leave`
-
-**ประเภทการลาที่รองรับ:**
-- ลาเยี่ยมญาติ *(ประเภทเดียวในปัจจุบัน)*
-
-**Workflow การลา:**
-```
-บุคลากร (Personnel) → ยื่นคำขอลาในระบบ
-       ↓
-Commander → รับแจ้งเตือน (Push Notification / PWA)
-       ↓
-Commander → อนุมัติ / ปฏิเสธ ผ่านระบบ
-       ↓
-บุคลากร → รับแจ้งเตือนผลการอนุมัติ
-       ↓
-Duty Officer → ระบบแจ้งให้ทราบว่ามีคนลา (เพื่อจัดเวรทดแทน)
-```
-
-**ข้อมูลที่เก็บ:** id, personnelId, type, startDate, endDate, reason, status (pending/approved/rejected), approvedBy, approvedAt
-
----
+### Module 3: Leave Management (ระบบการลา)
+- **การยื่นลา:** บุคลากรยื่นคำขอลาในระบบ พร้อมระบุวันที่และเหตุผล (เช่น ลาเยี่ยมญาติ)
+- **Workflow:** 
+  1. ยื่นลาผ่าน LIFF / Web
+  2. แจ้งเตือนไปยัง Commander เพื่อพิจารณา
+  3. Commander อนุมัติ/ปฏิเสธ
+  4. แจ้งเตือนกลับไปยังผู้ยื่น
+  5. ระบบจัดเวร (Duty) จะบล็อกไม่ให้จัดเวรในวันที่ลา
+- **Google Sheet Tab:** `Leave`
 
 ### Module 4: NCO Management (เวรนายสิบ)
-**Google Sheet Tab:** `NCO`
+- จัดการและบันทึกสถิติการเข้าเวรนายสิบ
+- NCO สามารถดูสถิติเวรที่ตัวเองรับผิดชอบได้ เพื่อความโปร่งใสและตรวจสอบได้
+- **Google Sheet Tab:** `NCO`
 
-**ฟีเจอร์:**
-- แสดงผลรายงานเวรนายสิบรายเดือน
-- NCO ดูสถิติเวรที่ตัวเองรับผิดชอบได้
-- รายงานสรุป NCO Report (Export ได้)
+### Module 5: Reporting & Analytics (รายงานและแดชบอร์ด)
+- **Dashboard (`/`):** สรุปภาพรวมกำลังพลรายวัน, วันนี้ใครอยู่เวร, ใครลา
+- **Reports (`/reports`):** 
+  - สรุปตารางเวร (รายวัน/เดือน)
+  - สรุปสถิติการลา
+  - รายงานเวรนายสิบ (NCO Report)
+- **Export Format:** รองรับการ Export รายงานทั้งหมดในรูปแบบ **PDF** สำหรับพิมพ์เป็นเอกสาร และ **Excel (XLSX)** สำหรับนำไปประมวลผลหรือรวบรวมสถิติต่อ
 
----
+### Module 6: Notification & LINE Bot (การแจ้งเตือนและแชทบอท)
+- **ช่องทาง:** LINE Messaging API & PWA Push Notification
+- **LINE Bot:** 
+  - มี LINE Official Account เชื่อมต่อกับระบบ (Webhook)
+  - ผู้ใช้สั่งงานพื้นฐานผ่าน Bot หรือเข้าใช้งานเมนูต่างๆ ผ่าน **Rich Menu** ที่ผูกเข้ากับ Web App (LIFF)
+- **เงื่อนไขการแจ้งเตือน (Push / LINE Message):**
+  - ตารางเวรเปลี่ยนแปลง 
+  - ยื่นคำขอลาใหม่ / ผลการพิจารณาลา
+  - แจ้งเตือนเวรล่วงหน้า
+- **ระบบตั้งค่าบอท (Bot Settings):** กำหนด Quick Replies หรือข้อความอัตโนมัติ
 
-### Module 5: Reporting & Analytics (รายงาน)
-
-| รายงาน | รายละเอียด | Export |
-|---|---|---|
-| Dashboard ภาพรวม | ใครอยู่เวร / ใครลา วันนี้ | — |
-| ตารางเวรรายวัน | Daily Schedule แสดงรายชื่อ/ตำแหน่ง | PDF, Excel |
-| สรุปจำนวนเวรรายบุคคล | รายเดือน / รายปี | PDF, Excel |
-| สถิติการลารายบุคคล | รายปี | PDF, Excel |
-| รายงานเวรนายสิบ (NCO) | รายเดือน | PDF, Excel |
-
----
-
-### Module 6: Notification (แจ้งเตือน)
-- **ช่องทาง:** Push Notification ผ่าน PWA (ติดตั้งแอปบนมือถือ/เดสก์ท็อป)
-- **กรณีที่แจ้งเตือน:**
-  - ตารางเวรมีการเปลี่ยนแปลง → แจ้งบุคลากรที่เกี่ยวข้อง
-  - มีคำขอลาใหม่ → แจ้ง Commander
-  - ผลอนุมัติลา → แจ้งบุคลากรที่ยื่นลา
+### Module 7: System Settings (ตั้งค่าระบบ)
+- **Admin Accounts:** จัดการสิทธิ์แอดมินแยกต่างหาก
+- **Bot Settings:** ปรับแต่งการทำงานของ LINE Bot
+- **Database Migration:** รองรับสคริปต์สำหรับการจัดการและอัปเดตโครงสร้าง Google Sheets
 
 ---
 
 ## 4. Technical Architecture (สถาปัตยกรรมทางเทคนิค)
 
-### 4.1 Frontend / Framework
-| Layer | Technology |
+### 4.1 Frontend / UI Layer
+| เทคโนโลยี | รายละเอียด |
 |---|---|
-| Framework | Next.js (App Router) |
-| UI | React 19 + Material UI (`@mui/material`) |
-| Styling | Tailwind CSS |
-| Animations | Framer Motion |
-| Drag & Drop | `@dnd-kit` (Kanban) |
-| Forms | `react-hook-form` |
-| Charts | `recharts` |
-| PWA | `@ducanh2912/next-pwa` |
-| Export | `xlsx` (Excel), `html2canvas` (PDF) |
-| Date | `date-fns` |
+| Framework | **Next.js 14+ (App Router)** |
+| UI Library | **React 19** + **Material UI v6 (`@mui/material`)** |
+| Styling | **Tailwind CSS v4** |
+| Animations | **Framer Motion** |
+| Drag & Drop | `@dnd-kit` (สำหรับ Kanban Board) |
+| Forms & Date | `react-hook-form`, `date-fns` |
+| PWA Support | `@ducanh2912/next-pwa` |
+| LINE Integration | `@line/liff` |
 
-### 4.2 Backend & Database
-| Layer | Technology |
+### 4.2 Backend & Data Layer
+| เทคโนโลยี | รายละเอียด |
 |---|---|
-| API Routes | Next.js Route Handlers |
-| Database | **Google Sheets API** (`googleapis`) |
-| Auth | LINE Login (OAuth 2.0) |
-| Auth Session | Next.js Session / JWT |
+| API & Backend | **Next.js Route Handlers** (`src/app/api`) |
+| Database | **Google Sheets API** (`googleapis`) ใช้เป็นฐานข้อมูลหลัก |
+| Caching Strategy | **Next.js Cache (Data Cache / ISR):** มีชั้น Caching สำหรับ API ที่ถูกเรียกบ่อย เช่น Dashboard ภาพรวมกำลังพล เพื่อป้องกันการชน Google Sheets API Rate Limit (100 reqs/100s/user หรือ 300 reqs/100s/project) ในช่วง Peak Hours ที่กำลังพลเข้ามาดูตารางเวรพร้อมกัน<br>- **Revalidate Interval:** ตั้งค่าหน่วงเวลาการดึงข้อมูลใหม่ทุกๆ 60 วินาที (Time-based ISR)<br>- **On-demand Invalidation:** หาก Duty Officer ลากวางแก้ไขตารางเวรใน Kanban Board สำเร็จ ระบบจะทำ Tag-based Invalidation เคลียร์ Cache ทันที เพื่อให้ทุกคนเห็นข้อมูลตารางใหม่แบบ Real-time |
+| Auth & AuthZ | **LINE Login (OAuth 2.0)** + Next.js JWT Session (`jose`) |
+| Bot Engine | รับส่ง Webhook และ LINE Messaging API ภายใน Next.js API |
 
-### 4.3 Google Sheets Structure (แผน Tab ใหม่)
-| Sheet Tab | โมดูล | สถานะ |
+### 4.3 Database Structure (Google Sheets Tabs)
+| ชื่อ Sheet (Tab) | โมดูลที่ใช้งาน | สถานะ |
 |---|---|---|
-| `Personnel` | HR | มีอยู่แล้ว |
-| `Duty` | Duty | มีอยู่แล้ว |
-| `DutyMeta` | Duty | มีอยู่แล้ว |
-| `NCO` | NCO | มีอยู่แล้ว |
-| `Records` | Records | มีอยู่แล้ว |
-| `Leave` | Leave Management | **[ใหม่]** คำขอลา, สถานะ, ผู้อนุมัติ |
-| `Users` | Auth | **[ใหม่]** LINE ID → Personnel ID mapping |
+| `Personnel` | ข้อมูลกำลังพล | ใช้งานแล้ว |
+| `Duty` | ข้อมูลตารางเวรแต่ละบุคคล | ใช้งานแล้ว |
+| `DutyMeta` | Metadata เกี่ยวกับโครงสร้างการจัดเวร | ใช้งานแล้ว |
+| `NCO` | สถิติเวรนายสิบ | ใช้งานแล้ว |
+| `Records` | Log และบันทึกประวัติการเปลี่ยนแปลง | ใช้งานแล้ว |
+| `Leave` | ระบบลาพัก (คำขอลา, สถานะ, ผู้อนุมัติ) | ใช้งานแล้ว |
+| `Users` | เก็บข้อมูลผู้ใช้งานระบบ (ID, LINE UID, สิทธิ์) | ใช้งานแล้ว |
+| `AdminAccounts` | เก็บรายชื่อ Admin ของระบบ | ใช้งานแล้ว |
+| `BotSettings` | การตั้งค่าข้อความอัตโนมัติของ Bot | ใช้งานแล้ว |
 
 ---
 
-## 5. Development Roadmap (แผนพัฒนา ภายใน 1 เดือน)
+## 5. Decisions Log (ประวัติการตัดสินใจสำคัญ)
 
-```
-Week 1: Auth + HR Foundation
-├── LINE Login integration (OAuth)
-├── Role-based access control (Admin/Commander/DutyOfficer/NCO/Personnel)
-└── Users Sheet tab + API
-
-Week 2: Leave Management
-├── Leave Sheet tab + API (GET/POST/PATCH)
-├── หน้ายื่นลา (Personnel)
-├── หน้าอนุมัติลา (Commander)
-└── Push Notification เมื่อลา/อนุมัติ
-
-Week 3: Auto-assign Scheduling + Notification
-├── อัลกอริธึม Auto-assign (Round-robin + เช็คสถานะลา)
-├── Push Notification เมื่อตารางเวรเปลี่ยน
-└── PWA Service Worker setup
-
-Week 4: Reporting & Polish
-├── Dashboard ภาพรวม (ใครอยู่เวร/ใครลา)
-├── Export PDF / Excel สำหรับรายงานทั้งหมด
-├── NCO Report
-└── Bug fixing & UX polish
-```
-
----
-
-## 6. Decisions Log (ตัดสินใจแล้ว)
-
-| หัวข้อ | การตัดสินใจ |
-|---|---|
-| **LINE Login** | ใช้ LINE Developer Account ส่วนตัวก่อน (เริ่มได้ทันที ฟรี) — อัปเกรดเป็น Official Account ในอนาคต |
-| **Auto-assign Algorithm** | Round-robin ปกติ + เช็คว่าไม่อยู่ระหว่างลา (ไม่มีกฎซับซ้อนเพิ่มเติม) |
-| **ประเภทการลา** | มีเพียง "ลาเยี่ยมญาติ" ประเภทเดียว |
-| **Development Order** | Auth → Leave Management → Auto-assign Scheduling → Reports (ตาม Week Plan) |
-| **Dashboard Refactoring** | แยก UI Components และ Modals ของหน้า Dashboard (`app/page.tsx`) ออกเป็นไฟล์ย่อยใน `components/dashboard/` เพื่อลดความซับซ้อนและให้อ่านโค้ดง่ายขึ้น (2026-08-15) |
+| วันที่ | หัวข้อ | การตัดสินใจ |
+|---|---|---|
+| 2026-08-11 | **Database Choice** | ใช้ Google Sheets เพื่อลดต้นทุนและให้แอดมินหรือบุคลากรที่ไม่ใช่โปรแกรมเมอร์สามารถเข้าไปดูข้อมูลแบบ Raw Data ได้ง่าย |
+| 2026-08-11 | **Auto-assign Algorithm** | [อัปเดต 16/08] เปลี่ยนจาก Round-robin ปกติ เป็นการคำนวณโดยใช้ **จำนวนเวรสะสม (Duty Count)** และ **วันที่เข้าเวรล่าสุด (Last Duty Date)** เป็นตัวชี้วัดความเป็นธรรม (Fairness Metric) เพื่อป้องกันการเหลื่อมล้ำในการเข้าเวร |
+| 2026-08-15 | **Dashboard Refactoring** | แยก UI Components และ Modals ของหน้า Dashboard (`app/page.tsx`) ออกเป็นไฟล์ย่อยใน `components/dashboard/` เพื่อให้อ่านและดูแลโค้ดง่ายขึ้น |
+| 2026-08-16 | **LINE Integration** | ใช้ LINE Official Account และ Rich Menu (สร้างผ่าน script `scripts/setup-richmenu.ts`) เป็นช่องทางหลักในการเข้าถึง Web App และรับแจ้งเตือน เพื่อให้ผู้ใช้เข้าถึงง่ายจากแอปแชท |
+| 2026-08-16 | **UI Architecture** | แยกหน้า `kanban`, `calendar`, `orgchart` ออกเป็น Route แยกต่างหากเพื่อให้แชร์ลิงก์ได้ตรงจุด และจัดระเบียบหน้าจอให้เหมาะสมกับ Mobile View |

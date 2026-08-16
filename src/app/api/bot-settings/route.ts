@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { requireRole } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -50,6 +51,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { user, error: roleError } = requireRole(request, ['admin']);
+  if (roleError) return roleError;
+
   try {
     const body = await request.json();
     const { groupId, alertTimes, leaveEnabled, adminEmail } = body;
