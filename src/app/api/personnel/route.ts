@@ -74,34 +74,8 @@ export async function GET() {
     d.setHours(d.getHours() + 7);
     const today = d.toISOString().split('T')[0];
 
-    // Compute dynamic status
+    // Set default status if empty
     for (const p of personnelListCopy) {
-      // Find active leave
-      const activeLeave = leaveRows.find((l: any) => 
-        l[1] === p.id && 
-        l[6] === 'approved' && 
-        l[3] <= today && l[4] >= today
-      );
-      
-      if (activeLeave) {
-        p.status = 'leave';
-        continue;
-      }
-      
-      // Find active DutyMeta exception
-      const activeMeta = metaRows.find((m: any) => 
-        m[1] === 'exception' && 
-        m[2] === p.id && 
-        m[4] <= today && m[5] >= today
-      );
-      
-      if (activeMeta) {
-        if (activeMeta[3] === 'ป่วย') p.status = 'sick';
-        else p.status = 'leave'; // ธุระการ, งดเวร
-        continue;
-      }
-      
-      // Do not overwrite native status if they are manually marked as leave or sick in the sheet.
       if (!p.status) p.status = 'available';
     }
 

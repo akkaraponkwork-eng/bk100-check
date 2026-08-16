@@ -33,11 +33,13 @@ export async function GET(request: NextRequest) {
       
       return NextResponse.json({
         groupId: settings['groupId'] || '',
-        alertTimes: settings['alertTimes'] ? settings['alertTimes'].split(',') : []
+        alertTimes: settings['alertTimes'] ? settings['alertTimes'].split(',') : [],
+        leaveEnabled: settings['leaveEnabled'] !== 'false', // default true unless explicitly 'false'
+        adminEmail: settings['adminEmail'] || ''
       });
     } catch (e: any) {
       if (e.message && e.message.includes('Unable to parse range')) {
-        return NextResponse.json({ groupId: '', alertTimes: [], error: 'Please create a sheet named "BotSettings"' });
+        return NextResponse.json({ groupId: '', alertTimes: [], leaveEnabled: true, adminEmail: '', error: 'Please create a sheet named "BotSettings"' });
       }
       throw e;
     }
@@ -50,22 +52,45 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { groupId, alertTimes } = body;
+    const { groupId, alertTimes, leaveEnabled, adminEmail } = body;
     
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
     
     const values = [
       ['groupId', groupId || ''],
-      ['alertTimes', Array.isArray(alertTimes) ? alertTimes.join(',') : '']
+      ['alertTimes', Array.isArray(alertTimes) ? alertTimes.join(',') : ''],
+      ['leaveEnabled', leaveEnabled !== undefined ? String(leaveEnabled) : 'true'],
+      ['adminEmail', adminEmail || '']
     ];
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: 'BotSettings!A1:B2',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values }
-    });
+    try {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: 'BotSettings!A1:B4',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values }
+      });
+    } catch (updateError: any) {
+      if (updateError.message && updateError.message.includes('Unable to parse range')) {
+        // Create the missing sheet
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: sheetId,
+          requestBody: {
+            requests: [{ addSheet: { properties: { title: 'BotSettings' } } }]
+          }
+        });
+        // Retry the update
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: sheetId,
+          range: 'BotSettings!A1:B4',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values }
+        });
+      } else {
+        throw updateError;
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

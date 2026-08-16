@@ -18,11 +18,12 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {
   Box, Typography, TextField, Button, CircularProgress, Paper,
   List, ListItem, ListItemAvatar, ListItemText, Avatar, Select,
-  MenuItem, Divider, InputAdornment, IconButton, Chip,
-  Tabs, Tab, Pagination
+  Tabs, Tab, Pagination, Switch, FormControlLabel, InputAdornment,
+  Chip, MenuItem, IconButton, Divider
 } from '@mui/material';
 import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/hooks/useToast';
@@ -47,6 +48,7 @@ export default function SettingsPage() {
   const [botGroupId, setBotGroupId] = useState('');
   const [botAlertTimes, setBotAlertTimes] = useState<string[]>([]);
   const [newAlertTime, setNewAlertTime] = useState('');
+  const [leaveEnabled, setLeaveEnabled] = useState(true);
   const [savingBotSettings, setSavingBotSettings] = useState(false);
 
   const { showToast } = useToast();
@@ -85,6 +87,7 @@ export default function SettingsPage() {
         const botData = await botRes.json();
         setBotGroupId(botData.groupId || '');
         setBotAlertTimes(botData.alertTimes || []);
+        setLeaveEnabled(botData.leaveEnabled !== false);
       }
     } catch (e) {
       console.error(e);
@@ -194,7 +197,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, alertTimes: botAlertTimes })
+        body: JSON.stringify({ groupId: botGroupId, alertTimes: botAlertTimes, leaveEnabled })
       });
       if (res.ok) {
         showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
@@ -248,7 +251,7 @@ export default function SettingsPage() {
             <Tab icon={<AdminPanelSettingsIcon fontSize="small" />} iconPosition="start" label="จัดการสิทธิ์" />
             <Tab icon={<AccountTreeIcon fontSize="small" />} iconPosition="start" label="ผังองค์กร" />
             <Tab icon={<CloudIcon fontSize="small" />} iconPosition="start" label="เชื่อมต่อระบบ" />
-            <Tab icon={<SmartToyIcon fontSize="small" />} iconPosition="start" label="บอทน้อง บก.ร้อย" />
+            <Tab icon={<SettingsIcon fontSize="small" />} iconPosition="start" label="ตั้งค่าทั่วไป / บอท" />
           </Tabs>
         </Box>
 
@@ -637,6 +640,17 @@ export default function SettingsPage() {
                       }
                     }}
                   />
+
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 2 }}>เปิด/ปิด ระบบลางาน</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    หากปิดการใช้งาน เมนูลางานและปุ่มยื่นลาจะถูกซ่อนจากกำลังพล (แอดมินยังคงเห็นเมนูและจัดการได้)
+                  </Typography>
+                  <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <FormControlLabel
+                      control={<Switch checked={leaveEnabled} onChange={(e) => setLeaveEnabled(e.target.checked)} color="primary" />}
+                      label={<Typography sx={{ fontWeight: 600 }}>{leaveEnabled ? 'เปิดใช้งานระบบลางาน' : 'ปิดใช้งานชั่วคราว'}</Typography>}
+                    />
+                  </Box>
 
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>เวลาแจ้งเตือนรายวัน (Cron Times)</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>

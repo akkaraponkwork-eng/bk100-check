@@ -56,8 +56,21 @@ interface SidebarProps {
 export default function Sidebar({ userRole = 'personnel', userName = 'ผู้ใช้งาน', userRank = '', userPicture, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [leaveEnabled, setLeaveEnabled] = useState(true); // default true
 
-  const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(userRole));
+  useEffect(() => {
+    fetch('/api/bot-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.leaveEnabled === false) setLeaveEnabled(false);
+      })
+      .catch(console.error);
+  }, []);
+
+  const visibleNavItems = navItems.filter(item => {
+    if (!leaveEnabled && item.href === '/leave' && userRole !== 'admin' && userRole !== 'commander') return false;
+    return !item.roles || item.roles.includes(userRole);
+  });
   const visibleAdminItems = adminItems.filter(item => !item.roles || item.roles.includes(userRole));
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
