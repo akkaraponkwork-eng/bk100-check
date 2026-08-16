@@ -274,7 +274,7 @@ export async function POST(request: NextRequest) {
                     action: {
                       type: 'uri',
                       label: 'จัดการบัญชี',
-                      uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/login` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
+                      uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
                     }
                   }
                 },
