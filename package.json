@@ -15,6 +15,7 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@line/liff": "^2.29.2",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.3.1",
     "@mui/material-nextjs": "^9.3.0",

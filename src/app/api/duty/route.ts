@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 import type { DutyShift, ShiftSlot } from '@/types';
+import { pushLineMessage } from '@/lib/line';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,6 +188,38 @@ export async function POST(request: Request) {
 
     // @ts-expect-error: Next.js types incorrectly expect 2 arguments
     revalidateTag('duty');
+
+    // Optional Notification (Triggered if client requests it)
+    if (request.headers.get('x-notify-line') === 'true') {
+      try {
+        const origin = new URL(request.url).origin;
+        const getRes = await fetch(`${origin}/api/bot-settings`);
+        const settings = await getRes.json();
+        
+        if (settings.groupId) {
+          const personnelRes = await fetch(`${origin}/api/personnel`);
+          const personnelData = await personnelRes.json();
+          const personnelList = personnelData.personnel || [];
+          
+          const getPersonnelName = (id: string) => {
+            const p = personnelList.find((x: any) => x.id === id);
+            return p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ระบุ';
+          };
+
+          let summaryText = `📢 **มีการอัปเดตตารางเวรประจำวันที่ ${new Date(shift.date).toLocaleDateString('th-TH')}**\n`;
+          summaryText += `\n📍 ${shift.location}\n`;
+          const slots = shift.timeSlots || [];
+          slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any) => {
+            const name = slot.customName || getPersonnelName(slot.personnelId);
+            summaryText += `- ${slot.start}-${slot.end} : ${name}\n`;
+          });
+
+          await pushLineMessage(settings.groupId, [{ type: 'text', text: summaryText }]);
+        }
+      } catch (e) {
+        console.error('Failed to notify duty update:', e);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

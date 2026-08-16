@@ -42,6 +42,7 @@ import { cookies } from 'next/headers';
 import type { AppUser } from '@/types';
 import { verifySessionToken } from '@/lib/session';
 import { ToastProvider } from '@/hooks/useToast';
+import LiffProvider from '@/components/LiffProvider';
 
 export default async function RootLayout({
   children,
@@ -57,18 +58,20 @@ export default async function RootLayout({
   return (
     <html lang="th" className={`${notoSansThai.variable} ${inter.variable}`} suppressHydrationWarning>
       <body>
-        <ThemeRegistry>
-          <ToastProvider>
-            <AppShell
-              userRole={user?.role || 'personnel'}
-              userName={user?.displayName || 'ไม่ได้เข้าสู่ระบบ'}
-              userRank=""
-              userPicture={user?.pictureUrl}
-            >
-              {children}
-            </AppShell>
-          </ToastProvider>
-        </ThemeRegistry>
+        <LiffProvider>
+          <ThemeRegistry>
+            <ToastProvider>
+              <AppShell
+                userRole={user?.role || 'personnel'}
+                userName={user?.displayName || 'ไม่ได้เข้าสู่ระบบ'}
+                userRank=""
+                userPicture={user?.pictureUrl}
+              >
+                {children}
+              </AppShell>
+            </ToastProvider>
+          </ThemeRegistry>
+        </LiffProvider>
       </body>
     </html>
   );

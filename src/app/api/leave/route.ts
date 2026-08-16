@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import type { LeaveRequest, LeaveStatus } from '@/types';
+import { pushLineMessage } from '@/lib/line';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -120,9 +121,12 @@ export async function POST(request: NextRequest) {
     try {
       const uRes = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Users!A:E' });
       const userRows = uRes.data.values || [];
-      const admins = userRows.filter(r => r[2] === 'admin' || r[2] === 'commander').map(r => r[1]); // personnelId
+      const admins = userRows.filter(r => r[2] === 'admin' || r[2] === 'commander');
       
-      const notifications = admins.map(adminId => [
+      const adminPersonnelIds = admins.map(r => r[1]);
+      const adminLineIds = admins.filter(r => r[0]).map(r => r[0]);
+      
+      const notifications = adminPersonnelIds.map(adminId => [
         crypto.randomUUID(), adminId, 'มีคำขอลาใหม่', 
         `คำขอลาเยี่ยมญาติจากกำลังพล รอการอนุมัติ`, 'leave_request', '/leave', 'false', new Date().toISOString()
       ]);
@@ -135,6 +139,19 @@ export async function POST(request: NextRequest) {
           requestBody: { values: notifications },
         });
       }
+
+      /* ปิดฟีเจอร์ 2 ไว้ชั่วคราว
+      // LINE Push Notification
+      if (adminLineIds.length > 0) {
+        adminLineIds.forEach(lineId => {
+          pushLineMessage(lineId, [{ 
+            type: 'text', 
+            text: `📢 **มีคำขอลาใหม่**\nคำขอลาเยี่ยมญาติจากกำลังพล รบกวนตรวจสอบและอนุมัติในระบบครับ` 
+          }]).catch(console.error);
+        });
+      }
+      */
+
     } catch (notifErr) {
       console.error('Failed to send notifications:', notifErr);
     }
@@ -211,6 +228,21 @@ export async function PATCH(request: NextRequest) {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [notification] },
       });
+
+      /* ปิดฟีเจอร์ 2 ไว้ชั่วคราว
+      // LINE Push Notification
+      const uRes = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Users!A:E' });
+      const userRows = uRes.data.values || [];
+      const requester = userRows.find(r => r[1] === personnelId);
+      
+      if (requester && requester[0]) {
+        await pushLineMessage(requester[0], [{ 
+          type: 'text', 
+          text: `📢 **อัปเดตสถานะการลา**\nใบลาของคุณถูก ${status === 'approved' ? '✅ อนุมัติ' : '❌ ปฏิเสธ'} แล้วครับ` 
+        }]).catch(console.error);
+      }
+      */
+
     } catch (notifErr) {
       console.error('Failed to send requester notification:', notifErr);
     }
