@@ -271,6 +271,21 @@ export async function POST(request: NextRequest) {
                       uri: process.env.NEXT_PUBLIC_LIFF_ID ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/link-account` : 'https://liff.line.me/2011067034-H9LnJMX7/link-account'
                     }
                   }
+                },
+                {
+                  type: 'bubble',
+                  hero: {
+                    type: 'image',
+                    url: `${origin}/images/meterbill_carousel.jpg`,
+                    size: 'full',
+                    aspectRatio: '1:1',
+                    aspectMode: 'cover',
+                    action: {
+                      type: 'uri',
+                      label: 'จดมิเตอร์น้ำประปาประจำเดือน',
+                      uri: 'https://meterbill-bk100.vercel.app/'
+                    }
+                  }
                 }
               ]
             }
