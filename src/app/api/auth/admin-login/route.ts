@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSessionToken } from '@/lib/session';
 import { cookies } from 'next/headers';
 import { google } from 'googleapis';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
+    // Instead of plaintext validEnvPassword, we expect ADMIN_PASSWORD to be either plain or hashed
     const validEnvUsername = process.env.ADMIN_USERNAME || 'bk100';
     const validEnvPassword = process.env.ADMIN_PASSWORD || 'bk100admin';
 
@@ -32,9 +34,13 @@ export async function POST(request: NextRequest) {
         });
         
         const rows = res.data.values || [];
-        const sheetUser = rows.find(r => r[0] === username && r[1] === password);
+        const sheetUser = rows.find(r => r[0] === username);
         if (sheetUser) {
-          isAuthenticated = true;
+          const storedPassword = sheetUser[1] || '';
+          const isValid = await bcrypt.compare(password, storedPassword);
+          if (isValid) {
+            isAuthenticated = true;
+          }
         }
       }
     } catch (e: any) {
@@ -42,8 +48,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback to ENV if not found in sheet
-    if (!isAuthenticated && username === validEnvUsername && password === validEnvPassword) {
-      isAuthenticated = true;
+    if (!isAuthenticated && username === validEnvUsername) {
+      if (validEnvPassword.startsWith('$2a$') || validEnvPassword.startsWith('$2b$')) {
+        const isValid = await bcrypt.compare(password, validEnvPassword);
+        if (isValid) {
+          isAuthenticated = true;
+        }
+      } else {
+        if (password === validEnvPassword) {
+          isAuthenticated = true;
+        }
+      }
     }
 
     if (!isAuthenticated) {

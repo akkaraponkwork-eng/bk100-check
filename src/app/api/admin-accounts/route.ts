@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import bcrypt from 'bcryptjs';
 import { requireRole } from '@/lib/auth-guard';
 
 function getSheetAuth() {
@@ -81,11 +82,12 @@ export async function POST(request: NextRequest) {
     const exists = rows.some(r => r[0] === username);
     if (exists) return NextResponse.json({ error: 'มีบัญชีนี้อยู่ในระบบแล้ว' }, { status: 400 });
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
       range: 'AdminAccounts!A:B',
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [[username, password]] }
+      requestBody: { values: [[username, hashedPassword]] }
     });
 
     return NextResponse.json({ success: true });
