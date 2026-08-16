@@ -252,8 +252,8 @@ export default function DashboardPage() {
                 completedTotal={yearlySummary?.completedMissions || 0}
                 onOpenYearlyModal={() => setShowYearlyMissionModal(true)}
               />
-              <DutyTimeline shift={todayShift} personnel={personnel} />
-              <QuickActions todayShift={todayShift} onExport={handleExportDuty} />
+              <DutyTimeline shift={todayShift} personnel={personnel} userRole={userRole} />
+              <QuickActions todayShift={todayShift} onExport={handleExportDuty} userRole={userRole} />
             </div>
 
             {/* Right Column */}

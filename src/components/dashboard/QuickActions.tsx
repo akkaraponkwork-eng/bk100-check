@@ -8,15 +8,20 @@ import type { DutyShift } from '@/types';
 interface QuickActionsProps {
   todayShift: DutyShift | null;
   onExport: () => void;
+  userRole?: string;
 }
 
-export default function QuickActions({ todayShift, onExport }: QuickActionsProps) {
+export default function QuickActions({ todayShift, onExport, userRole = 'personnel' }: QuickActionsProps) {
+  const canSchedule = ['admin', 'commander', 'duty_officer', 'nco'].includes(userRole);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-      <Link href="/duty" className="btn btn-primary" style={{ textDecoration: 'none', fontSize: 14 }}>
-        <AccessTimeIcon fontSize="small" /> จัดเวรวันนี้
-      </Link>
-      <Link href="/kanban" className="btn btn-ghost" style={{ textDecoration: 'none', fontSize: 14 }}>
+      {canSchedule && (
+        <Link href="/duty" className="btn btn-primary" style={{ textDecoration: 'none', fontSize: 14 }}>
+          <AccessTimeIcon fontSize="small" /> จัดเวรวันนี้
+        </Link>
+      )}
+      <Link href="/kanban" className={`btn ${canSchedule ? 'btn-ghost' : 'btn-primary'}`} style={{ textDecoration: 'none', fontSize: 14 }}>
         <AssignmentIcon fontSize="small" /> บันทึกยอด
       </Link>
       {todayShift && (

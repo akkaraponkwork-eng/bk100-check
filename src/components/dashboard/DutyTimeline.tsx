@@ -17,10 +17,12 @@ function getCurrentSlotIndex(): number {
 interface DutyTimelineProps {
   shift: DutyShift | null;
   personnel: Personnel[];
+  userRole?: string;
 }
 
-export default function DutyTimeline({ shift, personnel }: DutyTimelineProps) {
+export default function DutyTimeline({ shift, personnel, userRole = 'personnel' }: DutyTimelineProps) {
   const currentSlot = getCurrentSlotIndex();
+  const canSchedule = ['admin', 'commander', 'duty_officer', 'nco'].includes(userRole);
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
 
   // Helper: resolve display name from a slot (handles CUSTOM: prefix)
@@ -37,9 +39,11 @@ export default function DutyTimeline({ shift, personnel }: DutyTimelineProps) {
         <h3 style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: '4px' }}>
           <AccessTimeIcon fontSize="small" /> เวรยามวันนี้
         </h3>
-        <Link href="/duty" style={{ fontSize: 12, color: 'var(--color-primary-light)', textDecoration: 'none' }}>
-          จัดเวร →
-        </Link>
+        {canSchedule && (
+          <Link href="/duty" style={{ fontSize: 12, color: 'var(--color-primary-light)', textDecoration: 'none' }}>
+            จัดเวร →
+          </Link>
+        )}
       </div>
       {shift ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -72,10 +76,14 @@ export default function DutyTimeline({ shift, personnel }: DutyTimelineProps) {
       ) : (
         <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text-muted)', fontSize: 14 }}>
           ยังไม่ได้จัดเวรวันนี้
-          <br />
-          <Link href="/duty" style={{ color: 'var(--color-primary-light)', fontWeight: 600, textDecoration: 'none' }}>
-            + จัดเวรเลย
-          </Link>
+          {canSchedule && (
+            <>
+              <br />
+              <Link href="/duty" style={{ color: 'var(--color-primary-light)', fontWeight: 600, textDecoration: 'none' }}>
+                + จัดเวรเลย
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>

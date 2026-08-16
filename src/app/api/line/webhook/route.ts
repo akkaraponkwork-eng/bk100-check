@@ -243,8 +243,8 @@ export async function POST(request: NextRequest) {
         const targetDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
         const [mRes, pRes] = await Promise.all([
-          fetch(`${origin}/api/missions?date=${targetDateStr}`),
-          fetch(`${origin}/api/personnel`)
+          fetch(`${origin}/api/missions?date=${targetDateStr}`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } })
         ]);
 
         const mData = await mRes.json();
