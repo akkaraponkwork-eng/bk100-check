@@ -31,7 +31,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PageHeader from '@/components/layout/PageHeader';
 import GavelIcon from '@mui/icons-material/Gavel';
 // ==================== Constants ====================
-const LOCATION = 'หน้าคลังอาวุธกองร้อยกองบังคับการ';
+const LOCATION = 'หน้าคลังอาวุธ';
 
 const SHIFT_TIMES = [
   { shift: 1, label: 'ผลัด 1', start: '18:00', end: '20:00' },

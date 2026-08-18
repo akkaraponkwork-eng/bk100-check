@@ -64,7 +64,7 @@ The application has strong functional depth for military guard assignment, but t
 
 #### Minor Observations
 - Copy button toast message could show a preview of what was copied.
-- Location string ("หน้าคลังอาวุธกองร้อยกองบังคับการ") is hardcoded in constant instead of configurable settings.
+- Location string ("หน้าคลังอาวุธ") is hardcoded in constant instead of configurable settings.
 
 #### Questions to Consider
 - What if the duty schedule used a clean timeline grid instead of 6 separate heavy cards?
