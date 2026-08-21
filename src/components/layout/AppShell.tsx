@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/leave': 'การลา',
   '/personnel': 'กำลังพล',
   '/orgchart': 'ทำเนียบ',
+  '/beds': 'ตรวจโรงนอน',
   '/reports': 'รายงาน',
   '/settings': 'ตั้งค่า',
 };

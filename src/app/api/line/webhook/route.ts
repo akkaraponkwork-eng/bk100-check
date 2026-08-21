@@ -110,6 +110,20 @@ export async function POST(request: NextRequest) {
       const origin = host ? `https://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin);
 
 
+      if (text.includes('ผลการตรวจโรงนอน')) {
+        try {
+          await fetch(`${origin}/api/bed-reports`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rawText: text }),
+          });
+        } catch (e) {
+          console.error('Error saving bed report:', e);
+        }
+        // บอททำงานเงียบๆ ตามความต้องการ
+        return NextResponse.json({ status: 'ok' });
+      }
+
       if (text === 'เซ็ตกลุ่ม' && event.source.type === 'group') {
         const groupId = event.source.groupId;
         try {
@@ -170,8 +184,8 @@ export async function POST(request: NextRequest) {
         */
 
         const [dutyRes, personnelRes] = await Promise.all([
-          fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } }),
-          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } })
+          fetch(`${origin}/api/duty`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' })
         ]);
 
         const dutyData = await dutyRes.json();
@@ -243,8 +257,8 @@ export async function POST(request: NextRequest) {
         const targetDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
         const [mRes, pRes] = await Promise.all([
-          fetch(`${origin}/api/missions?date=${targetDateStr}`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } }),
-          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' } })
+          fetch(`${origin}/api/missions?date=${targetDateStr}`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' })
         ]);
 
         const mData = await mRes.json();
@@ -283,6 +297,44 @@ export async function POST(request: NextRequest) {
         await replyLineMessage(replyToken, [{
           type: 'text',
           text: summaryText.trim()
+        }]);
+      } else if (text === 'เช็คเตียง' || text === 'เตียงไม่เรียบร้อย' || text === 'เช็คเตียงไม่เรียบร้อย') {
+        const dDate = new Date();
+        const targetDateStr = dDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+        
+        const [metaRes, pRes] = await Promise.all([
+          fetch(`${origin}/api/duty-meta?type=punishment`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' }),
+          fetch(`${origin}/api/personnel`, { headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }, cache: 'no-store' })
+        ]);
+
+        const metaData = await metaRes.json();
+        const pData = await pRes.json();
+        
+        const punishments = metaData.punishments || [];
+        const personnelList = pData.personnel || [];
+        const pMap = Object.fromEntries(personnelList.map((p: any) => [p.id, `${p.rank}${p.firstName} ${p.lastName}`]));
+
+        // Filter for today's bed violations
+        const bedViolations = punishments.filter((p: any) => p.source === 'bed' && p.startDate === targetDateStr);
+
+        if (bedViolations.length === 0) {
+          await replyLineMessage(replyToken, [{
+            type: 'text',
+            text: `✅ ตรวจโรงนอนวันนี้ ทุกเตียงเรียบร้อยดีครับ!`
+          }]);
+          return NextResponse.json({ status: 'ok' });
+        }
+
+        let summaryText = `⚠️ **สรุปเตียงที่ไม่เรียบร้อยวันนี้**\n`;
+        bedViolations.forEach((v: any, index: number) => {
+           const name = pMap[v.personnelId] || 'ไม่ทราบชื่อ';
+           // v.remark format is usually: "เตียง X: Y"
+           summaryText += `\n${index + 1}. ${name}\n👉 ${v.remark}`;
+        });
+
+        await replyLineMessage(replyToken, [{
+          type: 'text',
+          text: summaryText
         }]);
       } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
         await replyLineMessage(replyToken, [

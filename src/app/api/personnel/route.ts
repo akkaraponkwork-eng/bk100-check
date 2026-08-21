@@ -30,6 +30,7 @@ function rowToPersonnel(row: string[]): Personnel {
     dutyCount: Number(row[7]) || 0,
     isNCOEligible: String(row[8]).toLowerCase() === 'true',
     num: Number(row[9]) || 0,
+    bedNumber: row[10] || undefined,
   };
 }
 
@@ -38,7 +39,7 @@ function personnelToRow(p: Personnel): string[] {
     p.id, p.rank, p.firstName, p.lastName,
     String(p.batch), p.phone || '',
     p.status, String(p.dutyCount), String(p.isNCOEligible || false),
-    String(p.num || 0)
+    String(p.num || 0), p.bedNumber || ''
   ];
 }
 
@@ -48,7 +49,7 @@ const getCachedPersonnel = unstable_cache(
     const sheets = google.sheets({ version: 'v4', auth });
     const res = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: sheetId,
-      ranges: ['Personnel!A2:J', 'Leave!A2:J', 'DutyMeta!A2:G'],
+      ranges: ['Personnel!A2:K', 'Leave!A2:J', 'DutyMeta!A2:G'],
     });
     
     const personnelRows = res.data.valueRanges?.[0].values || [];
@@ -111,10 +112,10 @@ export async function POST(request: Request) {
     // Clear and rewrite
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
-      range: 'Personnel!A1:J',
+      range: 'Personnel!A1:K',
     });
 
-    const header = [['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible', 'num']];
+    const header = [['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible', 'num', 'bedNumber']];
     const values = [
       ...header,
       ...personnel.map(personnelToRow),

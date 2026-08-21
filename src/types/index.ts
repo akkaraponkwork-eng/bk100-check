@@ -10,6 +10,7 @@ export interface Personnel {
   dutyCount: number;     // จำนวนเวรสะสม (fairness)
   isNCOEligible?: boolean; // สามารถเป็นสิบเวรได้ไหม
   num?: number;          // ลำดับคิวการเข้าเวร
+  bedNumber?: string;    // หมายเลขเตียง
   leaveDetails?: {
     startDate: string;
     endDate: string;
@@ -17,10 +18,14 @@ export interface Personnel {
 }
 
 export interface PunishmentEntry {
+  id?: string;
   personnelId: string;
-  shift: number; // 1-6 specific shift to do
+  shift: number; // 1-6 specific shift to do, 0 if not assigned yet
   startDate: string;
   endDate: string;
+  status?: 'todo' | 'progress' | 'done';
+  source?: 'bed' | 'manual';
+  remark?: string;
 }
 
 export interface ExceptionEntry {
@@ -211,5 +216,34 @@ export interface MissionYearlySummary {
   totalPersonnelAssigned: number;
   monthlyBreakdown: { month: string; count: number; completed: number }[];
   topPersonnel: { personnelId: string; rank: string; name: string; count: number }[];
+}
+
+// ==================== Bed Reports & Beds (ตรวจโรงนอน) ====================
+export interface BedEntry {
+  bedNo: string;
+  personnelId?: string;
+  ownerName?: string;
+}
+
+export interface BedViolation {
+  bedNo: string;
+  remark: string;
+  actualSleeperId?: string; // When the person sleeping is not the bed owner
+}
+
+export interface BedMonthlyStats {
+  bedNo: string;
+  ownerName?: string;
+  count: number;
+  remarks: string[];
+}
+
+export interface BedReport {
+  id: string;
+  rawText: string;
+  status: 'pending' | 'processed';
+  createdAt: string;
+  processedAt?: string;
+  violations?: string; // JSON string ของ BedViolation[]
 }
 

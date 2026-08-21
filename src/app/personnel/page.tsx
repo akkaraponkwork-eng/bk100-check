@@ -233,6 +233,7 @@ function PersonnelModal({
     dutyCount: person?.dutyCount || 0,
     isNCOEligible: person?.isNCOEligible || false,
     num: person?.num ?? nextNum,
+    bedNumber: person?.bedNumber || '',
   });
 
   const set = (k: keyof typeof form, v: unknown) =>
@@ -273,9 +274,15 @@ function PersonnelModal({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="label">เบอร์โทร</label>
-          <input className="input" type="tel" value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="08X-XXXXXXX" />
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="label">เบอร์โทร</label>
+            <input className="input" type="tel" value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="08X-XXXXXXX" />
+          </div>
+          <div className="form-group">
+            <label className="label">หมายเลขเตียง</label>
+            <input className="input" type="text" value={form.bedNumber || ''} onChange={e => set('bedNumber', e.target.value)} placeholder="เช่น 42, A-1" />
+          </div>
         </div>
 
         <div className="form-group">
@@ -504,6 +511,11 @@ function PersonnelPageInner() {
                     {p.isNCOEligible && <StarIcon titleAccess="สิบเวร" style={{ fontSize: 16, color: '#f59e0b' }} />}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
+                    {p.bedNumber && (
+                      <span className="badge" style={{ fontSize: 10, background: 'var(--color-primary-light)', color: 'white' }}>
+                        เตียง {p.bedNumber}
+                      </span>
+                    )}
                     <span className="badge badge-gray" style={{ fontSize: 10 }}>คิวที่ {p.num || 0}</span>
                     <span className={`badge badge-${p.batch >= 169 ? 'junior' : 'senior'}`} style={{ fontSize: 10 }}>
                       ผลัด {p.batch}

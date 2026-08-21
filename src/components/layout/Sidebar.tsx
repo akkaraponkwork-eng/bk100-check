@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
   { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', roles: ['admin', 'commander', 'nco', 'personnel'] },
   { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', roles: ['admin', 'commander', 'nco'] },
+  { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
   { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
 ];
