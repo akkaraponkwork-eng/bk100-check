@@ -228,7 +228,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
 
       {/* User Footer */}
       <Box sx={{ p: isCollapsed ? 2 : 2, display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: 1.5 }}>
-        <Avatar src={userPicture} imgProps={{ referrerPolicy: 'no-referrer' }} sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>
+        <Avatar src={userPicture} slotProps={{ img: { referrerPolicy: 'no-referrer' } }} sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>
           {!userPicture && (userName.charAt(0) || 'U')}
         </Avatar>
         {!isCollapsed && (
