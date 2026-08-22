@@ -469,7 +469,7 @@ export default function SettingsPage() {
                         >
                           <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-gray-400 border border-gray-200/50">
                             {u.pictureUrl ? (
-                              <img src={u.pictureUrl} alt={u.displayName} className="w-full h-full object-cover" />
+                              <img src={u.pictureUrl} alt={u.displayName} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                             ) : (
                               <PersonIcon />
                             )}
