@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
         await replyLineMessage(replyToken, [
           {
             type: 'text',
-            text: `น้องบก.ร้อย มาแล้วครับ! 🫡\nเลือกเมนูด้านล่างได้เลยครับ\n[Debug Origin: ${origin}]`
+            text: 'น้องบก.ร้อย มาแล้วครับ! 🫡\nเลือกเมนูด้านล่างได้เลยครับ'
           },
           {
             type: 'flex',
