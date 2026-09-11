@@ -47,6 +47,18 @@ export default async function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body>
+        {/* Inline script: runs before React hydrates — prevents white flash in LINE browser */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            if(typeof navigator!=='undefined' && navigator.userAgent.indexOf('Line/')!==-1){
+              var el=document.createElement('div');
+              el.id='liff-boot-overlay';
+              el.style.cssText='position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+              el.innerHTML='<div style="width:48px;height:48px;border:4px solid #e5e7eb;border-top-color:#00B900;border-radius:50%;animation:liff-spin 0.8s linear infinite"></div><style>@keyframes liff-spin{to{transform:rotate(360deg)}}</style><p style="margin:0;color:#00B900;font-weight:600;font-size:15px">กำลังเชื่อมต่อกับ LINE...</p>';
+              document.body.appendChild(el);
+            }
+          })()
+        ` }} />
         <LiffProvider hasSession={!!user}>
           <ThemeRegistry>
             <ToastProvider>

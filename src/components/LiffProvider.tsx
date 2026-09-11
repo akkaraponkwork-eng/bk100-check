@@ -76,6 +76,8 @@ export default function LiffProvider({
         console.error('LIFF Init error', e);
       } finally {
         setLoading(false);
+        // Remove the inline boot overlay injected before React hydrated
+        document.getElementById('liff-boot-overlay')?.remove();
       }
     };
 
