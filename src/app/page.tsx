@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const [showYearlyMissionModal, setShowYearlyMissionModal] = useState(false);
 
   const [leaveEnabled, setLeaveEnabled] = useState(true);
-  const [userRole, setUserRole] = useState<string>('personnel');
+
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayDisplay = format(new Date(), 'd MMMM yyyy', { locale: th });
@@ -61,14 +61,13 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, dRes, ncoRes, recRes, metaRes, botRes, meRes, misRes, misSumRes] = await Promise.allSettled([
+      const [pRes, dRes, ncoRes, recRes, metaRes, botRes, misRes, misSumRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/duty?date=${todayStr}`),
         fetch(`/api/nco?month=${currentMonth}`),
         fetch(`/api/records?date=${todayStr}`),
         fetch('/api/duty-meta'),
         fetch('/api/bot-settings'),
-        fetch('/api/auth/me'),
         fetch(`/api/missions?date=${todayStr}`),
         fetch(`/api/missions/summary?year=${currentYear}`),
       ]);
@@ -105,10 +104,7 @@ export default function DashboardPage() {
         const data = await botRes.value.json();
         setLeaveEnabled(data.leaveEnabled !== false);
       }
-      if (meRes && meRes.status === 'fulfilled') {
-        const data = await meRes.value.json();
-        setUserRole(data.role || 'personnel');
-      }
+
       if (misRes && misRes.status === 'fulfilled') {
         const data = await misRes.value.json();
         setTodayMissions(data.missions || []);
@@ -252,8 +248,8 @@ export default function DashboardPage() {
                 completedTotal={yearlySummary?.completedMissions || 0}
                 onOpenYearlyModal={() => setShowYearlyMissionModal(true)}
               />
-              <DutyTimeline shift={todayShift} personnel={personnel} userRole={userRole} />
-              <QuickActions todayShift={todayShift} onExport={handleExportDuty} userRole={userRole} />
+              <DutyTimeline shift={todayShift} personnel={personnel} />
+              <QuickActions todayShift={todayShift} onExport={handleExportDuty} />
             </div>
 
             {/* Right Column */}

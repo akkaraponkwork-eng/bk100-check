@@ -6,6 +6,7 @@ import { th } from 'date-fns/locale';
 import type { Personnel, NCODuty, DutyShift, KanbanTask, Mission, MissionStatus, ExceptionEntry } from '@/types';
 import { MISSION_STATUS_LABELS } from '@/types';
 import { useToast } from '@/hooks/useToast';
+import { usePermissions } from '@/hooks/usePermissions';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import PersonIcon from '@mui/icons-material/Person';
 import SecurityIcon from '@mui/icons-material/Security';
@@ -29,7 +30,6 @@ interface DailyRecord {
   remaining: number;
 }
 
-const CAN_MANAGE_ROLES = ['admin', 'commander', 'duty_officer', 'nco'];
 
 // ==================== Day Detail Modal (Duty + Missions) ====================
 function DayDetailModal({
@@ -40,7 +40,7 @@ function DayDetailModal({
   missions,
   personnelMap,
   personnelList,
-  userRole,
+  canManage,
   onOpenAddMission,
   onOpenEditMission,
   onQuickToggleStatus,
@@ -53,14 +53,13 @@ function DayDetailModal({
   missions: Mission[];
   personnelMap: Record<string, Personnel>;
   personnelList: Personnel[];
-  userRole: string;
+  canManage: boolean;
   onOpenAddMission: () => void;
   onOpenEditMission: (mission: Mission) => void;
   onQuickToggleStatus: (mission: Mission) => void;
   onClose: () => void;
 }) {
   const dateStr = format(date, 'd MMMM yyyy', { locale: th });
-  const canManage = CAN_MANAGE_ROLES.includes(userRole);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -589,7 +588,6 @@ export default function CalendarPage() {
   const [dutyShifts, setDutyShifts] = useState<Record<string, DutyShift>>({});
   const [recordDates, setRecordDates] = useState<Record<string, boolean>>({});
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [userRole, setUserRole] = useState<string>('personnel');
   const [exceptions, setExceptions] = useState<ExceptionEntry[]>([]);
 
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -602,18 +600,19 @@ export default function CalendarPage() {
 
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
+  const { can } = usePermissions();
+  const canManage = can('Duty.create');
 
   const monthKey = `${viewYear}-${String(viewMonth).padStart(2, '0')}`;
 
   const loadData = useCallback(async () => {
     try {
-      const [pRes, ncoRes, dutyRes, recRes, misRes, meRes, excRes] = await Promise.allSettled([
+      const [pRes, ncoRes, dutyRes, recRes, misRes, excRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/nco?month=${monthKey}`),
         fetch('/api/duty'),
         fetch('/api/records'),
         fetch(`/api/missions?month=${monthKey}`),
-        fetch('/api/auth/me'),
         fetch('/api/duty-meta?type=exception'),
       ]);
 
@@ -646,10 +645,6 @@ export default function CalendarPage() {
         const d = await misRes.value.json();
         setMissions(d.missions || []);
       }
-      if (meRes.status === 'fulfilled' && meRes.value.ok) {
-        const d = await meRes.value.json();
-        setUserRole(d.role || 'personnel');
-      }
       if (excRes && excRes.status === 'fulfilled' && excRes.value.ok) {
         const d = await excRes.value.json();
         setExceptions(d.exceptions || []);
@@ -662,6 +657,7 @@ export default function CalendarPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleSaveNCOModal = async (personnelId: string) => {
+    if (!canManage) { showToast('ไม่มีสิทธิ์จัดการสิบเวร', 'error'); return; }
     if (!selectedNCODay) return;
     setSaving(true);
     try {
@@ -691,6 +687,7 @@ export default function CalendarPage() {
   };
 
   const handleSaveMission = async (missionData: Partial<Mission>) => {
+    if (!canManage) { showToast('ไม่มีสิทธิ์จัดการภารกิจ', 'error'); return; }
     try {
       const isEdit = !!missionData.id;
       const url = '/api/missions';
@@ -716,6 +713,7 @@ export default function CalendarPage() {
   };
 
   const handleDeleteMission = async (id: string) => {
+    if (!canManage) { showToast('ไม่มีสิทธิ์ลบภารกิจ', 'error'); return; }
     try {
       const res = await fetch(`/api/missions?id=${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -860,7 +858,7 @@ export default function CalendarPage() {
           missions={dayMissions}
           personnelMap={personnelMap}
           personnelList={personnel}
-          userRole={userRole}
+          canManage={canManage}
           onOpenAddMission={() => {
             setEditingMission(null);
             setMissionModalOpen(true);

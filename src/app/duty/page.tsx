@@ -12,6 +12,7 @@ import {
 import { th } from 'date-fns/locale';
 import type { Personnel, DutyShift, ShiftSlot, CalendarEvent, KanbanTask, PunishmentEntry, ExceptionEntry } from '@/types';
 import { useToast } from '@/hooks/useToast';
+import { usePermissions } from '@/hooks/usePermissions';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -1068,6 +1069,8 @@ export default function DutyPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const { showToast } = useToast();
+  const { can } = usePermissions();
+  const canScheduleDuty = can('Duty.create');
 
   const monthKey = format(viewDate, 'yyyy-MM');
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
@@ -1103,6 +1106,7 @@ export default function DutyPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleSaveDay = async (shift: DutyShift) => {
+    if (!canScheduleDuty) { showToast('ไม่มีสิทธิ์บันทึกตารางเวร', 'error'); return; }
     await fetch('/api/duty', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1114,6 +1118,7 @@ export default function DutyPage() {
   };
 
   const handleSavePunishments = async (entries: PunishmentEntry[]) => {
+    if (!canScheduleDuty) { showToast('ไม่มีสิทธิ์จัดการดองเวร', 'error'); return; }
     await fetch('/api/duty-meta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1124,6 +1129,7 @@ export default function DutyPage() {
   };
 
   const handleSaveExceptions = async (entries: ExceptionEntry[]) => {
+    if (!canScheduleDuty) { showToast('ไม่มีสิทธิ์จัดการยกเว้น/ยกเลิก', 'error'); return; }
     await fetch('/api/duty-meta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1135,6 +1141,7 @@ export default function DutyPage() {
 
   // Auto-generate full month with punishment support
   const handleGenerateMonth = async () => {
+    if (!canScheduleDuty) { showToast('ไม่มีสิทธิ์สร้างตารางเวร', 'error'); return; }
     if (!confirm(`สร้างตารางเวรทั้งเดือน ${format(viewDate, 'MMMM yyyy', { locale: th })} อัตโนมัติ?\n(จะเขียนทับข้อมูลเดิม)`)) return;
     setGenerating(true);
     try {
