@@ -57,6 +57,7 @@ export default function AppShell({ children, userRole, userName, userRank, userP
   const handleLogout = async () => {
     if (confirm('ต้องการออกจากระบบหรือไม่?')) {
       await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.setItem('skipLiffAutoLogin', 'true');
       window.location.href = '/login';
     }
   };
