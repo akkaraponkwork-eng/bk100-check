@@ -222,8 +222,8 @@ export default function DashboardPage() {
             />
             <StatCard
               icon={<BarChartIcon />} label="ยอดล่าสุด"
-              value={lastRecord ? `${lastRecord.totalCompany} นาย` : '—'}
-              sub={lastRecord ? format(parseISO(lastRecord.date), 'd MMM', { locale: th }) : 'ยังไม่มีข้อมูล'}
+              value={lastRecord ? `${lastRecord.totalCompany} นาย` : `${personnel.filter(p => p.rank === 'พลฯ' && p.status === 'available').length} นาย`}
+              sub={lastRecord ? format(parseISO(lastRecord.date), 'd MMM', { locale: th }) : 'ยอดพลฯ ประจำการ'}
               accent="#06b6d4"
             />
             <StatCard
