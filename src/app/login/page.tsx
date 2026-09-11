@@ -16,6 +16,7 @@ export default function LoginPage() {
 
   const handleLineLogin = () => {
     setLoading(true);
+    localStorage.removeItem('skipLiffAutoLogin');
     window.location.href = '/api/auth/line';
   };
 

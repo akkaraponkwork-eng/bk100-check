@@ -245,6 +245,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
               onClick={async () => {
                 if (confirm('ต้องการออกจากระบบหรือไม่?')) {
                   await fetch('/api/auth/logout', { method: 'POST' });
+                  localStorage.setItem('skipLiffAutoLogin', 'true');
                   window.location.href = '/login';
                 }
               }}

@@ -38,6 +38,11 @@ export default function LiffProvider({
 
         // Already has a valid server session — nothing to do
         if (hasSession) return;
+        
+        // User explicitly logged out, do not auto-login again until they click Login
+        if (localStorage.getItem('skipLiffAutoLogin') === 'true') {
+          return;
+        }
 
         const profile = await liff.getProfile();
         const res = await fetch('/api/auth/liff', {
