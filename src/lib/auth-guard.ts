@@ -10,7 +10,7 @@ export function getUserInfo(request: NextRequest): RequestUser {
   return {
     id: request.headers.get('x-user-id') || '',
     role: request.headers.get('x-user-role') || '',
-    name: request.headers.get('x-user-name') || '',
+    name: decodeURIComponent(request.headers.get('x-user-name') || ''),
   };
 }
 

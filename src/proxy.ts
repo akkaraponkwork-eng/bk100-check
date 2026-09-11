@@ -84,7 +84,7 @@ export default async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-user-id', user.personnelId);
   requestHeaders.set('x-user-role', user.role);
-  requestHeaders.set('x-user-name', user.displayName);
+  requestHeaders.set('x-user-name', encodeURIComponent(user.displayName));
 
   return NextResponse.next({ request: { headers: requestHeaders } });
 }

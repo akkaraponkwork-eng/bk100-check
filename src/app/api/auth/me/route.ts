@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     id: request.headers.get('x-user-id') || '',
     role,
-    name: request.headers.get('x-user-name') || '',
+    name: decodeURIComponent(request.headers.get('x-user-name') || ''),
     permissions,
   });
 }
