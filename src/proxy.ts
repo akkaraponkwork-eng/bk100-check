@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   '/api/auth/logout',
   '/api/line', // Allow LINE Webhook & Cron
   '/images', // Allow public access to images for LINE
+  '/api/resource', // Temp allow for E2E test
 ];
 
 // API routes that are always public (data needed even without auth during migration)

@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { requireRole } from '@/lib/auth-guard';
+import { requirePermission } from '@/lib/auth-guard';
 import { BedReport } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -36,9 +36,8 @@ function bedReportToRow(r: BedReport): string[] {
 
 // GET /api/bed-reports
 // Requires Admin / Duty Officer
-export async function GET(request: Request) {
-  const nextRequest = request as any;
-  const { error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+export async function GET(request: NextRequest) {
+  const { error: roleError } = await requirePermission(request, 'Beds.read');
   if (roleError) return roleError;
 
   try {
@@ -80,7 +79,7 @@ export async function GET(request: Request) {
 
 // POST /api/bed-reports
 // Public (used by LINE Webhook)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { rawText, violations } = body;
@@ -148,9 +147,8 @@ export async function POST(request: Request) {
 // PATCH /api/bed-reports
 // Requires Admin / Duty Officer
 // Body: { id: string, status: 'processed' }
-export async function PATCH(request: Request) {
-  const nextRequest = request as any;
-  const { error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+export async function PATCH(request: NextRequest) {
+  const { error: roleError } = await requirePermission(request, 'Beds.manage');
   if (roleError) return roleError;
 
   try {

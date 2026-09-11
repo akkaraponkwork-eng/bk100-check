@@ -1,0 +1,7 @@
+--- Starting Vehicle Framework Tests ---
+\n[1] Testing POST /Vehicle
+✅ Created successfully. ID: 16c26f81-c810-4c32-913a-0134622eaee5
+\n[2] Testing GET /Vehicle
+✅ Fetched successfully. Total vehicles: 1
+✅ First vehicle: Toyota Hilux Revo (1กท 9999)
+\n🎉 Vehicle Test Passed Successfully! The Generic Resource Framework is proven! 🎉

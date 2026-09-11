@@ -1,0 +1,18 @@
+--- Starting Arsenal E2E Tests ---
+\n[1] Testing POST /Arsenal
+✅ Created successfully. ID: 6343922b-6edb-48d6-a9ef-841ac1f78a3f
+✅ Computed field security: Expected 15000, Got 15000
+\n[2] Testing GET /Arsenal/:id
+✅ Fetched successfully. Name: M4A1 Carbine
+\n[3] Testing PATCH /Arsenal/:id
+✅ Updated successfully. New Quantity: 15, New Version: 2026-08-23T06:13:50.523Z
+✅ Computed field recalculated: Total Value is now 22500
+\n[4] Testing 409 Conflict (Optimistic Concurrency)
+✅ Correctly rejected with 409 Conflict! Error: 409 Conflict: Record has been modified by someone else.
+\n[5] Testing DELETE /Arsenal/:id
+✅ Deleted successfully.
+\n[6] Verifying Deletion (GET should 404)
+✅ Verified correctly (404 Not Found).
+\n[7] Testing Schema Compatibility / Invalid DocType
+✅ Handled unknown DocType properly.
+\n🎉 All E2E Tests Passed Successfully! 🎉

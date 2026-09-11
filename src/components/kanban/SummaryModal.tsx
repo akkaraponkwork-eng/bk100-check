@@ -9,9 +9,10 @@ interface SummaryModalProps {
   onClose: () => void;
   totalCompany: number | '';
   tasks: KanbanTask[];
+  combineCounts?: boolean;
 }
 
-export default function SummaryModal({ onClose, totalCompany, tasks }: SummaryModalProps) {
+export default function SummaryModal({ onClose, totalCompany, tasks, combineCounts }: SummaryModalProps) {
   const totalSenior = tasks.reduce((s, t) => s + (Number(t.countSenior) || 0), 0);
   const totalJunior = tasks.reduce((s, t) => s + (Number(t.countJunior) || 0), 0);
   const totalLegacy = tasks.reduce((s, t) => s + (Number(t.count) || 0), 0);
@@ -41,15 +42,19 @@ export default function SummaryModal({ onClose, totalCompany, tasks }: SummaryMo
             <Typography sx={{ fontWeight: 700, fontSize: 16, color: 'primary.main' }}>{totalDistributed}</Typography>
           </Box>
 
-          <Box sx={{ pl: 2, display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">- รุ่นพี่</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalSenior}</Typography>
-          </Box>
-          <Box sx={{ pl: 2, display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">- รุ่นน้อง</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalJunior}</Typography>
-          </Box>
-          {totalLegacy > 0 && (
+          {!combineCounts && (
+            <>
+              <Box sx={{ pl: 2, display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">- รุ่นพี่</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalSenior}</Typography>
+              </Box>
+              <Box sx={{ pl: 2, display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">- รุ่นน้อง</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalJunior}</Typography>
+              </Box>
+            </>
+          )}
+          {(!combineCounts && totalLegacy > 0) && (
             <Box sx={{ pl: 2, display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="body2" color="text.secondary">- อื่นๆ (ไม่ระบุรุ่น)</Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalLegacy}</Typography>

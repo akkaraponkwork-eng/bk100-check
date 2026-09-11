@@ -4,6 +4,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import type { DutyShift } from '@/types';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface QuickActionsProps {
   todayShift: DutyShift | null;
@@ -12,16 +13,19 @@ interface QuickActionsProps {
 }
 
 export default function QuickActions({ todayShift, onExport, userRole = 'personnel' }: QuickActionsProps) {
-  const canSchedule = ['admin', 'commander', 'duty_officer', 'nco'].includes(userRole);
+  const { can } = usePermissions();
+
+  const canScheduleDuty = can('Duty.create');
+  const canManageKanban = can('Kanban.manage');
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-      {canSchedule && (
+      {canScheduleDuty && (
         <Link href="/duty" className="btn btn-primary" style={{ textDecoration: 'none', fontSize: 14 }}>
           <AccessTimeIcon fontSize="small" /> จัดเวรวันนี้
         </Link>
       )}
-      <Link href="/kanban" className={`btn ${canSchedule ? 'btn-ghost' : 'btn-primary'}`} style={{ textDecoration: 'none', fontSize: 14 }}>
+      <Link href="/kanban" className={`btn ${canScheduleDuty ? 'btn-ghost' : 'btn-primary'}`} style={{ textDecoration: 'none', fontSize: 14 }}>
         <AssignmentIcon fontSize="small" /> บันทึกยอด
       </Link>
       {todayShift && (

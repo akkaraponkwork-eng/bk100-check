@@ -24,9 +24,10 @@ interface TaskCardProps {
   task: KanbanTask;
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void;
   onDelete: (id: string) => void;
+  combineCounts?: boolean;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: TaskCardProps) {
   return (
     <Card sx={{ mb: 2, border: '1px solid var(--color-border)', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
       <CardContent sx={{ p: '16px !important' }}>
@@ -49,34 +50,50 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
 
           {/* Count Input */}
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-              <Typography sx={{ fontSize: 9, color: 'primary.main', fontWeight: 600 }}>พี่</Typography>
-              <InputBase
-                type="number"
-                value={task.countSenior !== undefined ? task.countSenior : (task.count || '')}
-                onChange={e => onUpdate(task.id, { countSenior: e.target.value === '' ? '' : Number(e.target.value), count: '' })}
-                placeholder="0"
-                inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
-                sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'primary.light', borderRadius: 1.5 }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-              <Typography sx={{ fontSize: 9, color: 'secondary.main', fontWeight: 600 }}>น้อง</Typography>
-              <InputBase
-                type="number"
-                value={task.countJunior !== undefined ? task.countJunior : ''}
-                onChange={e => onUpdate(task.id, { countJunior: e.target.value === '' ? '' : Number(e.target.value) })}
-                placeholder="0"
-                inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
-                sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'secondary.light', borderRadius: 1.5 }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, ml: 0.5 }}>
-              <Typography sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 600 }}>รวม</Typography>
-              <Box sx={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 1.5 }}>
-                <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{getTaskTotal(task) || '-'}</Typography>
+            {combineCounts ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                <Typography sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 600 }}>ยอดรวม</Typography>
+                <InputBase
+                  type="number"
+                  value={task.count !== undefined && task.count !== '' ? task.count : (getTaskTotal(task) || '')}
+                  onChange={e => onUpdate(task.id, { count: e.target.value === '' ? '' : Number(e.target.value), countSenior: '', countJunior: '' })}
+                  placeholder="0"
+                  inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
+                  sx={{ width: 44, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'text.secondary', borderRadius: 1.5 }}
+                />
               </Box>
-            </Box>
+            ) : (
+              <>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                  <Typography sx={{ fontSize: 9, color: 'primary.main', fontWeight: 600 }}>พี่</Typography>
+                  <InputBase
+                    type="number"
+                    value={task.countSenior !== undefined ? task.countSenior : (task.count || '')}
+                    onChange={e => onUpdate(task.id, { countSenior: e.target.value === '' ? '' : Number(e.target.value), count: '' })}
+                    placeholder="0"
+                    inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
+                    sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'primary.light', borderRadius: 1.5 }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                  <Typography sx={{ fontSize: 9, color: 'secondary.main', fontWeight: 600 }}>น้อง</Typography>
+                  <InputBase
+                    type="number"
+                    value={task.countJunior !== undefined ? task.countJunior : ''}
+                    onChange={e => onUpdate(task.id, { countJunior: e.target.value === '' ? '' : Number(e.target.value) })}
+                    placeholder="0"
+                    inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
+                    sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'secondary.light', borderRadius: 1.5 }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, ml: 0.5 }}>
+                  <Typography sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 600 }}>รวม</Typography>
+                  <Box sx={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 1.5 }}>
+                    <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{getTaskTotal(task) || '-'}</Typography>
+                  </Box>
+                </Box>
+              </>
+            )}
           </Box>
 
           {!task.isFixed && (

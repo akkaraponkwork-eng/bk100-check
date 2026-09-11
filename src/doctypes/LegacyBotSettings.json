@@ -1,0 +1,24 @@
+{
+  "name": "LegacyBotSettings",
+  "sheetName": "BotSettings",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BotSettings",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "groupId",
+      "type": "String",
+      "sheetHeader": "groupId",
+      "label": "groupId"
+    },
+    {
+      "fieldname": "isBotActive",
+      "type": "String",
+      "sheetHeader": "isBotActive",
+      "label": "isBotActive"
+    }
+  ]
+}

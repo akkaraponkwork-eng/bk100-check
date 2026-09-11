@@ -1,0 +1,36 @@
+{
+  "name": "LegacyNCO",
+  "sheetName": "NCO",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "NCO",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "date",
+      "type": "String",
+      "sheetHeader": "date",
+      "label": "date"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    },
+    {
+      "fieldname": "status",
+      "type": "String",
+      "sheetHeader": "status",
+      "label": "status"
+    }
+  ]
+}

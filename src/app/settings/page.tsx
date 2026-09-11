@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppUser, UserRole, ROLE_LABELS } from '@/types';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -25,6 +25,8 @@ import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/hooks/useToast';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportToExcel } from '@/utils/export';
 
 export default function SettingsPage() {
   const [currentTab, setCurrentTab] = useState(0);
@@ -46,6 +48,7 @@ export default function SettingsPage() {
   // Bot Settings
   const [botGroupId, setBotGroupId] = useState('');
   const [leaveEnabled, setLeaveEnabled] = useState(true);
+  const [combineKanbanCounts, setCombineKanbanCounts] = useState(false);
   const [savingBotSettings, setSavingBotSettings] = useState(false);
   const [refreshingBot, setRefreshingBot] = useState(false);
 
@@ -58,6 +61,117 @@ export default function SettingsPage() {
   const [openAdminDialog, setOpenAdminDialog] = useState(false);
 
   const { showToast } = useToast();
+
+  // RBAC Settings
+  const [rbacRoles, setRbacRoles] = useState<any[]>([]);
+  const [rbacPermissions, setRbacPermissions] = useState<any[]>([]);
+  const [rbacMappings, setRbacMappings] = useState<any[]>([]);
+  const [loadingRbac, setLoadingRbac] = useState(false);
+  const [hasRbacChanges, setHasRbacChanges] = useState(false);
+  const [savingRbac, setSavingRbac] = useState(false);
+  
+  const [rbacTab, setRbacTab] = useState(0);
+  const [newRoleKey, setNewRoleKey] = useState('');
+  const [newRoleName, setNewRoleName] = useState('');
+  const [savingRole, setSavingRole] = useState(false);
+
+  // Export Settings
+  const [leaveStartDate, setLeaveStartDate] = useState('');
+  const [leaveEndDate, setLeaveEndDate] = useState('');
+  const [dutyStartDate, setDutyStartDate] = useState('');
+  const [dutyEndDate, setDutyEndDate] = useState('');
+  const [exportingType, setExportingType] = useState<string | null>(null);
+
+  const loadRbacData = async () => {
+    setLoadingRbac(true);
+    try {
+      const res = await fetch('/api/rbac');
+      if (res.ok) {
+        const data = await res.json();
+        setRbacRoles(data.roles || []);
+        setRbacPermissions(data.permissions || []);
+        setRbacMappings(data.rolePermissions || []);
+        setHasRbacChanges(false);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('ไม่สามารถโหลดข้อมูลสิทธิ์ได้', 'error');
+    } finally {
+      setLoadingRbac(false);
+    }
+  };
+
+  const handleDeleteRole = async (id: string, name: string) => {
+    if (!window.confirm(`คุณต้องการลบตำแหน่ง ${name} ใช่หรือไม่?`)) return;
+    try {
+      const res = await fetch('/api/rbac/roles', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        showToast('ลบตำแหน่งสำเร็จ', 'success');
+        loadRbacData();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'ลบตำแหน่งไม่สำเร็จ', 'error');
+      }
+    } catch (e) {
+      showToast('เกิดข้อผิดพลาด', 'error');
+    }
+  };
+
+  const handleCreateRole = async () => {
+    if (!newRoleKey || !newRoleName) return showToast('กรุณากรอก Key และ ชื่อตำแหน่ง', 'error');
+    setSavingRole(true);
+    try {
+      const res = await fetch('/api/rbac/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: newRoleKey, name: newRoleName })
+      });
+      if (res.ok) {
+        showToast('สร้างตำแหน่งใหม่สำเร็จ', 'success');
+        setNewRoleKey('');
+        setNewRoleName('');
+        loadRbacData();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'สร้างตำแหน่งไม่สำเร็จ', 'error');
+      }
+    } catch (e) {
+      showToast('เกิดข้อผิดพลาด', 'error');
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
+  const handleToggleRbacCheckbox = (roleId: string, permissionId: string, enabled: boolean) => {
+    setHasRbacChanges(true);
+    if (enabled) {
+      setRbacMappings([...rbacMappings, { roleId, permissionId }]);
+    } else {
+      setRbacMappings(rbacMappings.filter(m => !(m.roleId === roleId && m.permissionId === permissionId)));
+    }
+  };
+
+  const handleSaveRbac = async () => {
+    setSavingRbac(true);
+    try {
+      const res = await fetch('/api/rbac', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mappings: rbacMappings })
+      });
+      if (!res.ok) throw new Error();
+      showToast('บันทึกสิทธิ์สำเร็จทั้งหมด', 'success');
+      setHasRbacChanges(false);
+    } catch (e) {
+      showToast('เกิดข้อผิดพลาดในการบันทึกสิทธิ์', 'error');
+    } finally {
+      setSavingRbac(false);
+    }
+  };
 
   const filteredUsers = users.filter(u =>
     u.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -74,11 +188,12 @@ export default function SettingsPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const [usersRes, orgChartRes, botRes, adminsRes] = await Promise.all([
-        fetch('/api/users'),
-        fetch('/api/orgchart'),
-        fetch('/api/bot-settings'),
-        fetch('/api/admin-accounts')
+      const [usersRes, orgChartRes, botRes, adminsRes, _rbac] = await Promise.all([
+        fetch('/api/users', { cache: 'no-store' }),
+        fetch('/api/orgchart', { cache: 'no-store' }),
+        fetch('/api/bot-settings', { cache: 'no-store' }),
+        fetch('/api/admin-accounts', { cache: 'no-store' }),
+        loadRbacData()
       ]);
 
       if (usersRes.ok) {
@@ -94,6 +209,7 @@ export default function SettingsPage() {
         const botData = await botRes.json();
         setBotGroupId(botData.groupId || '');
         setLeaveEnabled(botData.leaveEnabled !== false);
+        setCombineKanbanCounts(botData.combineKanbanCounts === true);
       }
       if (adminsRes.ok) {
         const adminsData = await adminsRes.json();
@@ -256,7 +372,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled: newVal })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled: newVal, combineKanbanCounts })
       });
       if (res.ok) {
         showToast(newVal ? 'เปิดใช้งานระบบลางานแล้ว' : 'ปิดใช้งานระบบลางานแล้ว', 'success');
@@ -271,10 +387,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleToggleCombineKanban = async (newVal: boolean) => {
+    setCombineKanbanCounts(newVal); // Optimistic UI update
+    try {
+      const res = await fetch('/api/bot-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, combineKanbanCounts: newVal })
+      });
+      if (res.ok) {
+        showToast(newVal ? 'เปิดโหมดรวมยอดงานพี่/น้องแล้ว' : 'ปิดโหมดรวมยอดงานแล้ว (แยกรุ่นพี่/รุ่นน้องตามปกติ)', 'success');
+      } else {
+        const data = await res.json();
+        showToast(`เกิดข้อผิดพลาด: ${data.error}`, 'error');
+        setCombineKanbanCounts(!newVal); // Revert on failure
+      }
+    } catch (e) {
+      showToast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      setCombineKanbanCounts(!newVal); // Revert on failure
+    }
+  };
+
   const handleRefreshBot = async () => {
     setRefreshingBot(true);
     try {
-      const res = await fetch('/api/bot-settings');
+      const res = await fetch('/api/bot-settings', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setBotGroupId(data.groupId || '');
@@ -296,7 +433,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, combineKanbanCounts })
       });
       if (res.ok) {
         showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
@@ -313,13 +450,50 @@ export default function SettingsPage() {
 
 
 
+  const handleExport = async (type: string, startDate?: string, endDate?: string) => {
+    setExportingType(type);
+    try {
+      let url = `/api/export?type=${type}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+      
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to export');
+      }
+      
+      const data = await res.json();
+      if (data.length === 0) {
+        showToast('ไม่พบข้อมูลในช่วงเวลาที่เลือก', 'info');
+        return;
+      }
+      
+      const titleMap: Record<string, string> = {
+        'personnel': 'ข้อมูลกำลังพลทั้งหมด',
+        'leave': 'ประวัติการลางาน',
+        'duty': 'ประวัติการจัดเวรยาม'
+      };
+      
+      exportToExcel(data, `${titleMap[type]}_${new Date().toISOString().split('T')[0]}`);
+      showToast('ดาวน์โหลดข้อมูลสำเร็จ', 'success');
+    } catch (e: any) {
+      showToast(`เกิดข้อผิดพลาด: ${e.message}`, 'error');
+    } finally {
+      setExportingType(null);
+    }
+  };
+
   const tabs = [
     { id: 0, label: 'ตั้งค่าทั่วไป', icon: <SettingsIcon fontSize="small" /> },
-    { id: 1, label: 'จัดการสิทธิ์', icon: <AdminPanelSettingsIcon fontSize="small" /> },
+    { id: 1, label: 'จัดการผู้ใช้', icon: <GroupIcon fontSize="small" /> },
     { id: 2, label: 'บัญชีแอดมิน', icon: <VpnKeyIcon fontSize="small" /> },
-    { id: 3, label: 'ตั้งค่าบอท', icon: <SmartToyIcon fontSize="small" /> },
+    // { id: 3, label: 'ตั้งค่าบอท', icon: <SmartToyIcon fontSize="small" /> },
+    { id: 6, label: 'จัดการสิทธิ์ใช้งาน', icon: <AdminPanelSettingsIcon fontSize="small" /> },
     { id: 4, label: 'ผังองค์กร', icon: <AccountTreeIcon fontSize="small" /> },
     { id: 5, label: 'เชื่อมต่อระบบ', icon: <CloudIcon fontSize="small" /> },
+    { id: 7, label: 'ส่งออกข้อมูล', icon: <DownloadIcon fontSize="small" /> },
+
   ];
 
   return (
@@ -382,7 +556,7 @@ export default function SettingsPage() {
                     จัดการการตั้งค่าพื้นฐานของระบบ
                   </p>
 
-                  <div className="mb-8 p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border border-gray-200">
+                  <div className="mb-4 p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border border-gray-200">
                     <label className="flex items-start sm:items-center gap-5 p-6 bg-white rounded-[1.3rem] cursor-pointer hover:shadow-md transition-shadow">
                       <div className="relative flex-shrink-0 mt-1 sm:mt-0">
                         <input type="checkbox" className="sr-only" checked={leaveEnabled} onChange={(e) => handleToggleLeave(e.target.checked)} />
@@ -393,6 +567,24 @@ export default function SettingsPage() {
                         <span className="block font-bold text-gray-900 mb-1 text-base">{leaveEnabled ? 'เปิดใช้งานระบบลางาน' : 'ปิดใช้งานระบบลางานชั่วคราว'}</span>
                         <span className="block text-sm text-gray-500 leading-relaxed">
                           หากปิดการใช้งาน เมนูและระบบลางานจะถูกซ่อนจากกำลังพลและแอดมินทั้งหมด
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="mb-8 p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border border-gray-200">
+                    <label className="flex items-start sm:items-center gap-5 p-6 bg-white rounded-[1.3rem] cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="relative flex-shrink-0 mt-1 sm:mt-0">
+                        <input type="checkbox" className="sr-only" checked={combineKanbanCounts} onChange={(e) => handleToggleCombineKanban(e.target.checked)} />
+                        <div className={`block w-[3.25rem] h-8 rounded-full transition-colors duration-300 ${combineKanbanCounts ? 'bg-[#06C755]' : 'bg-gray-200'}`}></div>
+                        <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 shadow-sm ${combineKanbanCounts ? 'transform translate-x-[1.25rem]' : ''}`}></div>
+                      </div>
+                      <div>
+                        <span className="block font-bold text-gray-900 mb-1 text-base">{combineKanbanCounts ? 'รูปแบบการจัดเวร: ใช้ "ยอดรวม" (ไม่แยกรุ่น)' : 'รูปแบบการจัดเวร: "แยกยอด" รุ่นพี่ / รุ่นน้อง'}</span>
+                        <span className="block text-sm text-gray-500 leading-relaxed">
+                          {combineKanbanCounts 
+                            ? 'ระบบจะซ่อนช่อง พี่/น้อง และแสดงแค่ช่อง "ยอดรวม" เพียงช่องเดียวในหน้าจัดเวรยาม' 
+                            : 'ระบบจะแสดงช่องกรอกข้อมูลแยกเป็น "รุ่นพี่" และ "รุ่นน้อง" ในหน้าจัดเวรยาม'}
                         </span>
                       </div>
                     </label>
@@ -503,9 +695,15 @@ export default function SettingsPage() {
                                 value={u.role}
                                 onChange={(e) => handleRoleChange(u.lineUserId, e.target.value)}
                               >
-                                {Object.entries(ROLE_LABELS).map(([val, label]) => (
-                                  <option key={val} value={val}>{label}</option>
-                                ))}
+                                {rbacRoles.length > 0 ? (
+                                  rbacRoles.map(r => (
+                                    <option key={r.id} value={r.key}>{r.name}</option>
+                                  ))
+                                ) : (
+                                  Object.entries(ROLE_LABELS).map(([val, label]) => (
+                                    <option key={val} value={val}>{label}</option>
+                                  ))
+                                )}
                               </select>
                             )}
                           </div>
@@ -563,18 +761,21 @@ export default function SettingsPage() {
               {currentTab === 2 && (
                 <div>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold mb-1">บัญชีแอดมิน (Admin Accounts)</h2>
+                    {/* <div>
+                      <h2 className="text-lg font-bold mb-1">บัญชีแอดมิน</h2>
                       <p className="text-sm text-[var(--color-text-secondary)]">
                         บัญชีเหล่านี้ใช้สำหรับ Login เพื่อเข้าสู่ระบบในฐานะแอดมินโดยไม่ต้องผูก LINE
                       </p>
+                    </div> */}
+                    <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
+                      <h2 className="text-lg font-bold mb-1">บัญชีผู้ดูแลระบบ</h2>
+                      {/* <button
+                        className="btn btn-primary whitespace-nowrap px-5"
+                        onClick={() => setOpenAdminDialog(true)}
+                      >
+                        <AddIcon fontSize="small" /> เพิ่มบัญชี
+                      </button> */}
                     </div>
-                    <button
-                      className="btn btn-primary whitespace-nowrap px-5"
-                      onClick={() => setOpenAdminDialog(true)}
-                    >
-                      <AddIcon fontSize="small" /> เพิ่มบัญชี
-                    </button>
                   </div>
 
                   <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
@@ -583,7 +784,14 @@ export default function SettingsPage() {
                         <thead>
                           <tr className="bg-gray-50 border-b border-[var(--color-border)] text-sm text-[var(--color-text-primary)]">
                             <th className="py-4 px-6 font-semibold">ชื่อผู้ใช้งาน (Username)</th>
-                            <th className="py-4 px-6 font-semibold text-right w-[120px]">จัดการ</th>
+                            <th className='py-4 px-6 text-right '><button
+                              className="btn btn-primary whitespace-nowrap px-5"
+                              onClick={() => setOpenAdminDialog(true)}
+                            >
+                              <AddIcon fontSize="small" /> เพิ่มบัญชี
+                            </button></th>
+                            {/* <th className="py-4 px-6 font-semibold text-right w-[120px]">จัดการ</th> */}
+
                           </tr>
                         </thead>
                         <tbody>
@@ -611,7 +819,7 @@ export default function SettingsPage() {
                           ) : (
                             <tr>
                               <td colSpan={2} className="py-12 text-center text-sm text-[var(--color-text-secondary)]">
-                                ยังไม่มีบัญชีในระบบ (ระบบใช้ค่าพื้นฐานจาก .env)
+                                ยังไม่มีบัญชีในระบบ
                               </td>
                             </tr>
                           )}
@@ -853,6 +1061,290 @@ export default function SettingsPage() {
                           disabled={savingKey}
                         >
                           {savingKey ? 'Saving...' : 'Save Config'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 6: RBAC Settings */}
+              {currentTab === 6 && (
+                <div className="max-w-[1000px] mx-auto">
+                  <div className="flex justify-between items-end mb-6">
+                    <div>
+                      <h2 className="flex items-center gap-2 text-lg font-bold mb-1">
+                        <AdminPanelSettingsIcon className="text-[var(--color-primary)]" /> จัดการสิทธิ์ใช้งาน
+                      </h2>
+                      <p className="text-sm text-[var(--color-text-secondary)]">
+                        กำหนดสิทธิ์การเข้าถึงเมนูและฟังก์ชันต่างๆ ของแต่ละตำแหน่ง
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={loadRbacData} 
+                        disabled={loadingRbac || savingRbac}
+                        className="btn btn-sm btn-outline text-xs px-3 h-8 gap-1.5 border-gray-200 hover:bg-gray-50 flex items-center"
+                      >
+                        <RefreshIcon fontSize="small" className={loadingRbac ? 'animate-spin' : ''} /> 
+                        รีเฟรช
+                      </button>
+                      <button 
+                        onClick={handleSaveRbac} 
+                        disabled={!hasRbacChanges || savingRbac}
+                        className="btn btn-sm btn-primary text-xs px-4 h-8 gap-1.5 flex items-center shadow-sm"
+                      >
+                        {savingRbac ? (
+                          <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        ) : (
+                          <SaveIcon fontSize="small" />
+                        )}
+                        บันทึกการเปลี่ยนแปลง
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-hide">
+                    <button 
+                      className={`btn btn-sm px-4 rounded-full ${rbacTab === 0 ? 'bg-gray-800 text-white hover:bg-gray-900' : 'btn-ghost text-gray-500 hover:bg-gray-100'}`} 
+                      onClick={() => setRbacTab(0)}
+                    >
+                      ตารางสิทธิ์ (Permissions Matrix)
+                    </button>
+                    <button 
+                      className={`btn btn-sm px-4 rounded-full ${rbacTab === 1 ? 'bg-gray-800 text-white hover:bg-gray-900' : 'btn-ghost text-gray-500 hover:bg-gray-100'}`} 
+                      onClick={() => setRbacTab(1)}
+                    >
+                      สร้างสิทธิ์ผู้ใช้ (Manage Roles)
+                    </button>
+                  </div>
+
+                  {rbacTab === 0 && (
+                    loadingRbac && rbacRoles.length === 0 ? (
+                    <div className="flex flex-col gap-4">
+                      {[1, 2, 3].map(i => <div key={i} className="skeleton h-[40px] rounded-[var(--radius-lg)]"></div>)}
+                    </div>
+                  ) : (
+                    <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto shadow-sm">
+                      <table className="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-[var(--color-border)] text-sm text-[var(--color-text-primary)]">
+                            <th className="py-4 px-6 font-semibold sticky left-0 bg-gray-50 z-10 border-r border-gray-200">ชื่อสิทธิ์ (Permission)</th>
+                            {rbacRoles.map(role => (
+                              <th key={role.id} className="py-4 px-4 font-semibold text-center whitespace-nowrap">
+                                {role.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rbacPermissions.map((perm, index) => {
+                            const isGroupHeader = index === 0 || rbacPermissions[index - 1].group !== perm.group;
+                            return (
+                              <React.Fragment key={perm.id}>
+                                {isGroupHeader && (
+                                  <tr className="bg-gray-100/50">
+                                    <td colSpan={rbacRoles.length + 1} className="py-2 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 border-r border-gray-200">
+                                      เมนู: {perm.group}
+                                    </td>
+                                  </tr>
+                                )}
+                                <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-gray-50/50 transition-colors">
+                                  <td className="py-3 px-6 sticky left-0 bg-white group-hover:bg-gray-50/50 z-10 border-r border-gray-200">
+                                    <div className="flex flex-col">
+                                      <span className="font-semibold text-[14px]">{perm.name}</span>
+                                      {/* <span className="text-[12px] text-gray-400 font-mono">{perm.key}</span> */}
+                                    </div>
+                                  </td>
+                                  {rbacRoles.map(role => {
+                                    const isEnabled = rbacMappings.some(m => m.roleId === role.id && m.permissionId === perm.id);
+                                    return (
+                                      <td key={role.id} className="py-3 px-4 text-center">
+                                        <label className="inline-flex items-center cursor-pointer">
+                                          <input 
+                                            type="checkbox" 
+                                            className="form-checkbox h-5 w-5 text-[var(--color-primary)] rounded border-gray-300 focus:ring-[var(--color-primary)] focus:ring-2 transition duration-200" 
+                                            checked={isEnabled}
+                                            onChange={(e) => handleToggleRbacCheckbox(role.id, perm.id, e.target.checked)}
+                                          />
+                                        </label>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+
+                  {rbacTab === 1 && (
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex-1 bg-white p-6 rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-sm h-fit">
+                        <h3 className="font-bold text-[15px] mb-4">สร้างตำแหน่งใหม่ (Create Role)</h3>
+                        <div className="flex flex-col gap-4">
+                          <div>
+                            <label className="label mb-1.5 text-xs text-gray-500">Role Key (ภาษาอังกฤษ หรือ _)</label>
+                            <input 
+                              type="text" 
+                              className="input text-sm" 
+                              placeholder="เช่น assistant_nco"
+                              value={newRoleKey}
+                              onChange={e => setNewRoleKey(e.target.value)}
+                            />
+                            <p className="text-[11px] text-gray-400 mt-1">ใช้สำหรับอ้างอิงในระบบ ไม่สามารถแก้ไขได้ภายหลัง</p>
+                          </div>
+                          <div>
+                            <label className="label mb-1.5 text-xs text-gray-500">ชื่อตำแหน่งแสดงผล (Display Name)</label>
+                            <input 
+                              type="text" 
+                              className="input text-sm" 
+                              placeholder="เช่น ผู้ช่วยสิบเวร"
+                              value={newRoleName}
+                              onChange={e => setNewRoleName(e.target.value)}
+                            />
+                          </div>
+                          <button 
+                            className="btn btn-primary w-full justify-center mt-2"
+                            onClick={handleCreateRole}
+                            disabled={savingRole || !newRoleKey || !newRoleName}
+                          >
+                            {savingRole ? 'กำลังบันทึก...' : '+ เพิ่มตำแหน่งใหม่'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex-[2] bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-sm">
+                        <div className="p-4 border-b border-[var(--color-border)] bg-gray-50/50">
+                          <h3 className="font-bold text-[15px]">ตำแหน่งทั้งหมดในระบบ ({rbacRoles.length})</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="bg-gray-50/80 border-b border-[var(--color-border)] text-xs text-gray-500">
+                                <th className="py-3 px-4 font-semibold">ชื่อตำแหน่ง</th>
+                                <th className="py-3 px-4 font-semibold">Role Key</th>
+                                <th className="py-3 px-4 font-semibold text-right">จัดการ</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rbacRoles.map(role => {
+                                const isSystem = role.key === 'admin' || role.key === 'personnel';
+                                return (
+                                  <tr key={role.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-gray-50/50">
+                                    <td className="py-3 px-4 font-medium text-[14px]">{role.name}</td>
+                                    <td className="py-3 px-4">
+                                      <code className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{role.key}</code>
+                                      {isSystem && <span className="ml-2 badge badge-red py-0 text-[10px]">System</span>}
+                                    </td>
+                                    <td className="py-3 px-4 text-right">
+                                      <button 
+                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-30"
+                                        onClick={() => handleDeleteRole(role.id, role.name)}
+                                        disabled={isSystem}
+                                        title={isSystem ? "ไม่สามารถลบ Role ระบบได้" : "ลบตำแหน่ง"}
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* <p className="mt-4 text-xs text-gray-500 text-center">
+                    เมื่อคุณปรับเปลี่ยนสิทธิ์เรียบร้อยแล้ว อย่าลืมกดปุ่ม <b>&quot;บันทึกการเปลี่ยนแปลง&quot;</b> เพื่อให้มีผลในระบบ (รอโหลดประมาณ 15 วินาทีในเครื่องอื่นๆ)
+                  </p> */}
+                </div>
+              )}
+
+              {/* Tab 7: Export Data */}
+              {currentTab === 7 && (
+                <div className="max-w-[800px] mx-auto">
+                  <div className="mb-6">
+                    <h2 className="flex items-center gap-2 text-lg font-bold mb-1">
+                      <DownloadIcon className="text-[var(--color-primary)]" /> ส่งออกข้อมูล (Export Data)
+                    </h2>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      ดาวน์โหลดข้อมูลในระบบออกมาเป็นไฟล์ Excel (.xlsx) เพื่อนำไปใช้งานต่อ
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-6">
+                    {/* Personnel Export */}
+                    <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                          <h3 className="font-bold text-[15px] mb-1">ข้อมูลกำลังพล (Personnel)</h3>
+                          <p className="text-[13px] text-[var(--color-text-secondary)]">ส่งออกรายชื่อกำลังพลทั้งหมดในระบบพร้อมสถานะปัจจุบัน</p>
+                        </div>
+                        <button
+                          className="btn btn-primary h-10 px-5 text-sm whitespace-nowrap"
+                          onClick={() => handleExport('personnel')}
+                          disabled={exportingType !== null}
+                        >
+                          {exportingType === 'personnel' ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด Excel'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Leave Export */}
+                    <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                          <h3 className="font-bold text-[15px] mb-1">ประวัติการลางาน (Leave Records)</h3>
+                          <p className="text-[13px] text-[var(--color-text-secondary)]">ส่งออกประวัติการลางานตามช่วงเวลาที่กำหนด</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-end gap-3 bg-gray-50/80 p-4 rounded-xl border border-gray-100">
+                        <div className="flex-1 w-full">
+                          <label className="label mb-1 text-xs text-gray-500 font-medium">ตั้งแต่วันที่</label>
+                          <input type="date" className="input h-10 text-sm" value={leaveStartDate} onChange={e => setLeaveStartDate(e.target.value)} />
+                        </div>
+                        <div className="flex-1 w-full">
+                          <label className="label mb-1 text-xs text-gray-500 font-medium">ถึงวันที่</label>
+                          <input type="date" className="input h-10 text-sm" value={leaveEndDate} onChange={e => setLeaveEndDate(e.target.value)} />
+                        </div>
+                        <button
+                          className="btn btn-primary h-10 px-5 text-sm whitespace-nowrap w-full sm:w-auto mt-2 sm:mt-0"
+                          onClick={() => handleExport('leave', leaveStartDate, leaveEndDate)}
+                          disabled={exportingType !== null || (!leaveStartDate && !leaveEndDate)}
+                        >
+                          {exportingType === 'leave' ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด Excel'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Duty/Kanban Export */}
+                    <div className="p-6 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                          <h3 className="font-bold text-[15px] mb-1">ประวัติการจัดเวรยาม (Duty Records)</h3>
+                          <p className="text-[13px] text-[var(--color-text-secondary)]">ส่งออกประวัติการจัดเวรยามจากบอร์ด Kanban ตามช่วงเวลา</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-end gap-3 bg-gray-50/80 p-4 rounded-xl border border-gray-100">
+                        <div className="flex-1 w-full">
+                          <label className="label mb-1 text-xs text-gray-500 font-medium">ตั้งแต่วันที่</label>
+                          <input type="date" className="input h-10 text-sm" value={dutyStartDate} onChange={e => setDutyStartDate(e.target.value)} />
+                        </div>
+                        <div className="flex-1 w-full">
+                          <label className="label mb-1 text-xs text-gray-500 font-medium">ถึงวันที่</label>
+                          <input type="date" className="input h-10 text-sm" value={dutyEndDate} onChange={e => setDutyEndDate(e.target.value)} />
+                        </div>
+                        <button
+                          className="btn btn-primary h-10 px-5 text-sm whitespace-nowrap w-full sm:w-auto mt-2 sm:mt-0"
+                          onClick={() => handleExport('duty', dutyStartDate, dutyEndDate)}
+                          disabled={exportingType !== null || (!dutyStartDate && !dutyEndDate)}
+                        >
+                          {exportingType === 'duty' ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด Excel'}
                         </button>
                       </div>
                     </div>

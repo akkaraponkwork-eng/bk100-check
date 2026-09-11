@@ -15,6 +15,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import { usePermissions } from '@/hooks/usePermissions';
 
 import type { UserRole } from '@/types';
 import { 
@@ -26,23 +27,23 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   label: string;
-  roles?: UserRole[];
+  permission?: string;
 }
 
 const navItems: NavItem[] = [
   { href: '/',          icon: <HomeIcon />,          label: 'หน้าหลัก' },
-  { href: '/duty',      icon: <AccessTimeIcon />,    label: 'เวรยาม', roles: ['admin'] },
-  { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', roles: ['admin', 'commander', 'duty_officer', 'personnel', 'nco'] },
-  { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
-  { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', roles: ['admin', 'commander', 'nco', 'personnel'] },
-  { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', roles: ['admin', 'commander', 'nco'] },
-  { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
+  { href: '/duty',      icon: <AccessTimeIcon />,    label: 'เวรยาม', permission: 'Duty.read' },
+  { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', permission: 'Calendar.read' },
+  { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', permission: 'Kanban.read' },
+  { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', permission: 'Leave.read' },
+  { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
+  { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', permission: 'Beds.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
-  { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
+  { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', permission: 'Reports.read' },
 ];
 
 const adminItems: NavItem[] = [
-  { href: '/settings', icon: <SettingsIcon />, label: 'ตั้งค่า', roles: ['admin', 'commander'] },
+  { href: '/settings', icon: <SettingsIcon />, label: 'ตั้งค่า', permission: 'Settings.read' },
 ];
 
 interface SidebarProps {
@@ -58,6 +59,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [leaveEnabled, setLeaveEnabled] = useState(true); // default true
+  const { can } = usePermissions();
 
   useEffect(() => {
     fetch('/api/bot-settings')
@@ -70,9 +72,9 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
 
   const visibleNavItems = navItems.filter(item => {
     if (!leaveEnabled && item.href === '/leave') return false;
-    return !item.roles || item.roles.includes(userRole);
+    return !item.permission || can(item.permission);
   });
-  const visibleAdminItems = adminItems.filter(item => !item.roles || item.roles.includes(userRole));
+  const visibleAdminItems = adminItems.filter(item => !item.permission || can(item.permission));
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   const getRoleLabel = (role: UserRole) => {

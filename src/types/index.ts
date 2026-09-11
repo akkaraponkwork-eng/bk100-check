@@ -4,9 +4,9 @@ export interface Personnel {
   rank: string;          // ยศ เช่น พลฯ, ส.ต., จ.ส.ต.
   firstName: string;
   lastName: string;
-  batch: number;         // ผลัด เช่น 168, 169
+  batch: number;         // ผลัด เช่น 691, 692
   phone?: string;
-  status: 'available' | 'on_duty' | 'leave' | 'sick';
+  status: 'available' | 'on_duty' | 'leave' | 'sick' | 'out_of_service' | 'Penalized' | 'Payment';
   dutyCount: number;     // จำนวนเวรสะสม (fairness)
   isNCOEligible?: boolean; // สามารถเป็นสิบเวรได้ไหม
   num?: number;          // ลำดับคิวการเข้าเวร
@@ -130,13 +130,15 @@ export interface Task {
 }
 
 // ==================== Auth & Roles ====================
-export type UserRole = 'admin' | 'commander' | 'duty_officer' | 'nco' | 'personnel';
+export type UserRole = string; // 'admin' | 'commander' | 'duty_officer' | 'nco' | 'personnel' + dynamic roles
 
-export const ROLE_LABELS: Record<UserRole, string> = {
+// Fallback / legacy labels (Dynamic roles from API should be preferred)
+export const ROLE_LABELS: Record<string, string> = {
   admin: 'ผู้ดูแลระบบ',
   commander: 'ผู้บังคับบัญชา',
   duty_officer: 'นายเวร',
   nco: 'นายสิบเวร',
+  assistant_nco: 'ผู้ช่วยสิบเวร',
   personnel: 'กำลังพล',
 };
 

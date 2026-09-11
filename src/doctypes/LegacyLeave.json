@@ -1,0 +1,66 @@
+{
+  "name": "LegacyLeave",
+  "sheetName": "Leave",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Leave",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    },
+    {
+      "fieldname": "leaveType",
+      "type": "String",
+      "sheetHeader": "leaveType",
+      "label": "leaveType"
+    },
+    {
+      "fieldname": "startDate",
+      "type": "String",
+      "sheetHeader": "startDate",
+      "label": "startDate"
+    },
+    {
+      "fieldname": "endDate",
+      "type": "String",
+      "sheetHeader": "endDate",
+      "label": "endDate"
+    },
+    {
+      "fieldname": "days",
+      "type": "String",
+      "sheetHeader": "days",
+      "label": "days"
+    },
+    {
+      "fieldname": "status",
+      "type": "String",
+      "sheetHeader": "status",
+      "label": "status"
+    },
+    {
+      "fieldname": "remark",
+      "type": "String",
+      "sheetHeader": "remark",
+      "label": "remark"
+    },
+    {
+      "fieldname": "timestamp",
+      "type": "String",
+      "sheetHeader": "timestamp",
+      "label": "timestamp"
+    }
+  ]
+}

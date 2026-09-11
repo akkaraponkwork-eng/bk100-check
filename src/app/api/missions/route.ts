@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import type { Mission, MissionStatus } from '@/types';
 import { pushLineMessage } from '@/lib/line';
-import { requireRole, getUserInfo } from '@/lib/auth-guard';
+import { requirePermission, getUserInfo } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,11 +122,8 @@ export async function GET(request: NextRequest) {
 // POST /api/missions - Create new mission
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserInfo(request);
-    const allowedRoles = ['admin', 'commander', 'duty_officer', 'nco'];
-    if (user.id && user.role && !allowedRoles.includes(user.role)) {
-      return NextResponse.json({ error: 'ไม่มีสิทธิ์ในการสร้างภารกิจ' }, { status: 403 });
-    }
+    const { user, error: roleError } = await requirePermission(request, 'Calendar.manage');
+    if (roleError) return roleError;
 
     const body = await request.json();
     const {
@@ -228,11 +225,8 @@ export async function POST(request: NextRequest) {
 // PUT /api/missions - Update existing mission
 export async function PUT(request: NextRequest) {
   try {
-    const user = getUserInfo(request);
-    const allowedRoles = ['admin', 'commander', 'duty_officer', 'nco'];
-    if (user.id && user.role && !allowedRoles.includes(user.role)) {
-      return NextResponse.json({ error: 'ไม่มีสิทธิ์ในการแก้ไขภารกิจ' }, { status: 403 });
-    }
+    const { user, error: roleError } = await requirePermission(request, 'Calendar.manage');
+    if (roleError) return roleError;
 
     const body = await request.json();
     const { id, ...updates } = body;
@@ -294,11 +288,8 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/missions?id=...
 export async function DELETE(request: NextRequest) {
   try {
-    const user = getUserInfo(request);
-    const allowedRoles = ['admin', 'commander', 'duty_officer', 'nco'];
-    if (user.id && user.role && !allowedRoles.includes(user.role)) {
-      return NextResponse.json({ error: 'ไม่มีสิทธิ์ในการลบภารกิจ' }, { status: 403 });
-    }
+    const { user, error: roleError } = await requirePermission(request, 'Calendar.manage');
+    if (roleError) return roleError;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

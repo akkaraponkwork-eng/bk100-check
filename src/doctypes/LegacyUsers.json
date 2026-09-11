@@ -1,0 +1,42 @@
+{
+  "name": "LegacyUsers",
+  "sheetName": "Users",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Users",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "lineUserId",
+      "type": "String",
+      "sheetHeader": "lineUserId",
+      "label": "lineUserId"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    },
+    {
+      "fieldname": "role",
+      "type": "String",
+      "sheetHeader": "role",
+      "label": "role"
+    },
+    {
+      "fieldname": "displayName",
+      "type": "String",
+      "sheetHeader": "displayName",
+      "label": "displayName"
+    },
+    {
+      "fieldname": "pictureUrl",
+      "type": "String",
+      "sheetHeader": "pictureUrl",
+      "label": "pictureUrl"
+    }
+  ]
+}

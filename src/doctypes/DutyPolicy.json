@@ -1,0 +1,56 @@
+{
+  "name": "DutyPolicy",
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["System", "ผู้ดูแลระบบ", "ผู้บังคับบัญชา", "สิบเวร"],
+    "create": ["System", "ผู้ดูแลระบบ"],
+    "update": ["System", "ผู้ดูแลระบบ"],
+    "delete": ["System", "ผู้ดูแลระบบ"]
+  },
+  "fields": [
+    {
+      "name": "id",
+      "type": "string",
+      "required": true,
+      "list": true
+    },
+    {
+      "name": "version",
+      "type": "number",
+      "required": true,
+      "list": true
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "list": true
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "required": true,
+      "list": true
+    },
+    {
+      "name": "personsPerShift",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "minRestHours",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "fairness_totalDutyWeight",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "fairness_shiftBalanceWeight",
+      "type": "number",
+      "required": true
+    }
+  ]
+}

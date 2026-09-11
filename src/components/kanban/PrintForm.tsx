@@ -22,9 +22,10 @@ interface PrintFormProps {
   tasks: KanbanTask[];
   date: string;
   totalCompany: number | '';
+  combineCounts?: boolean;
 }
 
-export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps) {
+export default function PrintForm({ tasks, date, totalCompany, combineCounts }: PrintFormProps) {
   const dateDisplay = date ? format(parseISO(date), 'd MMMM yyyy', { locale: th }) : format(new Date(), 'd MMMM yyyy', { locale: th });
   const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
   const totalSenior = tasks.reduce((s, t) => s + (Number(t.countSenior) || 0), 0);
@@ -42,6 +43,8 @@ export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps)
       location: t?.location || '',
       countSenior: t?.countSenior !== undefined && t?.countSenior !== '' ? Number(t.countSenior) : '',
       countJunior: t?.countJunior !== undefined && t?.countJunior !== '' ? Number(t.countJunior) : '',
+      count: t?.count !== undefined && t?.count !== '' ? Number(t.count) : '',
+      total: t ? getTaskTotal(t) : 0,
       remark: t?.remark || '',
     };
   });
@@ -113,15 +116,17 @@ export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps)
       <table className="official-table">
         <thead>
           <tr>
-            <th rowSpan={2} style={{ width: '24%' }}>รูปแบบงาน</th>
-            <th rowSpan={2} style={{ width: '34%' }}>สถานที่ทำงาน/จำหน่าย</th>
-            <th colSpan={2} style={{ width: '18%' }}>จำนวนยอด</th>
-            <th rowSpan={2} style={{ width: '24%' }}>หมายเหตุ</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ width: '24%' }}>รูปแบบงาน</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ width: '34%' }}>สถานที่ทำงาน/จำหน่าย</th>
+            <th colSpan={combineCounts ? 1 : 2} style={{ width: '18%' }}>{combineCounts ? 'ยอดรวม' : 'จำนวนยอด'}</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ width: '24%' }}>หมายเหตุ</th>
           </tr>
-          <tr>
-            <th style={{ width: '9%' }}>รุ่นพี่</th>
-            <th style={{ width: '9%' }}>รุ่นน้อง</th>
-          </tr>
+          {!combineCounts && (
+            <tr>
+              <th style={{ width: '9%' }}>รุ่นพี่</th>
+              <th style={{ width: '9%' }}>รุ่นน้อง</th>
+            </tr>
+          )}
         </thead>
         <tbody>
           {/* Routine 11 Rows */}
@@ -129,34 +134,49 @@ export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps)
             <tr key={r.title}>
               <td style={{ textAlign: 'left' }}>{r.title}</td>
               <td style={{ textAlign: 'left' }}>{r.location}</td>
-              <td style={{ textAlign: 'center' }}>{r.countSenior !== '' ? r.countSenior : ''}</td>
-              <td style={{ textAlign: 'center' }}>{r.countJunior !== '' ? r.countJunior : ''}</td>
+              {combineCounts ? (
+                <td style={{ textAlign: 'center' }}>{r.count !== '' ? r.count : (r.total > 0 ? r.total : '')}</td>
+              ) : (
+                <>
+                  <td style={{ textAlign: 'center' }}>{r.countSenior !== '' ? r.countSenior : ''}</td>
+                  <td style={{ textAlign: 'center' }}>{r.countJunior !== '' ? r.countJunior : ''}</td>
+                </>
+              )}
               <td style={{ textAlign: 'left' }}>{r.remark}</td>
             </tr>
           ))}
 
           {/* Table 2 Header: งานนอก/อื่นๆ */}
           <tr>
-            <th rowSpan={2} style={{ textAlign: 'center', fontWeight: 'bold' }}>งานนอก/อื่นๆ</th>
-            <th rowSpan={2} style={{ textAlign: 'center', fontWeight: 'bold' }}>สถานที่ทำงาน/จำหน่าย</th>
-            <th colSpan={2} style={{ textAlign: 'center', fontWeight: 'bold' }}>จำนวนยอด</th>
-            <th rowSpan={2} style={{ textAlign: 'center', fontWeight: 'bold' }}>หมายเหตุ</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ textAlign: 'center', fontWeight: 'bold' }}>งานนอก/อื่นๆ</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ textAlign: 'center', fontWeight: 'bold' }}>สถานที่ทำงาน/จำหน่าย</th>
+            <th colSpan={combineCounts ? 1 : 2} style={{ textAlign: 'center', fontWeight: 'bold' }}>{combineCounts ? 'ยอดรวม' : 'จำนวนยอด'}</th>
+            <th rowSpan={combineCounts ? 1 : 2} style={{ textAlign: 'center', fontWeight: 'bold' }}>หมายเหตุ</th>
           </tr>
-          <tr>
-            <th style={{ textAlign: 'center', fontWeight: 'bold' }}>รุ่นพี่</th>
-            <th style={{ textAlign: 'center', fontWeight: 'bold' }}>รุ่นน้อง</th>
-          </tr>
+          {!combineCounts && (
+            <tr>
+              <th style={{ textAlign: 'center', fontWeight: 'bold' }}>รุ่นพี่</th>
+              <th style={{ textAlign: 'center', fontWeight: 'bold' }}>รุ่นน้อง</th>
+            </tr>
+          )}
 
           {/* Other tasks rows */}
           {otherTasksList.map(t => {
             const s = t.countSenior !== undefined && t.countSenior !== '' ? t.countSenior : '';
             const j = t.countJunior !== undefined && t.countJunior !== '' ? t.countJunior : '';
+            const c = t.count !== undefined && t.count !== '' ? t.count : (getTaskTotal(t) > 0 ? getTaskTotal(t) : '');
             return (
               <tr key={t.id}>
                 <td style={{ textAlign: 'left' }}>{t.title}</td>
                 <td style={{ textAlign: 'left' }}>{t.location || ''}</td>
-                <td style={{ textAlign: 'center' }}>{s}</td>
-                <td style={{ textAlign: 'center' }}>{j}</td>
+                {combineCounts ? (
+                  <td style={{ textAlign: 'center' }}>{c}</td>
+                ) : (
+                  <>
+                    <td style={{ textAlign: 'center' }}>{s}</td>
+                    <td style={{ textAlign: 'center' }}>{j}</td>
+                  </>
+                )}
                 <td style={{ textAlign: 'left' }}>{t.remark || ''}</td>
               </tr>
             );
@@ -167,8 +187,14 @@ export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps)
             <tr key={`empty-${i}`}>
               <td>&nbsp;</td>
               <td></td>
-              <td></td>
-              <td></td>
+              {combineCounts ? (
+                <td></td>
+              ) : (
+                <>
+                  <td></td>
+                  <td></td>
+                </>
+              )}
               <td></td>
             </tr>
           ))}
@@ -176,13 +202,19 @@ export default function PrintForm({ tasks, date, totalCompany }: PrintFormProps)
           {/* Summary Rows */}
           <tr>
             <td colSpan={2} style={{ fontWeight: 'bold', textAlign: 'left' }}>รวมยอดจำหน่าย</td>
-            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{totalSenior || ''}</td>
-            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{totalJunior || ''}</td>
+            {combineCounts ? (
+              <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{totalDistributed || ''}</td>
+            ) : (
+              <>
+                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{totalSenior || ''}</td>
+                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{totalJunior || ''}</td>
+              </>
+            )}
             <td style={{ fontWeight: 'bold', textAlign: 'left' }}>{totalDistributed ? `${totalDistributed} นาย` : ''}</td>
           </tr>
           <tr>
             <td colSpan={2} style={{ fontWeight: 'bold', textAlign: 'left' }}>ยอดคงเหลือ</td>
-            <td colSpan={2} style={{ textAlign: 'center', fontWeight: 'bold' }}>{typeof totalCompany === 'number' ? `${remaining} นาย` : ''}</td>
+            <td colSpan={combineCounts ? 1 : 2} style={{ textAlign: 'center', fontWeight: 'bold' }}>{typeof totalCompany === 'number' ? `${remaining} นาย` : ''}</td>
             <td></td>
           </tr>
         </tbody>

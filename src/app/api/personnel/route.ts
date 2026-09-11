@@ -96,10 +96,12 @@ export async function GET() {
   }
 }
 
+import { requirePermission } from '@/lib/auth-guard';
+
 // POST /api/personnel — เพิ่มหรืออัปเดตทั้ง array (bulk upsert)
 export async function POST(request: Request) {
   const nextRequest = request as any;
-  const { user, error: roleError } = requireRole(nextRequest, ['admin']);
+  const { user, error: roleError } = await requirePermission(nextRequest, 'Personnel.manage');
   if (roleError) return roleError;
 
   try {

@@ -4,7 +4,7 @@ import { google } from 'googleapis';
 
 export const dynamic = 'force-dynamic';
 import type { BedEntry } from '@/types';
-import { requireRole } from '@/lib/auth-guard';
+import { requirePermission } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -71,8 +71,7 @@ export async function GET() {
 
 // POST /api/beds — Bulk upsert (replace all)
 export async function POST(request: Request) {
-  const nextRequest = request as any;
-  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'commander', 'nco', 'duty_officer']);
+  const { user, error: roleError } = await requirePermission(nextRequest, 'Beds.manage');
   if (roleError) return roleError;
 
   try {
@@ -126,8 +125,7 @@ export async function POST(request: Request) {
 
 // DELETE /api/beds?bedNo=36
 export async function DELETE(request: Request) {
-  const nextRequest = request as any;
-  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'commander', 'nco', 'duty_officer']);
+  const { user, error: roleError } = await requirePermission(nextRequest, 'Beds.manage');
   if (roleError) return roleError;
 
   try {

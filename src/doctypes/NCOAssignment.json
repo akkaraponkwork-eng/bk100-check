@@ -1,0 +1,101 @@
+{
+  "name": "NCOAssignment",
+  "sheetName": "NCOAssignment",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_NCOAssignment",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "commander", "nco", "duty_assistant", "personnel"],
+    "create": ["admin", "commander"],
+    "update": ["admin", "commander", "nco"],
+    "delete": ["admin"]
+  },
+  "states": {
+    "field": "status",
+    "initial": "scheduled",
+    "transitions": [
+      {
+        "from": "scheduled",
+        "to": "completed",
+        "roles": ["commander", "nco", "admin"]
+      },
+      {
+        "from": "scheduled",
+        "to": "cancelled",
+        "roles": ["commander", "admin"]
+      },
+      {
+        "from": "scheduled",
+        "to": "swapped",
+        "roles": ["commander", "admin"]
+      }
+    ]
+  },
+  "concurrency": {
+    "optimistic": true,
+    "versionField": "updatedAt"
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "Link",
+      "target": "Personnel",
+      "displayField": "firstName",
+      "resolve": "lazy",
+      "label": "สิบเวร",
+      "sheetHeader": "personnelId",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "dutyDate",
+      "type": "Date",
+      "label": "วันที่เข้าเวร",
+      "sheetHeader": "dutyDate",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "status",
+      "type": "Select",
+      "label": "สถานะ",
+      "sheetHeader": "status",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "จัดเวรแล้ว", "value": "scheduled" },
+        { "label": "ปฏิบัติหน้าที่แล้ว", "value": "completed" },
+        { "label": "สับเปลี่ยน", "value": "swapped" },
+        { "label": "ยกเลิก", "value": "cancelled" }
+      ]
+    },
+    {
+      "fieldname": "remark",
+      "type": "String",
+      "label": "หมายเหตุ",
+      "sheetHeader": "remark",
+      "form": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

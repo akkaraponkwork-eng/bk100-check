@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import type { LeaveRequest, LeaveStatus } from '@/types';
 import { pushLineMessage } from '@/lib/line';
+import { requirePermission, getUserInfo } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -16,14 +17,6 @@ function getSheetAuth() {
   return { auth, sheetId };
 }
 
-// Helper: Get user info from headers (set by middleware)
-function getUserInfo(request: NextRequest) {
-  return {
-    id: request.headers.get('x-user-id') || '',
-    role: request.headers.get('x-user-role') || '',
-    name: request.headers.get('x-user-name') || '',
-  };
-}
 
 // GET: ดึงประวัติการลา
 export async function GET(request: NextRequest) {
@@ -56,12 +49,14 @@ export async function GET(request: NextRequest) {
 
     const myRequests = requests.filter(r => r.personnelId === user.id);
     
-    const adminRoles = ['admin', 'commander', 'duty_officer'];
-    const pendingRequests = adminRoles.includes(user.role) 
+    const { error: roleError } = await requirePermission(request, 'Leave.approve');
+    const canApprove = !roleError;
+    
+    const pendingRequests = canApprove 
       ? requests.filter(r => r.status === 'pending')
       : [];
 
-    const allRequests = adminRoles.includes(user.role) ? requests : [];
+    const allRequests = canApprove ? requests : [];
 
     return NextResponse.json({ 
       myRequests, 
@@ -166,12 +161,8 @@ export async function POST(request: NextRequest) {
 // PATCH: อนุมัติ / ปฏิเสธการลา
 export async function PATCH(request: NextRequest) {
   try {
-    const user = getUserInfo(request);
-    const adminRoles = ['admin', 'commander', 'duty_officer'];
-    
-    if (!user.id || !adminRoles.includes(user.role)) {
-      return NextResponse.json({ error: 'Unauthorized or insufficient permissions' }, { status: 403 });
-    }
+    const { user, error: roleError } = await requirePermission(request, 'Leave.approve');
+    if (roleError) return roleError;
 
     const body = await request.json();
     const { id, status } = body; // status: 'approved' | 'rejected'

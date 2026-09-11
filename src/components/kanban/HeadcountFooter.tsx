@@ -10,10 +10,11 @@ interface HeadcountFooterProps {
   onChangeTotalCompany: (v: number | '') => void;
   onSave: () => void;
   saving: boolean;
+  combineCounts?: boolean;
 }
 
 export default function HeadcountFooter({
-  tasks, totalCompany, onChangeTotalCompany, onSave, saving,
+  tasks, totalCompany, onChangeTotalCompany, onSave, saving, combineCounts
 }: HeadcountFooterProps) {
   const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
   const totalSenior = tasks.reduce((s, t) => s + (Number(t.countSenior) || 0), 0);
@@ -66,16 +67,18 @@ export default function HeadcountFooter({
                 sx={{ width: { xs: 56, md: 72 }, height: { xs: 32, md: 40 }, fontSize: { xs: 14, md: 16 }, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
               />
             </Box>
-            <Box sx={{ display: 'flex', gap: { xs: 2, md: 3 } }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'primary.main', fontWeight: 600, mb: 0.25 }}>พี่</Typography>
-                <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>{totalSenior}</Typography>
+            {!combineCounts && (
+              <Box sx={{ display: 'flex', gap: { xs: 2, md: 3 } }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'primary.main', fontWeight: 600, mb: 0.25 }}>พี่</Typography>
+                  <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>{totalSenior}</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'secondary.main', fontWeight: 600, mb: 0.25 }}>น้อง</Typography>
+                  <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'secondary.main', lineHeight: 1 }}>{totalJunior}</Typography>
+                </Box>
               </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'secondary.main', fontWeight: 600, mb: 0.25 }}>น้อง</Typography>
-                <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'secondary.main', lineHeight: 1 }}>{totalJunior}</Typography>
-              </Box>
-            </Box>
+            )}
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', md: 'center' }, gap: { xs: 1, md: 4 }, width: { xs: '100%', md: 'auto' }, flex: { md: 1 }, bgcolor: { xs: 'rgba(0,0,0,0.02)', md: 'transparent' }, px: { xs: 1.5, md: 0 }, py: { xs: 0.5, md: 0 }, borderRadius: 1.5 }}>

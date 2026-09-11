@@ -23,9 +23,9 @@ import {
 import { Box, Button, Pagination, Select, MenuItem, SelectChangeEvent } from '@mui/material';
 import PageHeader from '@/components/layout/PageHeader';
 
-const RANK_OPTIONS = ['พลฯ', 'ส.ต.', 'จ.ส.ต.', 'ส.อ.', 'จ.ส.อ.', 'พล.อส.', 'ส.ต.อ.', 'อื่นๆ'];
+const RANK_OPTIONS = ['พลฯ', 'ส.ต.', 'จ.ส.ต.', 'ส.อ.', 'จ.ส.อ.', 'พล.อส.', 'พ.ต.', 'ร.ท.', 'ร.อ.', 'พ.อ.', 'อื่นๆ'];
 const STATUS_LABELS: Record<Personnel['status'], string> = {
-  available: 'ว่าง', on_duty: 'เวร', leave: 'ลา', sick: 'ป่วย',
+  available: 'ว่าง', on_duty: 'เวร', leave: 'ลา', sick: 'ป่วย', out_of_service: 'ปลดประจำการ', Penalized: 'ลงโทษ', Payment: 'จ่ายการ'
 };
 
 // ==================== Excel Import Modal ====================
@@ -90,7 +90,7 @@ function ExcelImportModal({
       'ยศ': 'พลฯ',
       'ชื่อ': 'สมชาย',
       'นามสกุล': 'รักชาติ',
-      'ผลัด': '169',
+      'ผลัด': '691',
       'เบอร์โทร': '0812345678'
     }]);
     const wb = XLSX.utils.book_new();
@@ -227,7 +227,7 @@ function PersonnelModal({
     rank: person?.rank || 'พลฯ',
     firstName: person?.firstName || '',
     lastName: person?.lastName || '',
-    batch: person?.batch || 169,
+    batch: person?.batch || 691,
     phone: person?.phone || '',
     status: person?.status || 'available',
     dutyCount: person?.dutyCount || 0,
@@ -259,7 +259,7 @@ function PersonnelModal({
           </div>
           <div className="form-group">
             <label className="label">ผลัด</label>
-            <input className="input" type="number" value={form.batch} onChange={e => set('batch', Number(e.target.value))} placeholder="169" />
+            <input className="input" type="number" value={form.batch} onChange={e => set('batch', Number(e.target.value))} placeholder="691" />
           </div>
         </div>
 
@@ -517,7 +517,7 @@ function PersonnelPageInner() {
                       </span>
                     )}
                     <span className="badge badge-gray" style={{ fontSize: 10 }}>คิวที่ {p.num || 0}</span>
-                    <span className={`badge badge-${p.batch >= 169 ? 'junior' : 'senior'}`} style={{ fontSize: 10 }}>
+                    <span className={`badge badge-${p.batch >= 691 ? 'junior' : 'senior'}`} style={{ fontSize: 10 }}>
                       ผลัด {p.batch}
                     </span>
                     <span className={`badge badge-${p.status}`} style={{ fontSize: 10 }}>

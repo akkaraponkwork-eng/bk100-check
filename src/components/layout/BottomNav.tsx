@@ -9,40 +9,41 @@ import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import type { UserRole } from '@/types';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Paper, BottomNavigation, BottomNavigationAction } from '@mui/material';
 
 interface NavItem {
   href: string;
   icon: React.ReactNode;
   label: string;
-  roles?: UserRole[];
+  permission?: string;
 }
 
 import GroupIcon from '@mui/icons-material/Group';
 
 const allNavItems: NavItem[] = [
   { href: '/',          icon: <HomeIcon />,          label: 'หน้าหลัก' },
-  { href: '/duty',      icon: <AccessTimeIcon />,    label: 'เวรยาม', roles: ['admin'] },
-  { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', roles: ['admin', 'commander', 'duty_officer', 'personnel', 'nco'] },
-  { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
-  { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', roles: ['admin', 'commander', 'nco', 'personnel'] },
-  { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', roles: ['admin', 'commander', 'nco'] },
+  { href: '/duty',      icon: <AccessTimeIcon />,    label: 'เวรยาม', permission: 'Duty.read' },
+  { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', permission: 'Calendar.read' },
+  { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', permission: 'Kanban.read' },
+  { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', permission: 'Leave.read' },
+  { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
-  { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', roles: ['admin', 'commander', 'duty_officer', 'nco'] },
-  { href: '/settings',  icon: <SettingsIcon />,      label: 'ตั้งค่า', roles: ['admin', 'commander'] },
+  { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', permission: 'Reports.read' },
+  { href: '/settings',  icon: <SettingsIcon />,      label: 'ตั้งค่า', permission: 'Settings.read' },
 ];
 
 interface BottomNavProps {
-  userRole?: UserRole;
+  userRole?: string;
 }
 
 export default function BottomNav({ userRole = 'personnel' }: BottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { can } = usePermissions();
 
   const items = allNavItems
-    .filter(item => !item.roles || item.roles.includes(userRole));
+    .filter(item => !item.permission || can(item.permission));
 
   const activeHref = items.find(i => 
     i.href === '/' ? pathname === '/' : pathname.startsWith(i.href)

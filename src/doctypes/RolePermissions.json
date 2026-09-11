@@ -1,0 +1,48 @@
+{
+  "name": "RolePermissions",
+  "sheetName": "RolePermissions",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_RolePermissions",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin"],
+    "create": ["admin"],
+    "update": ["admin"],
+    "delete": ["admin"]
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "roleId",
+      "type": "Link",
+      "target": "Roles",
+      "displayField": "name",
+      "sheetHeader": "roleId",
+      "required": true,
+      "label": "บทบาท",
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "permissionId",
+      "type": "Link",
+      "target": "Permissions",
+      "displayField": "name",
+      "sheetHeader": "permissionId",
+      "required": true,
+      "label": "สิทธิ์",
+      "list": true,
+      "form": true
+    }
+  ]
+}

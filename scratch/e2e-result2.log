@@ -1,0 +1,10 @@
+--- Starting Arsenal E2E Tests ---
+\n[1] Testing POST /Arsenal
+✅ Created successfully. ID: 6298cea7-bafa-4f72-b70d-99dcbf95efeb
+✅ Computed field security: Expected 15000, Got 15000
+\n[2] Testing GET /Arsenal/:id
+✅ Fetched successfully. Name: M4A1 Carbine
+\n[3] Testing PATCH /Arsenal/:id
+Error: PATCH failed: {"error":"Failed to compute field 'totalValue': Unknown variable or operator: price"}
+    at runTests (D:\BK100\fix-duty\bk100-check\scripts\test-e2e.ts:60:38)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

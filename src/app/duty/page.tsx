@@ -81,7 +81,7 @@ function isPersonnelAvailable(
   date: string,
   exceptions: ExceptionEntry[],
 ): boolean {
-  if (p.status === 'sick' || p.status === 'leave') return false;
+  if (p.status !== 'available') return false;
   // If there's any exception OTHER than 'ผู้ช่วยสิบเวร', they are unavailable
   const ex = exceptions.find(
     e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date && e.reason !== 'ผู้ช่วยสิบเวร'
@@ -165,14 +165,7 @@ function PunishmentModal({
 
   const handleAdd = () => {
     if (!form.personnelId) return;
-    const start = parseISO(form.startDate);
-    const end = parseISO(form.endDate);
-    const days = eachDayOfInterval({ start, end });
-    const newEntries = days.map(d => ({
-      ...form,
-      startDate: format(d, 'yyyy-MM-dd'),
-      endDate: format(d, 'yyyy-MM-dd')
-    }));
+    const newEntries = [{ ...form }];
 
     if (editIndex !== null) {
       setList(prev => {
@@ -348,14 +341,7 @@ function ExceptionModal({
 
   const handleAdd = () => {
     if (!form.personnelId) return;
-    const start = parseISO(form.startDate);
-    const end = parseISO(form.endDate);
-    const days = eachDayOfInterval({ start, end });
-    const newEntries = days.map(d => ({
-      ...form,
-      startDate: format(d, 'yyyy-MM-dd'),
-      endDate: format(d, 'yyyy-MM-dd')
-    }));
+    const newEntries = [{ ...form }];
 
     setList(prev => [...prev, ...newEntries]);
     setForm({ personnelId: '', reason: 'ผู้ช่วยสิบเวร', startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });
@@ -504,14 +490,7 @@ function ExemptModal({
 
   const handleAdd = () => {
     if (!form.personnelId) return;
-    const start = parseISO(form.startDate);
-    const end = parseISO(form.endDate);
-    const days = eachDayOfInterval({ start, end });
-    const newEntries = days.map(d => ({
-      ...form,
-      startDate: format(d, 'yyyy-MM-dd'),
-      endDate: format(d, 'yyyy-MM-dd')
-    }));
+    const newEntries = [{ ...form }];
 
     setList(prev => [...prev, ...newEntries]);
     setForm({ personnelId: '', reason: 'ป่วย', startDate: initialDate || format(new Date(), 'yyyy-MM-dd'), endDate: initialDate || format(new Date(), 'yyyy-MM-dd') });

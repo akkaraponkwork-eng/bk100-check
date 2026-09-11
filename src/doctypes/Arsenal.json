@@ -1,0 +1,92 @@
+{
+  "name": "Arsenal",
+  "sheetName": "Arsenal",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_Arsenal",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "duty_officer"],
+    "create": ["admin"],
+    "update": ["admin"],
+    "delete": ["admin"]
+  },
+  "cache": {
+    "tags": ["doctype-arsenal"],
+    "ttl": 300
+  },
+  "concurrency": {
+    "optimistic": true,
+    "versionField": "updatedAt"
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "name",
+      "type": "String",
+      "label": "รายการอุปกรณ์",
+      "sheetHeader": "name",
+      "required": true,
+      "searchable": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "quantity",
+      "type": "Number",
+      "label": "จำนวน",
+      "sheetHeader": "quantity",
+      "required": true,
+      "min": 0,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "price",
+      "type": "Number",
+      "label": "ราคาต่อหน่วย",
+      "sheetHeader": "price",
+      "min": 0,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "totalValue",
+      "type": "Number",
+      "label": "มูลค่ารวม",
+      "computed": true,
+      "formula": "quantity * price",
+      "dependsOn": ["quantity", "price"],
+      "list": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "ownerId",
+      "type": "Link",
+      "target": "Personnel",
+      "displayField": "firstName",
+      "resolve": "lazy",
+      "label": "ผู้เบิก",
+      "sheetHeader": "ownerId",
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

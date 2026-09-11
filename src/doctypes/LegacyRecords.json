@@ -1,0 +1,36 @@
+{
+  "name": "LegacyRecords",
+  "sheetName": "Records",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Records",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "date",
+      "type": "String",
+      "sheetHeader": "date",
+      "label": "date"
+    },
+    {
+      "fieldname": "totalCompany",
+      "type": "String",
+      "sheetHeader": "totalCompany",
+      "label": "totalCompany"
+    },
+    {
+      "fieldname": "totalDistributed",
+      "type": "String",
+      "sheetHeader": "totalDistributed",
+      "label": "totalDistributed"
+    },
+    {
+      "fieldname": "remaining",
+      "type": "String",
+      "sheetHeader": "remaining",
+      "label": "remaining"
+    }
+  ]
+}

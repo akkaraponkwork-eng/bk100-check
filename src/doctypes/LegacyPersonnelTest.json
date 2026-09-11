@@ -1,0 +1,26 @@
+{
+  "name": "LegacyPersonnelTest",
+  "sheetName": "Personnel",
+  "primaryKey": "id",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Personnel",
+    "mode": "legacy-readonly"
+  },
+  "permissions": {
+    "read": ["admin"],
+    "create": ["admin"],
+    "update": ["admin"],
+    "delete": ["admin"]
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    }
+  ]
+}

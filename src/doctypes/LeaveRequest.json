@@ -1,0 +1,134 @@
+{
+  "name": "LeaveRequest",
+  "sheetName": "LeaveRequest",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_LeaveRequest",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "commander", "duty_officer", "personnel", "nco"],
+    "create": ["admin", "commander", "duty_officer", "personnel", "nco"],
+    "update": ["admin", "commander", "personnel"],
+    "delete": ["admin"]
+  },
+  "states": {
+    "field": "status",
+    "initial": "pending",
+    "transitions": [
+      {
+        "from": "pending",
+        "to": "approved",
+        "roles": ["commander", "admin"]
+      },
+      {
+        "from": "pending",
+        "to": "rejected",
+        "roles": ["commander", "admin"]
+      },
+      {
+        "from": "pending",
+        "to": "cancelled",
+        "roles": ["admin", "personnel"]
+      }
+    ]
+  },
+  "concurrency": {
+    "optimistic": true,
+    "versionField": "updatedAt"
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "Link",
+      "target": "Personnel",
+      "displayField": "firstName",
+      "resolve": "lazy",
+      "label": "กำลังพล",
+      "sheetHeader": "personnelId",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "leaveType",
+      "type": "Select",
+      "label": "ประเภทการลา",
+      "sheetHeader": "leaveType",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "ลากิจ", "value": "personal" },
+        { "label": "ลาป่วย", "value": "sick" },
+        { "label": "พักผ่อนประจำปี", "value": "annual" }
+      ]
+    },
+    {
+      "fieldname": "startDate",
+      "type": "Date",
+      "label": "วันที่เริ่มต้น",
+      "sheetHeader": "startDate",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "endDate",
+      "type": "Date",
+      "label": "วันที่สิ้นสุด",
+      "sheetHeader": "endDate",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "days",
+      "type": "Number",
+      "label": "จำนวนวัน",
+      "sheetHeader": "days",
+      "computed": "business",
+      "readOnly": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "status",
+      "type": "Select",
+      "label": "สถานะ",
+      "sheetHeader": "status",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "รออนุมัติ", "value": "pending" },
+        { "label": "อนุมัติแล้ว", "value": "approved" },
+        { "label": "ไม่อนุมัติ", "value": "rejected" },
+        { "label": "ยกเลิก", "value": "cancelled" }
+      ]
+    },
+    {
+      "fieldname": "remark",
+      "type": "String",
+      "label": "หมายเหตุ",
+      "sheetHeader": "remark",
+      "form": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

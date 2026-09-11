@@ -1,0 +1,60 @@
+{
+  "name": "LegacyDutySlots",
+  "sheetName": "DutySlots",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "DutySlots",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "dutyDate",
+      "type": "String",
+      "sheetHeader": "dutyDate",
+      "label": "dutyDate"
+    },
+    {
+      "fieldname": "start",
+      "type": "String",
+      "sheetHeader": "start",
+      "label": "start"
+    },
+    {
+      "fieldname": "end",
+      "type": "String",
+      "sheetHeader": "end",
+      "label": "end"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    },
+    {
+      "fieldname": "customName",
+      "type": "String",
+      "sheetHeader": "customName",
+      "label": "customName"
+    },
+    {
+      "fieldname": "order",
+      "type": "String",
+      "sheetHeader": "order",
+      "label": "order"
+    },
+    {
+      "fieldname": "isPunishment",
+      "type": "String",
+      "sheetHeader": "isPunishment",
+      "label": "isPunishment"
+    }
+  ]
+}

@@ -92,8 +92,13 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
               — ไม่ระบุ —
             </button>
             {filtered.map(p => {
-              const isUnavailable = p.status === 'sick' || p.status === 'leave';
-              const statusLabel = p.status === 'sick' ? 'ป่วย' : p.status === 'leave' ? 'ลา' : null;
+              const isUnavailable = p.status !== 'available';
+              
+              const STATUS_LABELS: Record<string, string> = {
+                available: 'ว่าง', on_duty: 'เวร', leave: 'ลา', sick: 'ป่วย', out_of_service: 'ปลดประจำการ', Penalized: 'ลงโทษ', Payment: 'จ่ายการ'
+              };
+              const statusLabel = isUnavailable ? (STATUS_LABELS[p.status] || p.status) : null;
+              
               const isSelected = value === p.id;
               return (
                 <button
@@ -110,7 +115,9 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
                     {statusLabel && (
                       <span className={`text-[10px] px-1.5 py-[1px] rounded font-bold ${
                         isSelected ? 'bg-white/25 text-white' : 
-                        p.status === 'sick' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        p.status === 'sick' ? 'bg-red-100 text-red-700' : 
+                        p.status === 'leave' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-700'
                       }`}>
                         {statusLabel}
                       </span>

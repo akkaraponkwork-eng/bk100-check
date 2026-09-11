@@ -1,0 +1,60 @@
+{
+  "name": "LegacyNotifications",
+  "sheetName": "Notifications",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Notifications",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "userId",
+      "type": "String",
+      "sheetHeader": "userId",
+      "label": "userId"
+    },
+    {
+      "fieldname": "title",
+      "type": "String",
+      "sheetHeader": "title",
+      "label": "title"
+    },
+    {
+      "fieldname": "message",
+      "type": "String",
+      "sheetHeader": "message",
+      "label": "message"
+    },
+    {
+      "fieldname": "type",
+      "type": "String",
+      "sheetHeader": "type",
+      "label": "type"
+    },
+    {
+      "fieldname": "link",
+      "type": "String",
+      "sheetHeader": "link",
+      "label": "link"
+    },
+    {
+      "fieldname": "isRead",
+      "type": "String",
+      "sheetHeader": "isRead",
+      "label": "isRead"
+    },
+    {
+      "fieldname": "timestamp",
+      "type": "String",
+      "sheetHeader": "timestamp",
+      "label": "timestamp"
+    }
+  ]
+}

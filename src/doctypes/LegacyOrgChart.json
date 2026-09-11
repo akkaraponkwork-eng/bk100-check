@@ -1,0 +1,24 @@
+{
+  "name": "LegacyOrgChart",
+  "sheetName": "OrgChart",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "OrgChart",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "role",
+      "type": "String",
+      "sheetHeader": "role",
+      "label": "role"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    }
+  ]
+}

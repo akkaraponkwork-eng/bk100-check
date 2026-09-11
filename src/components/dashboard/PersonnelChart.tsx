@@ -12,6 +12,8 @@ export default function PersonnelChart({ personnel }: { personnel: Personnel[] }
     on_duty: privates.filter(p => p.status === 'on_duty').length,
     leave: privates.filter(p => p.status === 'leave').length,
     sick: privates.filter(p => p.status === 'sick').length,
+    penalized: privates.filter(p => p.status === 'Penalized').length,
+    payment: privates.filter(p => p.status === 'Payment').length,
   };
 
   const data = [
@@ -19,6 +21,8 @@ export default function PersonnelChart({ personnel }: { personnel: Personnel[] }
     { name: 'เข้าเวร', value: counts.on_duty, color: '#3b82f6' },
     { name: 'ลา', value: counts.leave, color: '#f59e0b' },
     { name: 'ป่วย', value: counts.sick, color: '#ef4444' },
+    { name: 'ลงโทษ', value: counts.penalized, color: '#71717a' },
+    { name: 'จ่ายการ', value: counts.payment, color: '#06b6d4' },
   ];
 
   return (

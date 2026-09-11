@@ -1,0 +1,36 @@
+{
+  "name": "LegacyBeds",
+  "sheetName": "Beds",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Beds",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "bedNumber",
+      "type": "String",
+      "sheetHeader": "bedNumber",
+      "label": "bedNumber"
+    },
+    {
+      "fieldname": "status",
+      "type": "String",
+      "sheetHeader": "status",
+      "label": "status"
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "String",
+      "sheetHeader": "personnelId",
+      "label": "personnelId"
+    }
+  ]
+}

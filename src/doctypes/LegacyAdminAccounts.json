@@ -1,0 +1,30 @@
+{
+  "name": "LegacyAdminAccounts",
+  "sheetName": "AdminAccounts",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "AdminAccounts",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "username",
+      "type": "String",
+      "sheetHeader": "username",
+      "label": "username"
+    },
+    {
+      "fieldname": "passwordHash",
+      "type": "String",
+      "sheetHeader": "passwordHash",
+      "label": "passwordHash"
+    },
+    {
+      "fieldname": "role",
+      "type": "String",
+      "sheetHeader": "role",
+      "label": "role"
+    }
+  ]
+}

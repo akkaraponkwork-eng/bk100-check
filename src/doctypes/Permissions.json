@@ -1,0 +1,52 @@
+{
+  "name": "Permissions",
+  "sheetName": "Permissions",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_Permissions",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin"],
+    "create": ["admin"],
+    "update": ["admin"],
+    "delete": ["admin"]
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "key",
+      "type": "String",
+      "sheetHeader": "key",
+      "required": true,
+      "label": "รหัสสิทธิ์",
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "name",
+      "type": "String",
+      "sheetHeader": "name",
+      "required": true,
+      "label": "ชื่อสิทธิ์",
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "group",
+      "type": "String",
+      "sheetHeader": "group",
+      "label": "กลุ่ม",
+      "list": true,
+      "form": true
+    }
+  ]
+}

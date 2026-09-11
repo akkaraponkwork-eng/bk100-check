@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { requireRole, getUserInfo } from '@/lib/auth-guard';
+import { requirePermission, getUserInfo } from '@/lib/auth-guard';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -17,7 +17,7 @@ function getSheetAuth() {
 // getUserInfo is imported from auth-guard
 
 export async function GET(request: NextRequest) {
-  const { error: roleError } = requireRole(request, ['admin']);
+  const { error: roleError } = await requirePermission(request, 'Settings.read');
   if (roleError) return roleError;
 
   try {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { error: roleError } = requireRole(request, ['admin']);
+  const { error: roleError } = await requirePermission(request, 'Settings.read');
   if (roleError) return roleError;
 
   try {

@@ -1,0 +1,24 @@
+{
+  "name": "LegacyDuty",
+  "sheetName": "Duty",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Duty",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "date",
+      "type": "String",
+      "sheetHeader": "date",
+      "label": "date"
+    },
+    {
+      "fieldname": "location",
+      "type": "String",
+      "sheetHeader": "location",
+      "label": "location"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+--- Starting Arsenal E2E Tests ---
+\n[1] Testing POST /Arsenal
+Error: POST failed: {"error":"Unable to parse range: Arsenal"}
+    at runTests (D:\BK100\fix-duty\bk100-check\scripts\test-e2e.ts:32:39)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

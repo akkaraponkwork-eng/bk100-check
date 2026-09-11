@@ -1,0 +1,7 @@
+◇ injected env (18) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+Setting up Google Sheet...
+Creating tab: Arsenal
+ℹ️ Tab already exists, proceeding to setup headers.
+Setting up headers...
+✅ Headers configured: id, name, quantity, price, ownerId, updatedAt
+🎉 Setup complete! You can now run E2E tests.

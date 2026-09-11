@@ -1,0 +1,62 @@
+{
+  "name": "Vehicle",
+  "sheetName": "Vehicles",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_Vehicles",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "duty_officer"],
+    "create": ["admin"],
+    "update": ["admin"],
+    "delete": ["admin"]
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "licensePlate",
+      "type": "String",
+      "label": "ทะเบียนรถ",
+      "sheetHeader": "licensePlate",
+      "required": true,
+      "searchable": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "brand",
+      "type": "String",
+      "label": "ยี่ห้อ",
+      "sheetHeader": "brand",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "status",
+      "type": "Select",
+      "label": "สถานะ",
+      "sheetHeader": "status",
+      "options": ["พร้อมใช้งาน", "ซ่อมบำรุง", "ถูกยืม"],
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

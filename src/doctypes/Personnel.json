@@ -1,0 +1,153 @@
+{
+  "name": "Personnel",
+  "sheetName": "Personnel",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_Personnel",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "commander", "duty_officer", "personnel", "nco"],
+    "create": ["admin", "commander"],
+    "update": ["admin", "commander"],
+    "delete": ["admin"]
+  },
+  "concurrency": {
+    "optimistic": true,
+    "versionField": "updatedAt"
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "personnelCode",
+      "type": "String",
+      "label": "รหัสประจำตัว",
+      "sheetHeader": "personnelCode",
+      "required": true,
+      "searchable": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "rank",
+      "type": "Select",
+      "label": "ยศ",
+      "sheetHeader": "rank",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "พลฯ", "value": "พลฯ" },
+        { "label": "ส.ต.", "value": "ส.ต." },
+        { "label": "ส.ท.", "value": "ส.ท." },
+        { "label": "ส.อ.", "value": "ส.อ." },
+        { "label": "จ.ส.ต.", "value": "จ.ส.ต." },
+        { "label": "จ.ส.ท.", "value": "จ.ส.ท." },
+        { "label": "จ.ส.อ.", "value": "จ.ส.อ." },
+        { "label": "ร.ต.", "value": "ร.ต." },
+        { "label": "ร.ท.", "value": "ร.ท." },
+        { "label": "ร.อ.", "value": "ร.อ." },
+        { "label": "พ.ต.", "value": "พ.ต." },
+        { "label": "พ.ท.", "value": "พ.ท." },
+        { "label": "พ.อ.", "value": "พ.อ." }
+      ]
+    },
+    {
+      "fieldname": "firstName",
+      "type": "String",
+      "label": "ชื่อ",
+      "sheetHeader": "firstName",
+      "required": true,
+      "searchable": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "lastName",
+      "type": "String",
+      "label": "นามสกุล",
+      "sheetHeader": "lastName",
+      "required": true,
+      "searchable": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "nickname",
+      "type": "String",
+      "label": "ชื่อเล่น",
+      "sheetHeader": "nickname",
+      "list": true,
+      "form": true,
+      "searchable": true
+    },
+    {
+      "fieldname": "batch",
+      "type": "Number",
+      "label": "ผลัด",
+      "sheetHeader": "batch",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "phone",
+      "type": "String",
+      "label": "เบอร์โทรศัพท์",
+      "sheetHeader": "phone",
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "status",
+      "type": "Select",
+      "label": "สถานะ",
+      "sheetHeader": "status",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "ว่าง", "value": "available" },
+        { "label": "เวร", "value": "on_duty" },
+        { "label": "ลา", "value": "leave" },
+        { "label": "ป่วย", "value": "sick" },
+        { "label": "ปลดประจำการ", "value": "out_of_service" },
+        { "label": "ลงโทษ", "value": "Penalized" },
+        { "label": "จ่ายการ", "value": "Payment" }
+      ]
+    },
+    {
+      "fieldname": "isNCOEligible",
+      "type": "Boolean",
+      "label": "สิทธิ์สิบเวร",
+      "sheetHeader": "isNCOEligible",
+      "list": true,
+      "form": true,
+      "readOnly": true
+    },
+    {
+      "fieldname": "bedNumber",
+      "type": "String",
+      "label": "หมายเลขเตียง",
+      "sheetHeader": "bedNumber",
+      "list": true,
+      "form": true,
+      "searchable": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

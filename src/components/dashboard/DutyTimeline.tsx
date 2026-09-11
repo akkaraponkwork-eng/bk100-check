@@ -19,10 +19,12 @@ interface DutyTimelineProps {
   personnel: Personnel[];
   userRole?: string;
 }
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function DutyTimeline({ shift, personnel, userRole = 'personnel' }: DutyTimelineProps) {
   const currentSlot = getCurrentSlotIndex();
-  const canSchedule = ['admin', 'commander', 'duty_officer', 'nco'].includes(userRole);
+  const { can } = usePermissions();
+  const canScheduleDuty = can('Duty.create');
   const personnelMap = Object.fromEntries(personnel.map(p => [p.id, p]));
 
   // Helper: resolve display name from a slot (handles CUSTOM: prefix)
@@ -39,7 +41,7 @@ export default function DutyTimeline({ shift, personnel, userRole = 'personnel' 
         <h3 style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: '4px' }}>
           <AccessTimeIcon fontSize="small" /> เวรยามวันนี้
         </h3>
-        {canSchedule && (
+        {canScheduleDuty && (
           <Link href="/duty" style={{ fontSize: 12, color: 'var(--color-primary-light)', textDecoration: 'none' }}>
             จัดเวร →
           </Link>
@@ -76,7 +78,7 @@ export default function DutyTimeline({ shift, personnel, userRole = 'personnel' 
       ) : (
         <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text-muted)', fontSize: 14 }}>
           ยังไม่ได้จัดเวรวันนี้
-          {canSchedule && (
+          {canScheduleDuty && (
             <>
               <br />
               <Link href="/duty" style={{ color: 'var(--color-primary-light)', fontWeight: 600, textDecoration: 'none' }}>

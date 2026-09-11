@@ -38,6 +38,7 @@ export default function DutyCheckPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [combineCounts, setCombineCounts] = useState(false);
   const { showToast } = useToast();
 
   const handleDownloadImage = async () => {
@@ -96,7 +97,16 @@ export default function DutyCheckPage() {
   const loadLatest = useCallback(async () => {
     setLoading(true);
     try {
-      const todayRes = await fetch(`/api/records?date=${today}`);
+      const [todayRes, botRes] = await Promise.all([
+        fetch(`/api/records?date=${today}`, { cache: 'no-store' }),
+        fetch('/api/bot-settings', { cache: 'no-store' })
+      ]);
+
+      if (botRes.ok) {
+        const botData = await botRes.json();
+        setCombineCounts(botData.combineKanbanCounts === true);
+      }
+
       const todayData = await todayRes.json();
       if (todayData.record) {
         const r = todayData.record;
@@ -167,7 +177,7 @@ export default function DutyCheckPage() {
 
   return (
     <Box sx={{ pb: { xs: 'calc(env(safe-area-inset-bottom) + 100px)', lg: '80px' } }}>
-      <PrintForm tasks={tasks} date={today} totalCompany={totalCompany} />
+      <PrintForm tasks={tasks} date={today} totalCompany={totalCompany} combineCounts={combineCounts} />
       <>
 
         <PageHeader
@@ -248,6 +258,7 @@ export default function DutyCheckPage() {
                   task={task}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
+                  combineCounts={combineCounts}
                 />
               ))
             )}
@@ -262,10 +273,11 @@ export default function DutyCheckPage() {
         onChangeTotalCompany={setTotalCompany}
         onSave={handleSave}
         saving={saving}
+        combineCounts={combineCounts}
       />
 
       {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
-      {showSummary && <SummaryModal onClose={() => setShowSummary(false)} totalCompany={totalCompany} tasks={tasks} />}
+      {showSummary && <SummaryModal onClose={() => setShowSummary(false)} totalCompany={totalCompany} tasks={tasks} combineCounts={combineCounts} />}
       
       {previewImage && (
         <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="sm" fullWidth>

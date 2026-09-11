@@ -1,0 +1,115 @@
+{
+  "name": "DutyAssignment",
+  "sheetName": "DutyAssignment",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "BKFW_DutyAssignment",
+    "mode": "framework"
+  },
+  "primaryKey": "id",
+  "permissions": {
+    "read": ["admin", "commander", "duty_officer", "personnel", "nco"],
+    "create": ["admin", "commander", "duty_officer"],
+    "update": ["admin", "commander", "duty_officer"],
+    "delete": ["admin"]
+  },
+  "states": {
+    "field": "status",
+    "initial": "scheduled",
+    "transitions": [
+      {
+        "from": "scheduled",
+        "to": "completed",
+        "roles": ["commander", "duty_officer", "admin"]
+      },
+      {
+        "from": "scheduled",
+        "to": "cancelled",
+        "roles": ["commander", "duty_officer", "admin"]
+      },
+      {
+        "from": "scheduled",
+        "to": "swapped",
+        "roles": ["commander", "duty_officer", "admin"]
+      }
+    ]
+  },
+  "concurrency": {
+    "optimistic": true,
+    "versionField": "updatedAt"
+  },
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "hidden": true,
+      "readOnly": true,
+      "systemManaged": true
+    },
+    {
+      "fieldname": "personnelId",
+      "type": "Link",
+      "target": "Personnel",
+      "displayField": "firstName",
+      "resolve": "lazy",
+      "label": "กำลังพล",
+      "sheetHeader": "personnelId",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "dutyDate",
+      "type": "Date",
+      "label": "วันที่เข้าเวร",
+      "sheetHeader": "dutyDate",
+      "required": true,
+      "list": true,
+      "form": true
+    },
+    {
+      "fieldname": "dutyType",
+      "type": "Select",
+      "label": "ผลัดเวร",
+      "sheetHeader": "dutyType",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "ผลัดเช้า", "value": "morning" },
+        { "label": "ผลัดบ่าย", "value": "afternoon" },
+        { "label": "ผลัดดึก", "value": "night" }
+      ]
+    },
+    {
+      "fieldname": "status",
+      "type": "Select",
+      "label": "สถานะ",
+      "sheetHeader": "status",
+      "required": true,
+      "list": true,
+      "form": true,
+      "options": [
+        { "label": "จัดเวรแล้ว", "value": "scheduled" },
+        { "label": "ปฏิบัติหน้าที่แล้ว", "value": "completed" },
+        { "label": "สับเปลี่ยน", "value": "swapped" },
+        { "label": "ยกเลิก", "value": "cancelled" }
+      ]
+    },
+    {
+      "fieldname": "remark",
+      "type": "String",
+      "label": "หมายเหตุ",
+      "sheetHeader": "remark",
+      "form": true
+    },
+    {
+      "fieldname": "updatedAt",
+      "type": "Date",
+      "sheetHeader": "updatedAt",
+      "hidden": true,
+      "systemManaged": true
+    }
+  ]
+}

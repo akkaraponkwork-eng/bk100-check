@@ -27,6 +27,11 @@ import type { AppUser } from '@/types';
 import { verifySessionToken } from '@/lib/session';
 import { ToastProvider } from '@/hooks/useToast';
 import LiffProvider from '@/components/LiffProvider';
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 
 export default async function RootLayout({
   children,
@@ -40,7 +45,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="th" suppressHydrationWarning>
+    <html lang="th" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body>
         <LiffProvider hasSession={!!user}>
           <ThemeRegistry>

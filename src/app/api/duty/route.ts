@@ -116,10 +116,11 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/duty
+import { requirePermission } from '@/lib/auth-guard';
+
 export async function POST(request: Request) {
   const nextRequest = request as any;
-  const { user, error: roleError } = requireRole(nextRequest, ['admin', 'duty_officer']);
+  const { user, error: roleError } = await requirePermission(nextRequest, 'Duty.create');
   if (roleError) return roleError;
 
   try {

@@ -1,0 +1,78 @@
+{
+  "name": "LegacyTasks",
+  "sheetName": "Tasks",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "Tasks",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "date",
+      "type": "String",
+      "sheetHeader": "date",
+      "label": "date"
+    },
+    {
+      "fieldname": "title",
+      "type": "String",
+      "sheetHeader": "title",
+      "label": "title"
+    },
+    {
+      "fieldname": "category",
+      "type": "String",
+      "sheetHeader": "category",
+      "label": "category"
+    },
+    {
+      "fieldname": "location",
+      "type": "String",
+      "sheetHeader": "location",
+      "label": "location"
+    },
+    {
+      "fieldname": "count",
+      "type": "String",
+      "sheetHeader": "count",
+      "label": "count"
+    },
+    {
+      "fieldname": "countSenior",
+      "type": "String",
+      "sheetHeader": "countSenior",
+      "label": "countSenior"
+    },
+    {
+      "fieldname": "countJunior",
+      "type": "String",
+      "sheetHeader": "countJunior",
+      "label": "countJunior"
+    },
+    {
+      "fieldname": "status",
+      "type": "String",
+      "sheetHeader": "status",
+      "label": "status"
+    },
+    {
+      "fieldname": "remark",
+      "type": "String",
+      "sheetHeader": "remark",
+      "label": "remark"
+    },
+    {
+      "fieldname": "isFixed",
+      "type": "String",
+      "sheetHeader": "isFixed",
+      "label": "isFixed"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "LegacyDutyMeta",
+  "sheetName": "DutyMeta",
+  "storage": {
+    "provider": "google-sheets",
+    "sheetName": "DutyMeta",
+    "mode": "legacy-readonly"
+  },
+  "primaryKey": "id",
+  "fields": [
+    {
+      "fieldname": "id",
+      "type": "String",
+      "sheetHeader": "id",
+      "label": "id"
+    },
+    {
+      "fieldname": "name",
+      "type": "String",
+      "sheetHeader": "name",
+      "label": "name"
+    },
+    {
+      "fieldname": "value",
+      "type": "String",
+      "sheetHeader": "value",
+      "label": "value"
+    }
+  ]
+}
