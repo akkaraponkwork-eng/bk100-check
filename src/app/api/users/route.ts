@@ -95,3 +95,35 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const { error: roleError } = await requirePermission(request, 'Settings.read');
+  if (roleError) return roleError;
+
+  try {
+    const { lineUserId } = await request.json();
+    if (!lineUserId) return NextResponse.json({ error: 'Missing lineUserId' }, { status: 400 });
+
+    const { auth, sheetId } = getSheetAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: 'Users!A:E' });
+    const rows = res.data.values || [];
+    
+    const newRows = rows.filter(r => r[0] !== lineUserId);
+    if (newRows.length === rows.length) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range: 'Users!A:E' });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: 'Users!A1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: newRows }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('DELETE Users Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

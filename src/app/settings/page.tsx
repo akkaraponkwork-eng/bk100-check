@@ -301,6 +301,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteUser = async (lineUserId: string, displayName: string) => {
+    if (!window.confirm(`คุณต้องการลบผู้ใช้ ${displayName} ออกจากระบบใช่หรือไม่?\nผู้ใช้นี้จะต้องยืนยันตัวตนใหม่เมื่อเข้าสู่ระบบครั้งหน้า`)) return;
+    try {
+      const res = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineUserId })
+      });
+      if (res.ok) {
+        showToast('ลบผู้ใช้สำเร็จ', 'success');
+        setUsers(users.filter(u => u.lineUserId !== lineUserId));
+      } else {
+        const data = await res.json();
+        showToast(`เกิดข้อผิดพลาด: ${data.error}`, 'error');
+      }
+    } catch (e) {
+      showToast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+    }
+  };
+
   const handleRoleChange = async (lineUserId: string, newRole: string) => {
     setUpdating(lineUserId);
     try {
@@ -682,29 +702,41 @@ export default function SettingsPage() {
                             </div>
                           </div>
 
-                          <div className="w-auto flex justify-end flex-shrink-0">
+                          <div className="w-auto flex justify-end flex-shrink-0 items-center gap-2">
                             {updating === u.lineUserId ? (
                               <div className="flex items-center gap-2 px-2 h-10">
                                 <svg className="animate-spin h-4 w-4 text-[var(--color-primary)]" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                 <span className="text-xs text-[var(--color-text-secondary)]">กำลังบันทึก...</span>
                               </div>
                             ) : (
-                              <select
-                                onClick={(e) => e.stopPropagation()}
-                                className={`select h-9 py-0 px-3 text-[13px] font-medium min-w-[120px] sm:min-w-[140px] ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200 focus:border-red-500 focus:ring-red-500' : ''}`}
-                                value={u.role}
-                                onChange={(e) => handleRoleChange(u.lineUserId, e.target.value)}
-                              >
-                                {rbacRoles.length > 0 ? (
-                                  rbacRoles.map(r => (
-                                    <option key={r.id} value={r.key}>{r.name}</option>
-                                  ))
-                                ) : (
-                                  Object.entries(ROLE_LABELS).map(([val, label]) => (
-                                    <option key={val} value={val}>{label}</option>
-                                  ))
-                                )}
-                              </select>
+                              <>
+                                <select
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={`select h-9 py-0 px-3 text-[13px] font-medium min-w-[120px] sm:min-w-[140px] ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                  value={u.role}
+                                  onChange={(e) => handleRoleChange(u.lineUserId, e.target.value)}
+                                >
+                                  {rbacRoles.length > 0 ? (
+                                    rbacRoles.map(r => (
+                                      <option key={r.id} value={r.key}>{r.name}</option>
+                                    ))
+                                  ) : (
+                                    Object.entries(ROLE_LABELS).map(([val, label]) => (
+                                      <option key={val} value={val}>{label}</option>
+                                    ))
+                                  )}
+                                </select>
+                                <button
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteUser(u.lineUserId, u.displayName);
+                                  }}
+                                  title="ลบผู้ใช้"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>

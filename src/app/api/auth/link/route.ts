@@ -115,8 +115,8 @@ export async function POST(request: NextRequest) {
       name: 'bk100_session',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });

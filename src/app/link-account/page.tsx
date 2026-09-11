@@ -73,7 +73,7 @@ function LinkAccountForm() {
   return (
     <div className="card p-6" style={{ width: '100%', maxWidth: 400 }}>
       <div className="text-center mb-6">
-        <div className="avatar mb-4 mx-auto" style={{ width: 64, height: 64, background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}>
+        <div className="avatar mb-4 mx-auto">
           <ShieldIcon fontSize="large" />
         </div>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-navy)' }}>
