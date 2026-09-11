@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
       name: 'bk100_session',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // must be true when sameSite:'none'
+      sameSite: 'none', // LINE LIFF WebView is cross-site context
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
