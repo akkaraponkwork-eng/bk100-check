@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// LIFF appends ?liff.state=... to the URL when opened from LINE
+// Detect LINE in-app browser by UA (works even after middleware redirect strips liff.state)
 function isLiffContext() {
   if (typeof window === 'undefined') return false;
-  const search = window.location.search;
   return (
-    search.includes('liff.state') ||
-    search.includes('liff_client_id') ||
-    navigator.userAgent.includes('Line/')
+    navigator.userAgent.includes('Line/') ||
+    window.location.search.includes('liff.state') ||
+    window.location.search.includes('liff_client_id')
   );
 }
 
