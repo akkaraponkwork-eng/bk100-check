@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { google } from 'googleapis';
 
@@ -71,7 +71,7 @@ export async function GET() {
 
 // POST /api/beds — Bulk upsert (replace all)
 export async function POST(request: Request) {
-  const { user, error: roleError } = await requirePermission(nextRequest, 'Beds.manage');
+  const { user, error: roleError } = await requirePermission(request as NextRequest, 'Beds.manage');
   if (roleError) return roleError;
 
   try {
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
 
 // DELETE /api/beds?bedNo=36
 export async function DELETE(request: Request) {
-  const { user, error: roleError } = await requirePermission(nextRequest, 'Beds.manage');
+  const { user, error: roleError } = await requirePermission(request as NextRequest, 'Beds.manage');
   if (roleError) return roleError;
 
   try {

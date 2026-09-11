@@ -1,3 +1,5 @@
+export {};
+
 /**
  * E2E Test Script for Arsenal DocType
  * Note: Requires Next.js dev server running on http://localhost:3000

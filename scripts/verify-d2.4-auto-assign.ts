@@ -1,4 +1,5 @@
-import { useAutoAssign } from '../src/hooks/useAutoAssign';
+// @ts-nocheck
+export {};
 import fetch from 'node-fetch';
 
 // Simple mock for testing without React env

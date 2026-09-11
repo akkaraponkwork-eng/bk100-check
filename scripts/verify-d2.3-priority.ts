@@ -1,4 +1,5 @@
-import { ReadinessStatus } from '../src/hooks/useReadiness';
+export {};
+type ReadinessStatus = string;
 
 function calculateOperationalStatus(
   personnelStatus: string,

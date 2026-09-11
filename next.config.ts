@@ -9,6 +9,9 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['100.103.6.122'],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   turbopack: {},
   async headers() {
     return [

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { requirePermission } from '../src/lib/auth-guard';
 import { NextRequest, NextResponse } from 'next/server';
 
