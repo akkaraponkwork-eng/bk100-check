@@ -1252,7 +1252,7 @@ export default function DutyPage() {
                 {generating ? 'กำลังสร้าง...' : 'ออโต้'}
               </Box>
             </Button>
-            <Button onClick={() => setShowException(true)} variant="outlined" color="primary" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
+            {/* <Button onClick={() => setShowException(true)} variant="outlined" color="primary" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
               <BlockIcon sx={{ mr: { xs: 0, sm: 1 } }} />
               <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>งดเวร</Box>
             </Button>
@@ -1263,7 +1263,7 @@ export default function DutyPage() {
             <Button onClick={() => setShowPunishment(true)} variant="contained" color="error" sx={{ borderRadius: 2, minWidth: { xs: 44, sm: 'auto' }, px: { xs: 0, sm: 2 } }}>
               <GavelIcon sx={{ mr: { xs: 0, sm: 1 } }} />
               <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>ดองเวร</Box>
-            </Button>
+            </Button> */}
           </Box>
         }
       />
