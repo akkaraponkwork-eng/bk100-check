@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     id: request.headers.get('x-user-id') || '',
     role,
     name: decodeURIComponent(request.headers.get('x-user-name') || ''),
+    personnelId: request.headers.get('x-user-id') || '', // x-user-id IS personnelId (set by proxy.ts)
     permissions,
   });
 }

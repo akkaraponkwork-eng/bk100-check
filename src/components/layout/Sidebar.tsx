@@ -62,7 +62,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [leaveEnabled, setLeaveEnabled] = useState(true); // default true
-  const { can } = usePermissions();
+  const { can, loading: permLoading } = usePermissions();
 
   useEffect(() => {
     fetch('/api/bot-settings')
@@ -154,7 +154,25 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
       <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         <List sx={{ px: 1.5, py: 2 }}>
           {!isCollapsed && <Typography variant="overline" sx={{ px: 2, color: 'text.secondary', fontWeight: 600 }}>เมนูหลัก</Typography>}
-          {visibleNavItems.map(item => (
+          {permLoading ? (
+            // Skeleton placeholders while permissions load
+            Array.from({ length: 5 }).map((_, i) => (
+              <ListItem key={i} disablePadding sx={{ mb: 0.5 }}>
+                <Box sx={{
+                  mx: 1, my: 0.5,
+                  height: 40,
+                  borderRadius: 2,
+                  bgcolor: 'action.hover',
+                  width: isCollapsed ? 40 : '100%',
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 1 },
+                    '50%': { opacity: 0.4 },
+                  },
+                }} />
+              </ListItem>
+            ))
+          ) : visibleNavItems.map(item => (
             <ListItem 
               key={item.href} 
               disablePadding 

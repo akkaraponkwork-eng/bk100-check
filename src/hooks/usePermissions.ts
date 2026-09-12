@@ -4,6 +4,7 @@ export function usePermissions() {
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{ id: string; role: string; name: string; personnelId: string } | null>(null);
 
   useEffect(() => {
     async function loadAuthAndMetadata() {
@@ -11,9 +12,10 @@ export function usePermissions() {
         const meRes = await fetch('/api/auth/me');
 
         if (meRes.ok) {
-          const user = await meRes.json();
-          setUserRoles([user.role || 'personnel']);
-          setUserPermissions(user.permissions || []);
+          const data = await meRes.json();
+          setUserRoles([data.role || 'personnel']);
+          setUserPermissions(data.permissions || []);
+          setUser({ id: data.id, role: data.role, name: data.name, personnelId: data.personnelId });
         }
       } catch (e) {
         console.error('Failed to load permissions', e);
@@ -35,5 +37,5 @@ export function usePermissions() {
     return userPermissions.includes(actionString);
   };
 
-  return { can, loading, userRoles };
+  return { can, loading, userRoles, user };
 }

@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/calendar': 'ปฏิทิน',
   '/kanban': 'งาน',
   '/leave': 'การลา',
+  '/sick-request': 'ร้องขอไปตร.',
   '/sick': 'ทะเบียนป่วย',
   '/personnel': 'กำลังพล',
   '/orgchart': 'ทำเนียบ',
@@ -115,7 +116,7 @@ export default function AppShell({ children, userRole, userName, userRank, userP
 
 
         {/* Page Content */}
-        <Box sx={{ flexGrow: 1, p: { xs: 2, md: 3, lg: 4 } }}>
+        <Box sx={{ flexGrow: 1, p: { xs: 2, md: 3, lg: 4 }, pb: { xs: 6, md: 3, lg: 4 } }}>
           {children}
         </Box>
       </Box>

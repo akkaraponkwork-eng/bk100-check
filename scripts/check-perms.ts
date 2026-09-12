@@ -14,18 +14,19 @@ async function run() {
   const perms = res.data.valueRanges?.[1].values || [];
   const rolePerms = res.data.valueRanges?.[2].values || [];
 
-  console.log(`Roles count: ${roles.length}`);
-  console.log(`Perms count: ${perms.length}`);
-  console.log(`RolePerms count: ${rolePerms.length}`);
+  console.log(`\n📊 Roles (${roles.length}):`);
+  for (const r of roles) console.log(`  [${r[1]}] ${r[2]}`);
 
-  const personnelRole = roles.find(r => r[1] === 'personnel');
-  if (personnelRole) {
-    const pPerms = rolePerms.filter(rp => rp[1] === personnelRole[0]);
-    console.log(`Personnel has ${pPerms.length} perms`);
-    for (const rp of pPerms) {
-      const p = perms.find(p => p[0] === rp[2]);
-      if (p) console.log(` - ${p[1]}`);
-    }
+  console.log(`\n🔑 Permissions (${perms.length}):`);
+  for (const p of perms) console.log(`  [${p[3]}] ${p[1]}`);
+
+  console.log(`\n🔗 Role ↔ Permission Matrix:`);
+  for (const r of roles) {
+    const myPerms = rolePerms
+      .filter(rp => rp[1] === r[0])
+      .map(rp => perms.find(p => p[0] === rp[2])?.[1] ?? '???');
+    console.log(`\n  ${r[2]} (${r[1]}): ${myPerms.length} perms`);
+    for (const pk of myPerms) console.log(`    ✓ ${pk}`);
   }
 }
 run().catch(console.error);

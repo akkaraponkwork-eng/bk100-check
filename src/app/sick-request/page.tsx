@@ -162,10 +162,9 @@ export default function SickRequestPage() {
       setFormData({
         startDate: new Date().toISOString().split('T')[0],
         isReturned: false,
-        personnelId: (!canManage && user?.personnelId) ? user.personnelId : undefined
       });
     }
-  }, [activeTab, user, canManage, formData.startDate, formData.id]);
+  }, [activeTab, formData.startDate, formData.id]);
 
   const getPersonnelName = (id: string) => { const p = personnel.find(x => x.id === id); return p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ทราบชื่อ'; };
 
@@ -185,7 +184,6 @@ export default function SickRequestPage() {
       setFormData({
         startDate: new Date().toISOString().split('T')[0],
         isReturned: false,
-        personnelId: (!canManage && user?.personnelId) ? user.personnelId : undefined
       });
       setActiveTab('history');
       loadData();
@@ -295,7 +293,6 @@ export default function SickRequestPage() {
                 setFormData({
                   startDate: new Date().toISOString().split('T')[0],
                   isReturned: false,
-                  personnelId: (!canManage && user?.personnelId) ? user.personnelId : undefined
                 });
               }} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>
                 ยกเลิกการแก้ไข
@@ -305,11 +302,7 @@ export default function SickRequestPage() {
 
           <div className="form-group" style={{ marginBottom: 20 }}>
             <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>กำลังพล <span style={{ color: '#ef4444' }}>*</span></label>
-            {(!canManage) ? (
-              <div style={{ padding: '12px 16px', background: 'var(--color-surface-2)', borderRadius: 12, fontSize: 15, fontWeight: 600 }}>
-                {getPersonnelName(user?.personnelId || '')}
-              </div>
-            ) : (!formData.id) ? (
+            {!formData.id ? (
               <SearchablePersonnelSelect personnel={personnel} value={formData.personnelId || ''} onChange={id => setFormData({ ...formData, personnelId: id })} placeholder="ค้นหาชื่อ-นามสกุล..." />
             ) : (
               <div style={{ padding: '12px 16px', background: 'var(--color-surface-2)', borderRadius: 12, fontSize: 15, fontWeight: 600 }}>

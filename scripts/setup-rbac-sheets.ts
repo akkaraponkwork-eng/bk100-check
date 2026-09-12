@@ -45,7 +45,6 @@ const COMPATIBILITY_MAP: Record<string, string[]> = {
     'Sick.manage', 'Sick.request'
   ],
   personnel: [
-    'Duty.read',
     'Calendar.read',
     'Leave.read',
     'Sick.request'
