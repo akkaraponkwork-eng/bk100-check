@@ -6,6 +6,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -27,6 +28,7 @@ const allNavItems: NavItem[] = [
   { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', permission: 'Calendar.read' },
   { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', permission: 'Kanban.read' },
   { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', permission: 'Leave.read' },
+  { href: '/sick',      icon: <LocalHospitalIcon />, label: 'ส่งป่วย', permission: 'Personnel.read' },
   { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
   { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', permission: 'Reports.read' },

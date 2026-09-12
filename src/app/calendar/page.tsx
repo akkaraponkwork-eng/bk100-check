@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday } from 'date-fns';
 import { th } from 'date-fns/locale';
-import type { Personnel, NCODuty, DutyShift, KanbanTask, Mission, MissionStatus, ExceptionEntry } from '@/types';
+import type { Personnel, NCODuty, DutyShift, KanbanTask, Mission, MissionStatus, ExceptionEntry, SickRecord } from '@/types';
 import { MISSION_STATUS_LABELS } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -19,6 +19,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PlaceIcon from '@mui/icons-material/Place';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import MissionModal from '@/components/calendar/MissionModal';
 
 type Tab = 'calendar' | 'nco' | 'tasks';
@@ -45,6 +46,7 @@ function DayDetailModal({
   onOpenEditMission,
   onQuickToggleStatus,
   onClose,
+  sickRecords,
 }: {
   date: Date;
   ncoPersonnel: Personnel | null;
@@ -58,8 +60,18 @@ function DayDetailModal({
   onOpenEditMission: (mission: Mission) => void;
   onQuickToggleStatus: (mission: Mission) => void;
   onClose: () => void;
+  sickRecords: SickRecord[];
 }) {
   const dateStr = format(date, 'd MMMM yyyy', { locale: th });
+  const daySickRecords = sickRecords.filter(r => {
+    const isAfterStart = r.startDate <= format(date, 'yyyy-MM-dd');
+    const isBeforeEnd = r.isReturned ? (r.expectedReturnDate && r.expectedReturnDate < format(date, 'yyyy-MM-dd') ? false : true) : true;
+    // Just a simple check: if date is >= startDate and they are not returned (or returned after this date)
+    // Actually, sick record is just marked as 'returned' on some day, we don't have return date exactly unless we use expectedReturnDate
+    // For simplicity, let's just say if startDate === dateStr it shows up, OR if it's currently active (not returned) and date >= startDate
+    // To be precise historically, it's hard without actual return date. Let's just show active ones if date >= startDate.
+    return r.startDate <= format(date, 'yyyy-MM-dd') && !r.isReturned;
+  });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -73,6 +85,26 @@ function DayDetailModal({
             <CloseIcon fontSize="small" />
           </button>
         </div>
+
+        {/* Sick Personnel */}
+        {daySickRecords.length > 0 && (
+          <div style={{ marginBottom: 12, background: 'var(--color-surface-2)', borderRadius: 12, padding: '10px' }}>
+            <div style={{ fontSize: 13, color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+              <LocalHospitalIcon style={{ fontSize: 16 }} /> กำลังพลป่วย ({daySickRecords.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {daySickRecords.map(r => {
+                const p = personnelMap[r.personnelId];
+                return (
+                  <div key={r.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--color-surface)', borderRadius: 6 }}>
+                    <span>{p ? `${p.rank}${p.firstName} ${p.lastName}` : r.personnelId}</span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{r.hospital || r.symptoms || 'ป่วย'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Missions Section */}
         <div style={{ marginBottom: 12, background: 'var(--color-surface-2)', borderRadius: 12, padding: '10px' }}>
@@ -258,7 +290,12 @@ function DayDetailModal({
 }
 
 // ==================== Task Record Modal ====================
-function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void }) {
+function TaskRecordModal({ date, onClose, sickRecords, personnelMap }: { 
+  date: Date; 
+  onClose: () => void;
+  sickRecords: SickRecord[];
+  personnelMap: Record<string, Personnel>;
+}) {
   const dateKey = format(date, 'yyyy-MM-dd');
   const dateStr = format(date, 'd MMMM yyyy', { locale: th });
   const [record, setRecord] = useState<{ totalCompany: number; totalDistributed: number; remaining: number; tasks: KanbanTask[] } | null>(null);
@@ -272,6 +309,10 @@ function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void })
   }, [dateKey]);
 
   const getTaskTotal = (t: KanbanTask) => (Number(t.countSenior) || 0) + (Number(t.countJunior) || 0) + (Number(t.count) || 0);
+
+  const daySickRecords = sickRecords.filter(r => {
+    return r.startDate <= dateKey && (!r.isReturned || (r.expectedReturnDate && r.expectedReturnDate >= dateKey));
+  });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -295,7 +336,27 @@ function TaskRecordModal({ date, onClose }: { date: Date; onClose: () => void })
           </div>
         ) : (
           <>
-            {/* Summary */}
+            {/* Sick Summary */}
+            {daySickRecords.length > 0 && (
+              <div style={{ marginBottom: 16, background: 'var(--color-surface-2)', borderRadius: 12, padding: '10px' }}>
+                <div style={{ fontSize: 13, color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <LocalHospitalIcon style={{ fontSize: 16 }} /> ยอดตรวจรักษา/ป่วย ({daySickRecords.length} นาย)
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {daySickRecords.map(r => {
+                    const p = personnelMap[r.personnelId];
+                    return (
+                      <div key={r.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--color-surface)', borderRadius: 6 }}>
+                        <span>{p ? `${p.rank}${p.firstName} ${p.lastName}` : r.personnelId}</span>
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{r.hospital || r.symptoms || 'ป่วย'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Task Summary */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
               {[
                 { label: 'ยอดรวม', value: record.totalCompany, color: 'var(--color-text-primary)' },
@@ -394,7 +455,7 @@ function NCOSelectModal({
 
 // ==================== Month Calendar ====================
 function MonthCalendar({
-  year, month, ncoByDate, shiftByDate, recordDates, missionDates, mode, personnelMap, onSelectDay, exceptions = []
+  year, month, ncoByDate, shiftByDate, recordDates, missionDates, mode, personnelMap, onSelectDay, exceptions = [], sickDates
 }: {
   year: number;
   month: number;
@@ -406,6 +467,7 @@ function MonthCalendar({
   personnelMap?: Record<string, Personnel>;
   onSelectDay: (date: Date) => void;
   exceptions?: ExceptionEntry[];
+  sickDates?: Record<string, boolean>;
 }) {
   const firstDay = startOfMonth(new Date(year, month - 1));
   const lastDay = endOfMonth(firstDay);
@@ -429,6 +491,7 @@ function MonthCalendar({
           const hasDuty = !!shiftByDate[dateStr];
           const hasRecord = !!recordDates[dateStr];
           const hasMission = !!missionDates[dateStr];
+          const hasSick = sickDates ? !!sickDates[dateStr] : false;
           const todayClass = isToday(day);
 
           return (
@@ -454,6 +517,7 @@ function MonthCalendar({
                 {mode === 'duty' && hasDuty && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
                 {mode === 'duty' && hasNCO  && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />}
                 {mode === 'duty' && hasMission && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#8b5cf6' }} />}
+                {mode === 'duty' && hasSick && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />}
                 {mode === 'tasks' && hasRecord && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6' }} />}
               </div>
               {mode === 'nco' && hasNCO && personnelMap && (
@@ -589,6 +653,7 @@ export default function CalendarPage() {
   const [recordDates, setRecordDates] = useState<Record<string, boolean>>({});
   const [missions, setMissions] = useState<Mission[]>([]);
   const [exceptions, setExceptions] = useState<ExceptionEntry[]>([]);
+  const [sickRecords, setSickRecords] = useState<SickRecord[]>([]);
 
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedTaskDay, setSelectedTaskDay] = useState<Date | null>(null);
@@ -607,13 +672,14 @@ export default function CalendarPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [pRes, ncoRes, dutyRes, recRes, misRes, excRes] = await Promise.allSettled([
+      const [pRes, ncoRes, dutyRes, recRes, misRes, excRes, sickRes] = await Promise.allSettled([
         fetch('/api/personnel'),
         fetch(`/api/nco?month=${monthKey}`),
         fetch('/api/duty'),
         fetch('/api/records'),
         fetch(`/api/missions?month=${monthKey}`),
         fetch('/api/duty-meta?type=exception'),
+        fetch('/api/sick'),
       ]);
 
       if (pRes.status === 'fulfilled' && pRes.value.ok) {
@@ -648,6 +714,10 @@ export default function CalendarPage() {
       if (excRes && excRes.status === 'fulfilled' && excRes.value.ok) {
         const d = await excRes.value.json();
         setExceptions(d.exceptions || []);
+      }
+      if (sickRes && sickRes.status === 'fulfilled' && sickRes.value.ok) {
+        const d = await sickRes.value.json();
+        setSickRecords(d.records || []);
       }
     } catch (error) {
       console.error('Failed to load calendar data:', error);
@@ -761,6 +831,30 @@ export default function CalendarPage() {
 
   const monthDisplay = format(new Date(viewYear, viewMonth - 1), 'MMMM yyyy', { locale: th });
 
+  // Map sick records to dates
+  const sickDates: Record<string, boolean> = {};
+  sickRecords.forEach(r => {
+    if (!r.isReturned) {
+      // If currently sick, show for today and all future days in current view?
+      // Actually, better to just mark the startDate if we only have start date,
+      // or mark all days from startDate until now.
+      const start = new Date(r.startDate);
+      const end = r.expectedReturnDate ? new Date(r.expectedReturnDate) : new Date(); // up to today if not returned
+      const days = eachDayOfInterval({ start, end: end < start ? start : end });
+      days.forEach(d => sickDates[format(d, 'yyyy-MM-dd')] = true);
+    } else if (r.expectedReturnDate) {
+      // If returned and had a range, we can show it historically
+      const start = new Date(r.startDate);
+      const end = new Date(r.expectedReturnDate);
+      if (end >= start) {
+        const days = eachDayOfInterval({ start, end });
+        days.forEach(d => sickDates[format(d, 'yyyy-MM-dd')] = true);
+      }
+    } else {
+      sickDates[r.startDate] = true;
+    }
+  });
+
   const selectedDateStr = selectedDay ? format(selectedDay, 'yyyy-MM-dd') : '';
   const selectedNCO = selectedDateStr && ncoByDate[selectedDateStr]
     ? personnelMap[ncoByDate[selectedDateStr]] || null
@@ -824,6 +918,9 @@ export default function CalendarPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} />ภารกิจ
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />ป่วย
+            </div>
           </>}
           {tab === 'tasks' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--color-text-muted)' }}>
@@ -840,6 +937,7 @@ export default function CalendarPage() {
             shiftByDate={shiftByDate}
             recordDates={recordDates}
             missionDates={missionDates}
+            sickDates={sickDates}
             mode={tab === 'nco' ? 'nco' : (tab === 'tasks' ? 'tasks' : 'duty')}
             personnelMap={personnelMap}
             onSelectDay={handleCalendarDayClick}
@@ -859,16 +957,11 @@ export default function CalendarPage() {
           personnelMap={personnelMap}
           personnelList={personnel}
           canManage={canManage}
-          onOpenAddMission={() => {
-            setEditingMission(null);
-            setMissionModalOpen(true);
-          }}
-          onOpenEditMission={(m) => {
-            setEditingMission(m);
-            setMissionModalOpen(true);
-          }}
+          onOpenAddMission={() => { setEditingMission(null); setMissionModalOpen(true); }}
+          onOpenEditMission={(m) => { setEditingMission(m); setMissionModalOpen(true); }}
           onQuickToggleStatus={handleQuickToggleStatus}
           onClose={() => setSelectedDay(null)}
+          sickRecords={sickRecords}
         />
       )}
 
@@ -877,6 +970,8 @@ export default function CalendarPage() {
         <TaskRecordModal
           date={selectedTaskDay}
           onClose={() => setSelectedTaskDay(null)}
+          sickRecords={sickRecords}
+          personnelMap={personnelMap}
         />
       )}
 

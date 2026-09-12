@@ -9,6 +9,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GroupIcon from '@mui/icons-material/Group';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ShieldIcon from '@mui/icons-material/Shield';
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', permission: 'Calendar.read' },
   { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', permission: 'Kanban.read' },
   { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', permission: 'Leave.read' },
+  { href: '/sick',      icon: <LocalHospitalIcon />, label: 'ส่งป่วย', permission: 'Personnel.read' },
   { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
   { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', permission: 'Beds.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
@@ -70,9 +72,17 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
       .catch(console.error);
   }, []);
 
+  const canManagePersonnel = can('Personnel.manage');
+
   const visibleNavItems = navItems.filter(item => {
     if (!leaveEnabled && item.href === '/leave') return false;
+    if (item.href === '/sick') return true; // Everyone can see the sick route for requests
     return !item.permission || can(item.permission);
+  }).map(item => {
+    if (item.href === '/sick') {
+      return { ...item, label: canManagePersonnel ? 'ส่งป่วย' : 'ร้องขอไปตร.' };
+    }
+    return item;
   });
   const visibleAdminItems = adminItems.filter(item => !item.permission || can(item.permission));
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);

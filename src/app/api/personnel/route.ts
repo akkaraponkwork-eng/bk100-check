@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     // Clear and rewrite
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
-      range: 'Personnel!A1:K',
+      range: 'Personnel!A1:L',
     });
 
     const header = [['id', 'rank', 'firstName', 'lastName', 'batch', 'phone', 'status', 'dutyCount', 'isNCOEligible', 'num', 'bedNumber']];

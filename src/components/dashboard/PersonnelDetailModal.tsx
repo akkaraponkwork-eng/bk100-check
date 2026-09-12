@@ -76,7 +76,26 @@ export default function PersonnelDetailModal({ open, onClose, personnel, ncosCou
             {currentData.map((p, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${statusColors[p.status] || 'bg-gray-300'}`}></div>
-                <div className="flex flex-col flex-1 pl-2">
+                
+                {/* Avatar */}
+                <div className="pl-2">
+                  {p.imageUrl ? (
+                    <img 
+                      src={p.imageUrl} 
+                      alt={p.firstName} 
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200 bg-white"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center font-bold text-[16px] shadow-sm border border-blue-200 ${p.imageUrl ? 'hidden' : ''}`}>
+                    {p.firstName ? p.firstName.charAt(0) : p.rank.charAt(0)}
+                  </div>
+                </div>
+
+                <div className="flex flex-col flex-1 pl-1">
                   <span className="text-[15px] font-medium text-[var(--color-text-primary)]">
                     {p.rank}{p.firstName} {p.lastName}
                   </span>

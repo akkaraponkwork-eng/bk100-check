@@ -45,7 +45,6 @@ export default function SettingsPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Bot Settings
   const [botGroupId, setBotGroupId] = useState('');
   const [leaveEnabled, setLeaveEnabled] = useState(true);
   const [combineKanbanCounts, setCombineKanbanCounts] = useState(false);
@@ -407,6 +406,8 @@ export default function SettingsPage() {
     }
   };
 
+
+
   const handleToggleCombineKanban = async (newVal: boolean) => {
     setCombineKanbanCounts(newVal); // Optimistic UI update
     try {
@@ -576,21 +577,6 @@ export default function SettingsPage() {
                     จัดการการตั้งค่าพื้นฐานของระบบ
                   </p>
 
-                  <div className="mb-4 p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border border-gray-200">
-                    <label className="flex items-start sm:items-center gap-5 p-6 bg-white rounded-[1.3rem] cursor-pointer hover:shadow-md transition-shadow">
-                      <div className="relative flex-shrink-0 mt-1 sm:mt-0">
-                        <input type="checkbox" className="sr-only" checked={leaveEnabled} onChange={(e) => handleToggleLeave(e.target.checked)} />
-                        <div className={`block w-[3.25rem] h-8 rounded-full transition-colors duration-300 ${leaveEnabled ? 'bg-[#06C755]' : 'bg-gray-200'}`}></div>
-                        <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 shadow-sm ${leaveEnabled ? 'transform translate-x-[1.25rem]' : ''}`}></div>
-                      </div>
-                      <div>
-                        <span className="block font-bold text-gray-900 mb-1 text-base">{leaveEnabled ? 'เปิดใช้งานระบบลางาน' : 'ปิดใช้งานระบบลางานชั่วคราว'}</span>
-                        <span className="block text-sm text-gray-500 leading-relaxed">
-                          หากปิดการใช้งาน เมนูและระบบลางานจะถูกซ่อนจากกำลังพลและแอดมินทั้งหมด
-                        </span>
-                      </div>
-                    </label>
-                  </div>
 
                   <div className="mb-8 p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border border-gray-200">
                     <label className="flex items-start sm:items-center gap-5 p-6 bg-white rounded-[1.3rem] cursor-pointer hover:shadow-md transition-shadow">
@@ -1133,6 +1119,25 @@ export default function SettingsPage() {
                         )}
                         บันทึกการเปลี่ยนแปลง
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-8 p-6 bg-white rounded-2xl shadow-sm border border-gray-200">
+                    <h3 className="text-[14px] font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <SettingsIcon fontSize="small" className="text-[var(--color-primary)]" /> เปิด-ปิดการเข้าถึงโมดูลหลัก
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Leave Enabled Toggle */}
+                      <label className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
+                        <div className="relative flex-shrink-0">
+                          <input type="checkbox" className="sr-only" checked={leaveEnabled} onChange={(e) => handleToggleLeave(e.target.checked)} />
+                          <div className={`block w-[2.75rem] h-6 rounded-full transition-colors duration-300 ${leaveEnabled ? 'bg-[#06C755]' : 'bg-gray-300'}`}></div>
+                          <div className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm ${leaveEnabled ? 'transform translate-x-[1.25rem]' : ''}`}></div>
+                        </div>
+                        <div>
+                          <span className="block font-bold text-gray-900 text-[13px]">{leaveEnabled ? 'ระบบลางาน (Leave): เปิด' : 'ระบบลางาน (Leave): ปิด'}</span>
+                        </div>
+                      </label>
                     </div>
                   </div>
 

@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/calendar': 'ปฏิทิน',
   '/kanban': 'งาน',
   '/leave': 'การลา',
+  '/sick': 'ทะเบียนป่วย',
   '/personnel': 'กำลังพล',
   '/orgchart': 'ทำเนียบ',
   '/beds': 'ตรวจโรงนอน',

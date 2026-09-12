@@ -35,6 +35,17 @@ export interface ExceptionEntry {
   endDate: string;
 }
 
+export interface SickRecord {
+  id: string;
+  personnelId: string;
+  symptoms: string;
+  hospital: string;
+  startDate: string; // YYYY-MM-DD
+  expectedReturnDate: string; // YYYY-MM-DD
+  isReturned: boolean;
+  status?: 'pending' | 'approved' | 'rejected';
+}
+
 // ==================== Kanban ====================
 export interface KanbanTask {
   id: string;
@@ -179,7 +190,6 @@ export interface OrgChartMember {
   rank: string;
   name: string;
   position: string;
-  imageUrl?: string;
   level: number; // 1 = Top Commander, 2 = Deputy, etc.
   order: number; // For sorting within the same level
 }

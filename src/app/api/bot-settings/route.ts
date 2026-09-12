@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       ['alertTimes', finalAlertTimes],
       ['leaveEnabled', finalLeaveEnabled],
       ['combineKanbanCounts', finalCombineKanbanCounts],
-      ['adminEmail', finalAdminEmail]
+      ['adminEmail', finalAdminEmail],
     ];
 
     try {
