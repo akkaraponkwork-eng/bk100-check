@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday } from 'date-fns';
@@ -145,7 +145,7 @@ export default function SickPage() {
   
   const { showToast } = useToast();
   const { can, user } = usePermissions();
-  const canManage = can('Personnel.manage');
+  const canManage = can('Sick.manage');
 
   const loadData = useCallback(async () => {
     setLoading(true);

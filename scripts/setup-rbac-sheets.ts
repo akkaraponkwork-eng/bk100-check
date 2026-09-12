@@ -12,7 +12,8 @@ const COMPATIBILITY_MAP: Record<string, string[]> = {
     'Personnel.read', 'Personnel.manage',
     'Kanban.read', 'Kanban.manage',
     'Reports.read', 'Settings.read',
-    'Beds.read', 'Beds.manage'
+    'Beds.read', 'Beds.manage',
+    'Sick.manage', 'Sick.request'
   ],
   commander: [
     'Duty.read', 'Duty.create', 'Duty.update',
@@ -21,7 +22,8 @@ const COMPATIBILITY_MAP: Record<string, string[]> = {
     'Personnel.read',
     'Kanban.read',
     'Reports.read', 'Settings.read',
-    'Beds.read'
+    'Beds.read',
+    'Sick.request'
   ],
   duty_officer: [
     'Duty.read', 'Duty.update', 'Duty.create',
@@ -29,7 +31,8 @@ const COMPATIBILITY_MAP: Record<string, string[]> = {
     'Leave.approve',
     'Kanban.read', 'Kanban.manage',
     'Reports.read',
-    'Beds.read', 'Beds.manage'
+    'Beds.read', 'Beds.manage',
+    'Sick.manage', 'Sick.request'
   ],
   nco: [
     'Duty.read',
@@ -38,12 +41,14 @@ const COMPATIBILITY_MAP: Record<string, string[]> = {
     'Personnel.read',
     'Kanban.read', 'Kanban.manage',
     'Reports.read',
-    'Beds.read', 'Beds.manage'
+    'Beds.read', 'Beds.manage',
+    'Sick.manage', 'Sick.request'
   ],
   personnel: [
     'Duty.read',
     'Calendar.read',
-    'Leave.read'
+    'Leave.read',
+    'Sick.request'
   ]
 };
 

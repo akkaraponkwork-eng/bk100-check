@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   const role = user.role || 'personnel';
   const compatibilityMap = await getCachedPermissions();
   const rolePermissions = compatibilityMap[role] || [];
-  const canManage = rolePermissions.includes('Personnel.manage');
+  const canManage = rolePermissions.includes('Sick.manage');
 
   try {
     const body = await request.json();
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update a sick record
 export async function PUT(request: NextRequest) {
-  const authRes = await requirePermission(request as any, 'Personnel.manage');
+  const authRes = await requirePermission(request as any, 'Sick.manage');
   if (authRes.error) return authRes.error;
 
   try {
@@ -181,7 +181,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Remove a sick record
 export async function DELETE(request: NextRequest) {
-  const authRes = await requirePermission(request as any, 'Personnel.manage');
+  const authRes = await requirePermission(request as any, 'Sick.manage');
   if (authRes.error) return authRes.error;
 
   try {

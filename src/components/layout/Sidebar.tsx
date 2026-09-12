@@ -37,7 +37,8 @@ const navItems: NavItem[] = [
   { href: '/calendar',  icon: <CalendarMonthIcon />, label: 'ปฏิทิน', permission: 'Calendar.read' },
   { href: '/kanban',    icon: <AssignmentIcon />,    label: 'งาน', permission: 'Kanban.read' },
   { href: '/leave',     icon: <BeachAccessIcon />,   label: 'การลา', permission: 'Leave.read' },
-  { href: '/sick',      icon: <LocalHospitalIcon />, label: 'ส่งป่วย', permission: 'Personnel.read' },
+  { href: '/sick',      icon: <LocalHospitalIcon />, label: 'ส่งป่วย', permission: 'Sick.manage' },
+  { href: '/sick-request', icon: <LocalHospitalIcon />, label: 'ร้องขอไปตร.', permission: 'Sick.request' },
   { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
   { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', permission: 'Beds.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
@@ -76,16 +77,10 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
 
   const visibleNavItems = navItems.filter(item => {
     if (!leaveEnabled && item.href === '/leave') return false;
-    if (item.href === '/sick') return true; // Everyone can see the sick route for requests
     return !item.permission || can(item.permission);
-  }).map(item => {
-    if (item.href === '/sick') {
-      return { ...item, label: canManagePersonnel ? 'ส่งป่วย' : 'ร้องขอไปตร.' };
-    }
-    return item;
   });
   const visibleAdminItems = adminItems.filter(item => !item.permission || can(item.permission));
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
+  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
 
   const getRoleLabel = (role: UserRole) => {
     switch(role) {
