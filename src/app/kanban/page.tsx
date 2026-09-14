@@ -12,7 +12,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import html2canvas from 'html2canvas';
+import { toJpeg } from 'html-to-image';
 
 import PageHeader from '@/components/layout/PageHeader';
 import TaskCard, { STATUS_CONFIG, getTaskTotal } from '@/components/kanban/TaskCard';
@@ -42,55 +42,62 @@ export default function DutyCheckPage() {
   const { showToast } = useToast();
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('print-form-container');
-    if (!element) return;
-    const originalDisplay = element.style.display;
-    const originalPosition = element.style.position;
-    const originalLeft = element.style.left;
-    const originalWidth = element.style.width;
-    element.style.setProperty('display', 'block', 'important');
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.width = '800px';
-    element.style.background = 'white';
+    const originalElement = document.getElementById('print-form-container');
+    if (!originalElement) return;
+
+    // Create a clone to render off-screen cleanly
+    const clone = originalElement.cloneNode(true) as HTMLElement;
+    clone.id = 'print-form-container-clone';
+    clone.classList.remove('print-only');
+    
+    // Ensure the clone itself has normal positioning for the snapshot
+    clone.style.cssText = `
+      display: block !important;
+      width: 800px !important;
+      background: white !important;
+      margin: 0 !important;
+    `;
+
+    // Wrap in an off-screen container so the user doesn't see it
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: -9999px;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    `;
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
     try {
       showToast('กำลังสร้างรูปภาพ...', 'success');
-      await new Promise(r => setTimeout(r, 100));
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Give DOM time to update
+      await new Promise(r => setTimeout(r, 150));
       
-      let shared = false;
-      try {
-        if (navigator.share) {
-          const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
-            shared = true;
-          }
-        }
-      } catch (e) {
-        console.log('Share failed or rejected', e);
+      const dataUrl = await toJpeg(clone, {
+        quality: 0.9,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+      });
+      
+      const isMobile = /Line|Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        setPreviewImage(dataUrl);
+      } else {
+        const link = document.createElement('a');
+        link.download = `ยอดกำลังพล_${today}.jpg`;
+        link.href = dataUrl;
+        link.click();
       }
-
-      if (!shared) {
-        if (/Line/i.test(navigator.userAgent) || /Mobi|Android/i.test(navigator.userAgent)) {
-          setPreviewImage(dataUrl);
-        } else {
-          const link = document.createElement('a');
-          link.download = `ยอดกำลังพล_${today}.jpg`;
-          link.href = dataUrl;
-          link.click();
-        }
-      }
-    } catch {
-      showToast('ไม่สามารถสร้างรูปภาพได้', 'error');
+    } catch (err: any) {
+      console.error('html-to-image error:', err);
+      showToast(`ไม่สามารถสร้างรูปภาพได้: ${err?.message || err}`, 'error');
     } finally {
-      element.style.display = originalDisplay;
-      element.style.position = originalPosition;
-      element.style.left = originalLeft;
-      element.style.width = originalWidth;
-      element.style.background = '';
+      if (wrapper.parentNode) {
+        wrapper.parentNode.removeChild(wrapper);
+      }
     }
   };
 
@@ -290,12 +297,25 @@ export default function DutyCheckPage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setPreviewImage(null)} color="inherit">ปิด</Button>
-            <Button variant="contained" onClick={() => {
+            <Button variant="contained" onClick={async () => {
+              try {
+                if (navigator.share) {
+                  const blob = await (await fetch(previewImage)).blob();
+                  const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
+                  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
+                    return; // Shared successfully
+                  }
+                }
+              } catch (e) {
+                console.log('Share failed', e);
+              }
+              // Fallback to regular download if share fails or is not supported
               const link = document.createElement('a');
               link.download = `ยอดกำลังพล_${today}.jpg`;
               link.href = previewImage;
               link.click();
-            }}>ดาวน์โหลด</Button>
+            }}>แชร์ / ดาวน์โหลด</Button>
           </DialogActions>
         </Dialog>
       )}

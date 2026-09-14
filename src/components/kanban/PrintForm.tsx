@@ -64,7 +64,7 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
         margin: '0 auto',
         padding: '24px 32px',
         backgroundColor: '#ffffff',
-        fontFamily: '"Sarabun", "TH Sarabun PSK", "Angsana New", sans-serif',
+        fontFamily: '"TH Sarabun PSK", "THSarabunNew", "Sarabun", sans-serif',
         color: '#000000',
         boxSizing: 'border-box',
       }}
