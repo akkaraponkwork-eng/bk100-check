@@ -37,12 +37,13 @@ const getCachedBotSettings = unstable_cache(
         groupId: settings['groupId'] || '',
         alertTimes: settings['alertTimes'] ? settings['alertTimes'].split(',') : [],
         leaveEnabled: String(settings['leaveEnabled']).toLowerCase() !== 'false',
+        complaintsEnabled: String(settings['complaintsEnabled']).toLowerCase() !== 'false',
         combineKanbanCounts: String(settings['combineKanbanCounts']).toLowerCase() === 'true',
         adminEmail: settings['adminEmail'] || ''
       };
     } catch (e: any) {
       if (e.message && e.message.includes('Unable to parse range')) {
-        return { groupId: '', alertTimes: [], leaveEnabled: true, combineKanbanCounts: false, adminEmail: '', error: 'Please create a sheet named "BotSettings"' };
+        return { groupId: '', alertTimes: [], leaveEnabled: true, complaintsEnabled: true, combineKanbanCounts: false, adminEmail: '', error: 'Please create a sheet named "BotSettings"' };
       }
       throw e;
     }
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { groupId, alertTimes, leaveEnabled, combineKanbanCounts, adminEmail } = body;
+    const { groupId, alertTimes, leaveEnabled, complaintsEnabled, combineKanbanCounts, adminEmail } = body;
     
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
     const finalGroupId = groupId !== undefined ? groupId : (existingSettings['groupId'] || '');
     const finalAlertTimes = alertTimes !== undefined ? (Array.isArray(alertTimes) ? alertTimes.join(',') : alertTimes) : (existingSettings['alertTimes'] || '');
     const finalLeaveEnabled = leaveEnabled !== undefined ? String(leaveEnabled) : (existingSettings['leaveEnabled'] || 'true');
+    const finalComplaintsEnabled = complaintsEnabled !== undefined ? String(complaintsEnabled) : (existingSettings['complaintsEnabled'] || 'true');
     const finalCombineKanbanCounts = combineKanbanCounts !== undefined ? String(combineKanbanCounts) : (existingSettings['combineKanbanCounts'] || 'false');
     const finalAdminEmail = adminEmail !== undefined ? adminEmail : (existingSettings['adminEmail'] || '');
 
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
       ['groupId', finalGroupId],
       ['alertTimes', finalAlertTimes],
       ['leaveEnabled', finalLeaveEnabled],
+      ['complaintsEnabled', finalComplaintsEnabled],
       ['combineKanbanCounts', finalCombineKanbanCounts],
       ['adminEmail', finalAdminEmail],
     ];
@@ -104,7 +107,7 @@ export async function POST(request: NextRequest) {
     try {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
-        range: 'BotSettings!A1:B5',
+        range: 'BotSettings!A1:B6',
         valueInputOption: 'USER_ENTERED',
         requestBody: { values }
       });
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
         });
         await sheets.spreadsheets.values.update({
           spreadsheetId: sheetId,
-          range: 'BotSettings!A1:B5',
+          range: 'BotSettings!A1:B6',
           valueInputOption: 'USER_ENTERED',
           requestBody: { values }
         });

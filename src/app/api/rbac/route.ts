@@ -30,8 +30,31 @@ export async function GET(request: NextRequest) {
     });
 
     const roles = (res.data.valueRanges?.[0].values || []).map(r => ({ id: r[0], key: r[1], name: r[2] }));
-    const permissions = (res.data.valueRanges?.[1].values || []).map(p => ({ id: p[0], key: p[1], name: p[2], group: p[3] }));
+    let permissions = (res.data.valueRanges?.[1].values || []).map(p => ({ id: p[0], key: p[1], name: p[2], group: p[3] }));
     const rolePermissions = (res.data.valueRanges?.[2].values || []).map(rp => ({ id: rp[0], roleId: rp[1], permissionId: rp[2] }));
+
+    // Auto-seed Complaints permissions if missing
+    const newPerms = [];
+    if (!permissions.some(p => p.key === 'Complaints.read')) {
+      newPerms.push({ id: crypto.randomUUID(), key: 'Complaints.read', name: 'รับเรื่องร้องเรียน (แอดมิน)', group: 'การตั้งค่า (Settings)' });
+    }
+    if (!permissions.some(p => p.key === 'Complaints.submit')) {
+      newPerms.push({ id: crypto.randomUUID(), key: 'Complaints.submit', name: 'ส่งเรื่องร้องเรียน', group: 'ทั่วไป (General)' });
+    }
+    
+    if (newPerms.length > 0) {
+      try {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: sheetId,
+          range: 'BKFW_Permissions!A:D',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: newPerms.map(p => [p.id, p.key, p.name, p.group]) }
+        });
+        permissions.push(...newPerms);
+      } catch (e) {
+        console.error('Failed to auto-seed Complaints permissions:', e);
+      }
+    }
 
     return NextResponse.json({ roles, permissions, rolePermissions });
   } catch (err: any) {

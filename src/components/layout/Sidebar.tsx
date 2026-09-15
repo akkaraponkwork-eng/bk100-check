@@ -16,6 +16,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ReportIcon from '@mui/icons-material/Report';
 import { usePermissions } from '@/hooks/usePermissions';
 
 import type { UserRole } from '@/types';
@@ -42,11 +43,13 @@ const navItems: NavItem[] = [
   { href: '/personnel', icon: <GroupIcon />,         label: 'กำลังพล', permission: 'Personnel.read' },
   { href: '/beds',      icon: <AssignmentIcon />,    label: 'ตรวจโรงนอน', permission: 'Beds.read' },
   { href: '/orgchart',  icon: <AccountTreeIcon />,   label: 'ทำเนียบ' },
+  { href: '/complaints', icon: <ReportIcon />,        label: 'ร้องเรียน', permission: 'Complaints.submit' },
   { href: '/reports',   icon: <BarChartIcon />,      label: 'รายงาน', permission: 'Reports.read' },
 ];
 
 const adminItems: NavItem[] = [
   { href: '/settings', icon: <SettingsIcon />, label: 'ตั้งค่า', permission: 'Settings.read' },
+  { href: '/complaints/admin', icon: <ReportIcon />, label: 'รับเรื่องร้องเรียน', permission: 'Complaints.read' },
 ];
 
 interface SidebarProps {
@@ -62,6 +65,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [leaveEnabled, setLeaveEnabled] = useState(true); // default true
+  const [complaintsEnabled, setComplaintsEnabled] = useState(true); // default true
   const { can, loading: permLoading } = usePermissions();
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
       .then(res => res.json())
       .then(data => {
         if (data.leaveEnabled === false) setLeaveEnabled(false);
+        if (data.complaintsEnabled === false) setComplaintsEnabled(false);
       })
       .catch(console.error);
   }, []);
@@ -79,8 +84,14 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
     if (!leaveEnabled && item.href === '/leave') return false;
     return !item.permission || can(item.permission);
   });
-  const visibleAdminItems = adminItems.filter(item => !item.permission || can(item.permission));
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+  const visibleAdminItems = adminItems.filter(item => {
+    return !item.permission || can(item.permission);
+  });
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    if (href === '/complaints' && pathname.startsWith('/complaints/admin')) return false;
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
   const getRoleLabel = (role: UserRole) => {
     switch(role) {
@@ -206,7 +217,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
                   {item.icon}
                 </ListItemIcon>
                 {!isCollapsed && (
-                  <ListItemText primary={<Typography sx={{ fontSize: 14, fontWeight: isActive(item.href) ? 600 : 500 }} noWrap>{item.label}</Typography>} />
+                  <ListItemText primary={<Typography color="inherit" sx={{ fontSize: 14, fontWeight: isActive(item.href) ? 600 : 500 }} noWrap>{item.label}</Typography>} />
                 )}
               </ListItemButton>
             </ListItem>
@@ -240,7 +251,7 @@ export default function Sidebar({ userRole = 'personnel', userName = 'ผู้�
                     }}>
                       {item.icon}
                     </ListItemIcon>
-                    {!isCollapsed && <ListItemText primary={<Typography sx={{ fontSize: 14, fontWeight: isActive(item.href) ? 600 : 500 }} noWrap>{item.label}</Typography>} />}
+                    {!isCollapsed && <ListItemText primary={<Typography color="inherit" sx={{ fontSize: 14, fontWeight: isActive(item.href) ? 600 : 500 }} noWrap>{item.label}</Typography>} />}
                   </ListItemButton>
                 </ListItem>
               ))}

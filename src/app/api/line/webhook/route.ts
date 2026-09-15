@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
           type: 'text',
           text: summaryText
         }]);
-      } else if (text.includes('น้องบก') || text.includes('บก.ร้อย')) {
+      } else if (text.includes('น้องบก')) {
         await replyLineMessage(replyToken, [
           {
             type: 'text',

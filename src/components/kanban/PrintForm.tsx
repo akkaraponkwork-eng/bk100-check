@@ -49,8 +49,23 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
     };
   });
 
+  // Extra routine tasks (user added as รปจ but not in fixed titles)
+  const extraRoutineList = tasks
+    .filter(t => t.category === 'รปจ' && !ROUTINE_TITLES.includes(t.title))
+    .map(t => ({
+      title: t.title,
+      location: t.location || '',
+      countSenior: t.countSenior !== undefined && t.countSenior !== '' ? Number(t.countSenior) : '',
+      countJunior: t.countJunior !== undefined && t.countJunior !== '' ? Number(t.countJunior) : '',
+      count: t.count !== undefined && t.count !== '' ? Number(t.count) : '',
+      total: getTaskTotal(t),
+      remark: t.remark || '',
+    }));
+
+  const combinedRoutineList = [...routineList, ...extraRoutineList];
+
   // Other/Outside tasks mapping
-  const otherTasksList = tasks.filter(t => !ROUTINE_TITLES.includes(t.title));
+  const otherTasksList = tasks.filter(t => t.category !== 'รปจ' && !ROUTINE_TITLES.includes(t.title));
   const emptyRowsNeeded = Math.max(0, 6 - otherTasksList.length);
   const emptyRows = Array.from({ length: emptyRowsNeeded }, (_, i) => i);
 
@@ -129,9 +144,9 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
           )}
         </thead>
         <tbody>
-          {/* Routine 11 Rows */}
-          {routineList.map(r => (
-            <tr key={r.title}>
+          {/* Routine Rows */}
+          {combinedRoutineList.map((r, i) => (
+            <tr key={`${r.title}-${i}`}>
               <td style={{ textAlign: 'left' }}>{r.title}</td>
               <td style={{ textAlign: 'left' }}>{r.location}</td>
               {combineCounts ? (

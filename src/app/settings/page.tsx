@@ -46,7 +46,9 @@ export default function SettingsPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [botGroupId, setBotGroupId] = useState('');
+  const [alertTimes, setAlertTimes] = useState<string[]>([]);
   const [leaveEnabled, setLeaveEnabled] = useState(true);
+  const [complaintsEnabled, setComplaintsEnabled] = useState(true);
   const [combineKanbanCounts, setCombineKanbanCounts] = useState(false);
   const [savingBotSettings, setSavingBotSettings] = useState(false);
   const [refreshingBot, setRefreshingBot] = useState(false);
@@ -207,7 +209,9 @@ export default function SettingsPage() {
       if (botRes.ok) {
         const botData = await botRes.json();
         setBotGroupId(botData.groupId || '');
+        setAlertTimes(botData.alertTimes || []);
         setLeaveEnabled(botData.leaveEnabled !== false);
+        setComplaintsEnabled(botData.complaintsEnabled !== false);
         setCombineKanbanCounts(botData.combineKanbanCounts === true);
       }
       if (adminsRes.ok) {
@@ -391,7 +395,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled: newVal, combineKanbanCounts })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled: newVal, complaintsEnabled, combineKanbanCounts })
       });
       if (res.ok) {
         showToast(newVal ? 'เปิดใช้งานระบบลางานแล้ว' : 'ปิดใช้งานระบบลางานแล้ว', 'success');
@@ -414,7 +418,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, combineKanbanCounts: newVal })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, complaintsEnabled, combineKanbanCounts: newVal })
       });
       if (res.ok) {
         showToast(newVal ? 'เปิดโหมดรวมยอดงานพี่/น้องแล้ว' : 'ปิดโหมดรวมยอดงานแล้ว (แยกรุ่นพี่/รุ่นน้องตามปกติ)', 'success');
@@ -454,7 +458,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, combineKanbanCounts })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, complaintsEnabled, combineKanbanCounts })
       });
       if (res.ok) {
         showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
@@ -1136,6 +1140,17 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <span className="block font-bold text-gray-900 text-[13px]">{leaveEnabled ? 'ระบบลางาน (Leave): เปิด' : 'ระบบลางาน (Leave): ปิด'}</span>
+                        </div>
+                      </label>
+                      {/* Complaints Enabled Toggle */}
+                      <label className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
+                        <div className="relative flex-shrink-0">
+                          <input type="checkbox" className="sr-only" checked={complaintsEnabled} onChange={(e) => handleToggleComplaints(e.target.checked)} />
+                          <div className={`block w-[2.75rem] h-6 rounded-full transition-colors duration-300 ${complaintsEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                          <div className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm ${complaintsEnabled ? 'transform translate-x-[1.25rem]' : ''}`}></div>
+                        </div>
+                        <div>
+                          <span className="block font-bold text-gray-900 text-[13px]">{complaintsEnabled ? 'ระบบร้องเรียน (Complaints): เปิด' : 'ระบบร้องเรียน (Complaints): ปิด'}</span>
                         </div>
                       </label>
                     </div>

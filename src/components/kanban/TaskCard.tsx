@@ -4,6 +4,8 @@ import {
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ChatIcon from '@mui/icons-material/Chat';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
@@ -25,9 +27,11 @@ interface TaskCardProps {
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void;
   onDelete: (id: string) => void;
   combineCounts?: boolean;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, combineCounts, onMoveUp, onMoveDown }: TaskCardProps) {
   return (
     <Card sx={{ mb: 2, border: '1px solid var(--color-border)', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
       <CardContent sx={{ p: '16px !important' }}>
@@ -96,11 +100,23 @@ export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: Ta
             )}
           </Box>
 
-          {!task.isFixed && (
-            <IconButton size="small" color="error" onClick={() => onDelete(task.id)} sx={{ ml: 0.5, p: 0.5 }}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', ml: 0.5 }}>
+            {onMoveUp && (
+              <IconButton size="small" onClick={() => onMoveUp(task.id)} sx={{ p: 0.25 }}>
+                <KeyboardArrowUpIcon fontSize="small" />
+              </IconButton>
+            )}
+            {onMoveDown && (
+              <IconButton size="small" onClick={() => onMoveDown(task.id)} sx={{ p: 0.25 }}>
+                <KeyboardArrowDownIcon fontSize="small" />
+              </IconButton>
+            )}
+            {!task.isFixed && (
+              <IconButton size="small" color="error" onClick={() => onDelete(task.id)} sx={{ p: 0.25, mt: onMoveUp ? 0.5 : 0 }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'action.hover', px: 1.5, py: 0, borderRadius: 2, border: '1px solid', borderColor: 'divider', mt: 1.5 }}>

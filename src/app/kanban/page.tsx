@@ -159,6 +159,40 @@ export default function DutyCheckPage() {
     setShowAdd(false);
   };
 
+  const handleMoveUp = (id: string) => {
+    setTasks(prev => {
+      const idx = prev.findIndex(t => t.id === id);
+      if (idx <= 0) return prev;
+      const newTasks = [...prev];
+      let prevIdx = idx - 1;
+      while (prevIdx >= 0 && newTasks[prevIdx].category !== newTasks[idx].category) {
+        prevIdx--;
+      }
+      if (prevIdx < 0) return prev;
+      const temp = newTasks[idx];
+      newTasks[idx] = newTasks[prevIdx];
+      newTasks[prevIdx] = temp;
+      return newTasks;
+    });
+  };
+
+  const handleMoveDown = (id: string) => {
+    setTasks(prev => {
+      const idx = prev.findIndex(t => t.id === id);
+      if (idx < 0 || idx >= prev.length - 1) return prev;
+      const newTasks = [...prev];
+      let nextIdx = idx + 1;
+      while (nextIdx < newTasks.length && newTasks[nextIdx].category !== newTasks[idx].category) {
+        nextIdx++;
+      }
+      if (nextIdx >= newTasks.length) return prev;
+      const temp = newTasks[idx];
+      newTasks[idx] = newTasks[nextIdx];
+      newTasks[nextIdx] = temp;
+      return newTasks;
+    });
+  };
+
   const handleSave = async () => {
     if (totalCompany === '') { showToast('กรุณากรอกยอดรวม', 'error'); return; }
     
@@ -266,6 +300,8 @@ export default function DutyCheckPage() {
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
                   combineCounts={combineCounts}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
                 />
               ))
             )}
