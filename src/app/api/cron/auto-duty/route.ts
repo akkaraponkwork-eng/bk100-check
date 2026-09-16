@@ -19,9 +19,14 @@ function getSheetAuth() {
 
 export async function GET(request: Request) {
   try {
-    // Check for Vercel Cron header to prevent unauthorized access
+    const url = new URL(request.url);
+    const secret = url.searchParams.get('secret');
+    
+    // Check for Vercel Cron header, auth header, or URL secret
     const authHeader = request.headers.get('authorization');
-    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}` || request.headers.get('x-vercel-cron') === '1';
+    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}` 
+                || request.headers.get('x-vercel-cron') === '1'
+                || (secret && (secret === process.env.CRON_SECRET || secret === process.env.INTERNAL_API_SECRET));
     
     // For local testing, allow if no cron secret is set, otherwise enforce it
     if (process.env.NODE_ENV === 'production' && !isCron) {
