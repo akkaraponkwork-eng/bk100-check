@@ -46,7 +46,7 @@ function DayDetailModal({
   onOpenEditMission,
   onQuickToggleStatus,
   onClose,
-  sickRecords,
+  daySickRecords,
 }: {
   date: Date;
   ncoPersonnel: Personnel | null;
@@ -60,18 +60,9 @@ function DayDetailModal({
   onOpenEditMission: (mission: Mission) => void;
   onQuickToggleStatus: (mission: Mission) => void;
   onClose: () => void;
-  sickRecords: SickRecord[];
+  daySickRecords: SickRecord[];
 }) {
   const dateStr = format(date, 'd MMMM yyyy', { locale: th });
-  const daySickRecords = sickRecords.filter(r => {
-    const isAfterStart = r.startDate <= format(date, 'yyyy-MM-dd');
-    const isBeforeEnd = r.isReturned ? (r.expectedReturnDate && r.expectedReturnDate < format(date, 'yyyy-MM-dd') ? false : true) : true;
-    // Just a simple check: if date is >= startDate and they are not returned (or returned after this date)
-    // Actually, sick record is just marked as 'returned' on some day, we don't have return date exactly unless we use expectedReturnDate
-    // For simplicity, let's just say if startDate === dateStr it shows up, OR if it's currently active (not returned) and date >= startDate
-    // To be precise historically, it's hard without actual return date. Let's just show active ones if date >= startDate.
-    return r.startDate <= format(date, 'yyyy-MM-dd') && !r.isReturned;
-  });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -290,10 +281,10 @@ function DayDetailModal({
 }
 
 // ==================== Task Record Modal ====================
-function TaskRecordModal({ date, onClose, sickRecords, personnelMap }: { 
+function TaskRecordModal({ date, onClose, daySickRecords, personnelMap }: { 
   date: Date; 
   onClose: () => void;
-  sickRecords: SickRecord[];
+  daySickRecords: SickRecord[];
   personnelMap: Record<string, Personnel>;
 }) {
   const dateKey = format(date, 'yyyy-MM-dd');
@@ -309,10 +300,6 @@ function TaskRecordModal({ date, onClose, sickRecords, personnelMap }: {
   }, [dateKey]);
 
   const getTaskTotal = (t: KanbanTask) => (Number(t.countSenior) || 0) + (Number(t.countJunior) || 0) + (Number(t.count) || 0);
-
-  const daySickRecords = sickRecords.filter(r => {
-    return r.startDate <= dateKey && (!r.isReturned || (r.expectedReturnDate && r.expectedReturnDate >= dateKey));
-  });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -833,25 +820,29 @@ export default function CalendarPage() {
 
   // Map sick records to dates
   const sickDates: Record<string, boolean> = {};
+  const sickByDate: Record<string, SickRecord[]> = {};
   sickRecords.forEach(r => {
+    const addDate = (d: Date) => {
+      const dateStr = format(d, 'yyyy-MM-dd');
+      sickDates[dateStr] = true;
+      if (!sickByDate[dateStr]) sickByDate[dateStr] = [];
+      sickByDate[dateStr].push(r);
+    };
+
     if (!r.isReturned) {
-      // If currently sick, show for today and all future days in current view?
-      // Actually, better to just mark the startDate if we only have start date,
-      // or mark all days from startDate until now.
       const start = new Date(r.startDate);
       const end = r.expectedReturnDate ? new Date(r.expectedReturnDate) : new Date(); // up to today if not returned
       const days = eachDayOfInterval({ start, end: end < start ? start : end });
-      days.forEach(d => sickDates[format(d, 'yyyy-MM-dd')] = true);
+      days.forEach(addDate);
     } else if (r.expectedReturnDate) {
-      // If returned and had a range, we can show it historically
       const start = new Date(r.startDate);
       const end = new Date(r.expectedReturnDate);
       if (end >= start) {
         const days = eachDayOfInterval({ start, end });
-        days.forEach(d => sickDates[format(d, 'yyyy-MM-dd')] = true);
+        days.forEach(addDate);
       }
     } else {
-      sickDates[r.startDate] = true;
+      addDate(new Date(r.startDate));
     }
   });
 
@@ -961,7 +952,7 @@ export default function CalendarPage() {
           onOpenEditMission={(m) => { setEditingMission(m); setMissionModalOpen(true); }}
           onQuickToggleStatus={handleQuickToggleStatus}
           onClose={() => setSelectedDay(null)}
-          sickRecords={sickRecords}
+          daySickRecords={selectedDateStr ? (sickByDate[selectedDateStr] || []) : []}
         />
       )}
 
@@ -970,7 +961,7 @@ export default function CalendarPage() {
         <TaskRecordModal
           date={selectedTaskDay}
           onClose={() => setSelectedTaskDay(null)}
-          sickRecords={sickRecords}
+          daySickRecords={selectedTaskDay ? (sickByDate[format(selectedTaskDay, 'yyyy-MM-dd')] || []) : []}
           personnelMap={personnelMap}
         />
       )}

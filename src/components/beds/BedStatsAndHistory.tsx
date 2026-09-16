@@ -175,7 +175,7 @@ export default function BedStatsAndHistory({ reports, beds, personnel, punishmen
         <h3 className="text-lg font-bold text-gray-800 mb-6">10 อันดับเตียงที่ไม่เรียบร้อยบ่อยที่สุด</h3>
         <div className="h-[300px] w-full">
           {statsData.chartData.length > 0 ? (
-             <ResponsiveContainer>
+             <ResponsiveContainer width="99%" height="100%" minWidth={1}>
              <BarChart data={statsData.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />

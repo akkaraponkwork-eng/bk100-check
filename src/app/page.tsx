@@ -212,6 +212,8 @@ export default function DashboardPage() {
               sub={todayAssistants.length > 0 ? `ผช: ${todayAssistants.map(a => `${a?.rank}${a?.firstName}`).join(', ')}` : (ncoPersonnel?.lastName || 'ไม่มีผู้ช่วย')}
               accent="#f59e0b"
               onClick={() => setShowNCOModal(true)}
+              valueFontSize={18}
+              subFontSize={11}
             />
             <StatCard
               icon={<AssignmentTurnedInIcon />} label="ภารกิจประจำปี"
