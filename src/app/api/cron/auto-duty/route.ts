@@ -38,13 +38,15 @@ export async function GET(request: Request) {
     const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+    const internalHeaders = { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' };
+
     // 1. Fetch all required data
     const [personnelRes, dutyRes, punishmentsRes, exceptionsRes, botSettingsRes] = await Promise.all([
-      fetch(`${origin}/api/personnel`),
-      fetch(`${origin}/api/duty`),
-      fetch(`${origin}/api/duty-meta/punishments`),
-      fetch(`${origin}/api/duty-meta/exceptions`),
-      fetch(`${origin}/api/bot-settings`)
+      fetch(`${origin}/api/personnel`, { headers: internalHeaders }),
+      fetch(`${origin}/api/duty`, { headers: internalHeaders }),
+      fetch(`${origin}/api/duty-meta/punishments`, { headers: internalHeaders }),
+      fetch(`${origin}/api/duty-meta/exceptions`, { headers: internalHeaders }),
+      fetch(`${origin}/api/bot-settings`, { headers: internalHeaders })
     ]);
 
     const { personnel } = await personnelRes.json();
