@@ -50,6 +50,7 @@ export default function SettingsPage() {
   const [leaveEnabled, setLeaveEnabled] = useState(true);
   const [complaintsEnabled, setComplaintsEnabled] = useState(true);
   const [combineKanbanCounts, setCombineKanbanCounts] = useState(false);
+  const [autoDutyTime, setAutoDutyTime] = useState('12:00');
   const [savingBotSettings, setSavingBotSettings] = useState(false);
   const [refreshingBot, setRefreshingBot] = useState(false);
 
@@ -213,6 +214,7 @@ export default function SettingsPage() {
         setLeaveEnabled(botData.leaveEnabled !== false);
         setComplaintsEnabled(botData.complaintsEnabled !== false);
         setCombineKanbanCounts(botData.combineKanbanCounts === true);
+        setAutoDutyTime(botData.autoDutyTime || '12:00');
       }
       if (adminsRes.ok) {
         const adminsData = await adminsRes.json();
@@ -412,6 +414,8 @@ export default function SettingsPage() {
 
 
 
+
+
   const handleToggleCombineKanban = async (newVal: boolean) => {
     setCombineKanbanCounts(newVal); // Optimistic UI update
     try {
@@ -458,7 +462,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/bot-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, complaintsEnabled, combineKanbanCounts })
+        body: JSON.stringify({ groupId: botGroupId, leaveEnabled, complaintsEnabled, combineKanbanCounts, autoDutyTime })
       });
       if (res.ok) {
         showToast('บันทึกการตั้งค่าบอทสำเร็จ', 'success');
@@ -598,6 +602,32 @@ export default function SettingsPage() {
                         </span>
                       </div>
                     </label>
+                  </div>
+
+                  <div className="mb-8 p-6 bg-white rounded-3xl border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+                      <div className="flex-1">
+                        <span className="block font-bold text-gray-900 mb-1 text-base">เวลาจัดเวรอัตโนมัติ</span>
+                        <span className="block text-sm text-gray-500 leading-relaxed">
+                          ระบบจะตรวจสอบคิวและจัดเวรอัตโนมัติในเวลาที่กำหนด (ตัวกระตุ้น Cron ของระบบต้องทำงานในชั่วโมงที่ตรงกัน)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="time"
+                          value={autoDutyTime}
+                          onChange={(e) => setAutoDutyTime(e.target.value)}
+                          className="w-32 bg-gray-100/80 border-transparent hover:bg-gray-200/60 focus:bg-white focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-300 outline-none"
+                        />
+                        <button
+                          onClick={handleSaveBotSettings}
+                          disabled={savingBotSettings}
+                          className="btn btn-primary whitespace-nowrap"
+                        >
+                          {savingBotSettings ? 'กำลังบันทึก...' : 'บันทึกเวลา'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1142,17 +1172,7 @@ export default function SettingsPage() {
                           <span className="block font-bold text-gray-900 text-[13px]">{leaveEnabled ? 'ระบบลางาน (Leave): เปิด' : 'ระบบลางาน (Leave): ปิด'}</span>
                         </div>
                       </label>
-                      {/* Complaints Enabled Toggle */}
-                      <label className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
-                        <div className="relative flex-shrink-0">
-                          <input type="checkbox" className="sr-only" checked={complaintsEnabled} onChange={(e) => handleToggleComplaints(e.target.checked)} />
-                          <div className={`block w-[2.75rem] h-6 rounded-full transition-colors duration-300 ${complaintsEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-                          <div className={`absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm ${complaintsEnabled ? 'transform translate-x-[1.25rem]' : ''}`}></div>
-                        </div>
-                        <div>
-                          <span className="block font-bold text-gray-900 text-[13px]">{complaintsEnabled ? 'ระบบร้องเรียน (Complaints): เปิด' : 'ระบบร้องเรียน (Complaints): ปิด'}</span>
-                        </div>
-                      </label>
+
                     </div>
                   </div>
 

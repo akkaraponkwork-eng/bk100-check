@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ResourceService } from '@/lib/services/resource';
+import { GoogleSheetsRepository } from '@/lib/repository/sheets/repository';
 import { DocTypeRegistry } from '@/lib/doctypes/registry';
+
+const repository = new GoogleSheetsRepository();
+const resourceService = new ResourceService(repository);
 
 // Simple in-memory cache for idempotency in this PoC
 // In production, this should be Redis or a database table
@@ -33,9 +37,9 @@ export async function POST(req: NextRequest) {
     const leaveDocType = DocTypeRegistry.get('LeaveRequest');
 
     // 1. Re-read necessary data to re-validate
-    const allPersonnel = await ResourceService.list(personnelDocType, { 'x-mock-role': 'System' } as any);
-    const allLeaves = await ResourceService.list(leaveDocType, { 'x-mock-role': 'System' } as any);
-    const allDuties = await ResourceService.list(dutyDocType, { 'x-mock-role': 'System' } as any);
+    const allPersonnel = await resourceService.list('Personnel', { 'x-mock-role': 'System' } as any);
+    const allLeaves = await resourceService.list('LeaveRequest', { 'x-mock-role': 'System' } as any);
+    const allDuties = await resourceService.list('DutyAssignment', { 'x-mock-role': 'System' } as any);
 
     const results = [];
 
@@ -74,7 +78,7 @@ export async function POST(req: NextRequest) {
 
       // 3. Create using ResourceService (triggers DutyPolicy & ConcurrencyGuard & Hook & ShadowGuard)
       const mockReq = { headers: new Headers({ 'x-mock-role': 'System' }) } as any; // Bypass API level RBAC for batch internal call
-      const created = await ResourceService.create(dutyDocType, {
+      const created = await resourceService.create('DutyAssignment', {
         personnelId: assign.personnelId,
         dutyDate: assign.date,
         dutyType: assign.dutyType,

@@ -15,18 +15,18 @@ import noSheetNameTestDocType from '../../doctypes/NoSheetNameTest.json';
 // In a real implementation, this could dynamically import JSON files
 // or load them from a secure remote config. For now, it's a static registry.
 const docTypeMap: Record<string, DocType> = {
-  Arsenal: arsenalDocType as DocType,
-  Vehicle: vehicleDocType as DocType,
-  Personnel: personnelDocType as DocType,
-  LeaveRequest: leaveRequestDocType as DocType,
-  DutyAssignment: dutyAssignmentDocType as DocType,
-  NCOAssignment: ncoAssignmentDocType as DocType,
-  Roles: rolesDocType as DocType,
-  Permissions: permissionsDocType as DocType,
-  RolePermissions: rolePermissionsDocType as DocType,
-  DutyPolicy: dutyPolicyDocType as DocType,
-  LegacyPersonnelTest: legacyPersonnelTestDocType as DocType,
-  NoSheetNameTest: noSheetNameTestDocType as DocType,
+  Arsenal: arsenalDocType as unknown as DocType,
+  Vehicle: vehicleDocType as unknown as DocType,
+  Personnel: personnelDocType as unknown as DocType,
+  LeaveRequest: leaveRequestDocType as unknown as DocType,
+  DutyAssignment: dutyAssignmentDocType as unknown as DocType,
+  NCOAssignment: ncoAssignmentDocType as unknown as DocType,
+  Roles: rolesDocType as unknown as DocType,
+  Permissions: permissionsDocType as unknown as DocType,
+  RolePermissions: rolePermissionsDocType as unknown as DocType,
+  DutyPolicy: dutyPolicyDocType as unknown as DocType,
+  LegacyPersonnelTest: legacyPersonnelTestDocType as unknown as DocType,
+  NoSheetNameTest: noSheetNameTestDocType as unknown as DocType,
   // More DocTypes will be added here
 };
 

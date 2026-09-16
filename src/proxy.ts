@@ -12,7 +12,8 @@ const PUBLIC_PATHS = [
   '/api/auth/liff',
   '/api/auth/admin-login',
   '/api/auth/logout',
-  '/api/line', // Allow LINE Webhook & Cron
+  '/api/line', // Allow LINE Webhook
+  '/api/cron', // Allow Cron endpoints
   '/images', // Allow public access to images for LINE
   '/api/resource', // Temp allow for E2E test
 ];

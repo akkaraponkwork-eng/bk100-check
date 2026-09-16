@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
+import { google } from 'googleapis';
 
 export interface RequestUser {
   id: string;
@@ -34,8 +36,6 @@ export function requireRole(
   return { user, error: null };
 }
 
-import { unstable_cache } from 'next/cache';
-import { google } from 'googleapis';
 
 function getSheetAuth() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       requestBody: { values: [[newRoleId, key, name]] }
     });
 
-    revalidateTag('rbac');
+    revalidateTag('rbac', undefined as any);
     return NextResponse.json({ success: true, role: { id: newRoleId, key, name } });
   } catch (err: any) {
     console.error('POST /api/rbac/roles error:', err);
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
       requestBody: { values: [[name]] }
     });
 
-    revalidateTag('rbac');
+    revalidateTag('rbac', undefined as any);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('PATCH /api/rbac/roles error:', err);
@@ -159,7 +159,7 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
-    revalidateTag('rbac');
+    revalidateTag('rbac', undefined as any);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('DELETE /api/rbac/roles error:', err);

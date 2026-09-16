@@ -698,7 +698,7 @@ function DayDetailModal({
       else {
         const lastPerson = personnel.find(p => p.id === lastAssignedId);
         if (lastPerson) {
-          const nextIdx = availableNotPunished.findIndex(p => (p.num || 0) > (lastPerson.num || 0));
+          const nextIdx = availableNotPunished.findIndex(p => sortPersonnelByBatchAndNum(p, lastPerson) > 0);
           aIdx = nextIdx !== -1 ? nextIdx : 0;
         }
       }

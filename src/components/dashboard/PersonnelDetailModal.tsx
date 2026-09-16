@@ -79,9 +79,9 @@ export default function PersonnelDetailModal({ open, onClose, personnel, ncosCou
                 
                 {/* Avatar */}
                 <div className="pl-2">
-                  {p.imageUrl ? (
+                  {(p as any).imageUrl ? (
                     <img 
-                      src={p.imageUrl} 
+                      src={(p as any).imageUrl} 
                       alt={p.firstName} 
                       className="w-10 h-10 rounded-full object-cover border border-gray-200 bg-white"
                       onError={(e) => {
@@ -90,7 +90,7 @@ export default function PersonnelDetailModal({ open, onClose, personnel, ncosCou
                       }}
                     />
                   ) : null}
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center font-bold text-[16px] shadow-sm border border-blue-200 ${p.imageUrl ? 'hidden' : ''}`}>
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center font-bold text-[16px] shadow-sm border border-blue-200 ${(p as any).imageUrl ? 'hidden' : ''}`}>
                     {p.firstName ? p.firstName.charAt(0) : p.rank.charAt(0)}
                   </div>
                 </div>

@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Invalidate Cache
-    revalidateTag('rbac');
+    revalidateTag('rbac', undefined as any);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

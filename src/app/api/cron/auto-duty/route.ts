@@ -34,17 +34,27 @@ export async function GET(request: Request) {
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     // 1. Fetch all required data
-    const [personnelRes, dutyRes, punishmentsRes, exceptionsRes] = await Promise.all([
+    const [personnelRes, dutyRes, punishmentsRes, exceptionsRes, botSettingsRes] = await Promise.all([
       fetch(`${origin}/api/personnel`),
       fetch(`${origin}/api/duty`),
       fetch(`${origin}/api/duty-meta/punishments`),
-      fetch(`${origin}/api/duty-meta/exceptions`)
+      fetch(`${origin}/api/duty-meta/exceptions`),
+      fetch(`${origin}/api/bot-settings`)
     ]);
 
     const { personnel } = await personnelRes.json();
     const { shifts } = await dutyRes.json();
     const { punishments } = await punishmentsRes.json();
     const { exceptions } = await exceptionsRes.json();
+    const botSettings = await botSettingsRes.json();
+
+    const autoDutyTime = botSettings.autoDutyTime || '12:00';
+    const autoHour = parseInt(autoDutyTime.split(':')[0], 10);
+    const currentHour = today.getHours();
+
+    if (currentHour !== autoHour) {
+      return NextResponse.json({ message: `Not the scheduled time. Scheduled for ${autoHour}:00 (BKK), Current hour is ${currentHour}:00 (BKK)` });
+    }
 
     // Check if duty for today already exists
     const existingShift = shifts?.find((s: any) => s.date === todayStr);
@@ -61,15 +71,22 @@ export async function GET(request: Request) {
       return !exc;
     };
 
+    const sortPersonnelByBatchAndNum = (a: any, b: any) => {
+      const batchA = Number(a.batch) || 0;
+      const batchB = Number(b.batch) || 0;
+      const yearA = batchA % 100;
+      const termA = Math.floor(batchA / 100);
+      const yearB = batchB % 100;
+      const termB = Math.floor(batchB / 100);
+      if (yearA !== yearB) return yearA - yearB;
+      if (termA !== termB) return termA - termB;
+      return (a.num || 0) - (b.num || 0);
+    };
+
     const available = (personnel || [])
       .filter((p: any) => p.rank?.includes('พลฯ'))
       .filter((p: any) => isPersonnelAvailable(p, todayStr, exceptions || []))
-      .sort((a: any, b: any) => {
-        const batchA = a.batch ? String(a.batch) : '';
-        const batchB = b.batch ? String(b.batch) : '';
-        if (batchA !== batchB) return batchA.localeCompare(batchB);
-        return (a.num || 0) - (b.num || 0);
-      });
+      .sort(sortPersonnelByBatchAndNum);
 
     const availableNotPunished = available.filter((p: any) => !punishedIds.includes(p.id));
 
@@ -97,7 +114,7 @@ export async function GET(request: Request) {
       else {
         const lastPerson = personnel.find((p: any) => p.id === lastAssignedId);
         if (lastPerson) {
-          const nextIdx = availableNotPunished.findIndex((p: any) => (p.num || 0) > (lastPerson.num || 0));
+          const nextIdx = availableNotPunished.findIndex((p: any) => sortPersonnelByBatchAndNum(p, lastPerson) > 0);
           aIdx = nextIdx !== -1 ? nextIdx : 0;
         }
       }

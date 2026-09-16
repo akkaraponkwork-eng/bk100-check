@@ -1,5 +1,4 @@
 import React from 'react';
-import { Paper, Box, Typography, InputBase, Button } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import type { KanbanTask } from '@/types';
 import { getTaskTotal } from './TaskCard';
@@ -23,94 +22,65 @@ export default function HeadcountFooter({
   const isOver = remaining < 0;
 
   return (
-    <Paper
-      elevation={6}
-      sx={{
-        position: 'fixed',
-        bottom: { xs: 'env(safe-area-inset-bottom)', lg: 0 },
-        left: { xs: 0, lg: 'var(--sidebar-width, 240px)' },
-        right: 0,
-        bgcolor: 'rgba(255,255,255,0.95)',
-        borderTop: '1px solid',
-        borderColor: 'divider',
-        px: 2,
-        py: 1.5,
-        backdropFilter: 'blur(12px)',
-        transition: 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-      }}
+    <div
+      className="fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur-md transition-[left] duration-300 lg:bottom-0 lg:left-[var(--sidebar-width,240px)]"
     >
-      <Box
-        sx={{
-          maxWidth: { xs: 600, md: 1000 },
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: { xs: 2, md: 3 },
-        }}
-      >
-        <Box sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: { xs: 'column', md: 'row' }, 
-          gap: { xs: 1, md: 3 },
-          alignItems: 'center'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', md: 'center' }, gap: { xs: 1, md: 4 }, width: { xs: '100%', md: 'auto' } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: { xs: 12, md: 14 }, color: 'text.secondary', fontWeight: 600 }}>ยอดรวม</Typography>
-              <InputBase
+      <div className="mx-auto flex max-w-5xl items-center gap-4 md:gap-8">
+        
+        <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-8">
+          
+          <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-center md:gap-8">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 md:text-sm">ยอดรวม</span>
+              <input
                 type="number"
+                min="0"
                 value={totalCompany}
                 onChange={e => onChangeTotalCompany(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="0"
-                inputProps={{ style: { textAlign: 'center', fontWeight: 700 } }}
-                sx={{ width: { xs: 56, md: 72 }, height: { xs: 32, md: 40 }, fontSize: { xs: 14, md: 16 }, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+                className="h-8 w-14 rounded-lg border border-gray-300 bg-gray-50 text-center text-sm font-bold text-gray-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 md:h-10 md:w-20 md:text-base"
               />
-            </Box>
+            </div>
+            
             {!combineCounts && (
-              <Box sx={{ display: 'flex', gap: { xs: 2, md: 3 } }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'primary.main', fontWeight: 600, mb: 0.25 }}>พี่</Typography>
-                  <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>{totalSenior}</Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontSize: { xs: 10, md: 12 }, color: 'secondary.main', fontWeight: 600, mb: 0.25 }}>น้อง</Typography>
-                  <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700, color: 'secondary.main', lineHeight: 1 }}>{totalJunior}</Typography>
-                </Box>
-              </Box>
+              <div className="flex gap-4 md:gap-6">
+                <div className="text-center">
+                  <div className="mb-1 text-[10px] font-semibold text-blue-600 md:text-xs">พี่</div>
+                  <div className="text-sm font-bold leading-none text-blue-600 md:text-lg">{totalSenior}</div>
+                </div>
+                <div className="text-center">
+                  <div className="mb-1 text-[10px] font-semibold text-purple-600 md:text-xs">น้อง</div>
+                  <div className="text-sm font-bold leading-none text-purple-600 md:text-lg">{totalJunior}</div>
+                </div>
+              </div>
             )}
-          </Box>
+          </div>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', md: 'center' }, gap: { xs: 1, md: 4 }, width: { xs: '100%', md: 'auto' }, flex: { md: 1 }, bgcolor: { xs: 'rgba(0,0,0,0.02)', md: 'transparent' }, px: { xs: 1.5, md: 0 }, py: { xs: 0.5, md: 0 }, borderRadius: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: { xs: 11, md: 13 }, color: 'text.secondary' }}>ยอดจ่ายรวม:</Typography>
-              <Typography sx={{ fontSize: { xs: 14, md: 18 }, fontWeight: 700 }}>{totalDistributed}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: { xs: 11, md: 13 }, color: 'text.secondary' }}>คงเหลือ:</Typography>
-              <Typography sx={{ fontSize: { xs: 15, md: 20 }, fontWeight: 700, color: isOver ? 'error.main' : 'success.main' }}>
+          <div className="flex w-full items-center justify-between gap-2 rounded-lg bg-black/5 px-3 py-1.5 md:w-auto md:flex-1 md:justify-center md:gap-8 md:bg-transparent md:p-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-500 md:text-[13px]">ยอดจ่ายรวม:</span>
+              <span className="text-sm font-bold text-gray-900 md:text-lg">{totalDistributed}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-500 md:text-[13px]">คงเหลือ:</span>
+              <span className={`text-[15px] font-bold md:text-xl ${isOver ? 'text-red-500' : 'text-green-500'}`}>
                 {typeof totalCompany === 'number' ? remaining : '—'}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+              </span>
+            </div>
+          </div>
+          
+        </div>
 
-        <Button
-          variant="contained"
+        <button
           onClick={onSave}
           disabled={saving || isOver}
-          startIcon={!saving && <SaveIcon />}
-          sx={{
-            height: 48,
-            borderRadius: 2.5,
-            px: 2.5,
-            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)',
-            fontWeight: 600
-          }}
+          className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-sky-600 px-6 font-bold text-white shadow-[0_4px_12px_rgba(59,130,246,0.25)] transition-colors hover:bg-sky-700 disabled:bg-gray-400 disabled:shadow-none"
         >
+          {!saving && <SaveIcon fontSize="small" />}
           {saving ? '...' : 'บันทึก'}
-        </Button>
-      </Box>
-    </Paper>
+        </button>
+        
+      </div>
+    </div>
   );
 }

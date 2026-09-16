@@ -1,15 +1,13 @@
 import React from 'react';
-import {
-  Box, Typography, Card, CardContent, Chip, InputBase, IconButton, ToggleButtonGroup, ToggleButton
-} from '@mui/material';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CloseIcon from '@mui/icons-material/Close';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ChatIcon from '@mui/icons-material/Chat';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import type { KanbanTask } from '@/types';
 
 type TaskStatus = KanbanTask['status'];
@@ -27,164 +25,170 @@ interface TaskCardProps {
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void;
   onDelete: (id: string) => void;
   combineCounts?: boolean;
-  onMoveUp?: (id: string) => void;
-  onMoveDown?: (id: string) => void;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete, combineCounts, onMoveUp, onMoveDown }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: TaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    opacity: isDragging ? 0.8 : 1,
+  };
+
   return (
-    <Card sx={{ mb: 2, border: '1px solid var(--color-border)', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-      <CardContent sx={{ p: '16px !important' }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5, lineHeight: 1.2 }}>{task.title}</Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
-              <Chip label={task.category} size="small" sx={{ fontSize: 10, height: 20 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(0,0,0,0.03)', px: 1, py: 0.25, borderRadius: 1 }}>
-                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary', mr: 0.5 }} />
-                <InputBase
-                  value={task.location || ''}
-                  onChange={e => onUpdate(task.id, { location: e.target.value })}
-                  placeholder="เพิ่มสถานที่..."
-                  sx={{ fontSize: 12, width: 100 }}
-                />
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Count Input */}
-          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-            {combineCounts ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                <Typography sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 600 }}>ยอดรวม</Typography>
-                <InputBase
-                  type="number"
-                  value={task.count !== undefined && task.count !== '' ? task.count : (getTaskTotal(task) || '')}
-                  onChange={e => onUpdate(task.id, { count: e.target.value === '' ? '' : Number(e.target.value), countSenior: '', countJunior: '' })}
-                  placeholder="0"
-                  inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
-                  sx={{ width: 44, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'text.secondary', borderRadius: 1.5 }}
-                />
-              </Box>
-            ) : (
-              <>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                  <Typography sx={{ fontSize: 9, color: 'primary.main', fontWeight: 600 }}>พี่</Typography>
-                  <InputBase
-                    type="number"
-                    value={task.countSenior !== undefined ? task.countSenior : (task.count || '')}
-                    onChange={e => onUpdate(task.id, { countSenior: e.target.value === '' ? '' : Number(e.target.value), count: '' })}
-                    placeholder="0"
-                    inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
-                    sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'primary.light', borderRadius: 1.5 }}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                  <Typography sx={{ fontSize: 9, color: 'secondary.main', fontWeight: 600 }}>น้อง</Typography>
-                  <InputBase
-                    type="number"
-                    value={task.countJunior !== undefined ? task.countJunior : ''}
-                    onChange={e => onUpdate(task.id, { countJunior: e.target.value === '' ? '' : Number(e.target.value) })}
-                    placeholder="0"
-                    inputProps={{ min: 0, style: { textAlign: 'center', fontWeight: 700, padding: 0 } }}
-                    sx={{ width: 36, height: 36, bgcolor: 'action.hover', border: '1px solid', borderColor: 'secondary.light', borderRadius: 1.5 }}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, ml: 0.5 }}>
-                  <Typography sx={{ fontSize: 9, color: 'text.secondary', fontWeight: 600 }}>รวม</Typography>
-                  <Box sx={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 1.5 }}>
-                    <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{getTaskTotal(task) || '-'}</Typography>
-                  </Box>
-                </Box>
-              </>
-            )}
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', ml: 0.5 }}>
-            {onMoveUp && (
-              <IconButton size="small" onClick={() => onMoveUp(task.id)} sx={{ p: 0.25 }}>
-                <KeyboardArrowUpIcon fontSize="small" />
-              </IconButton>
-            )}
-            {onMoveDown && (
-              <IconButton size="small" onClick={() => onMoveDown(task.id)} sx={{ p: 0.25 }}>
-                <KeyboardArrowDownIcon fontSize="small" />
-              </IconButton>
-            )}
-            {!task.isFixed && (
-              <IconButton size="small" color="error" onClick={() => onDelete(task.id)} sx={{ p: 0.25, mt: onMoveUp ? 0.5 : 0 }}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'action.hover', px: 1.5, py: 0, borderRadius: 2, border: '1px solid', borderColor: 'divider', mt: 1.5 }}>
-          <ChatIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-          <InputBase
-            value={task.remark || ''}
-            onChange={e => onUpdate(task.id, { remark: e.target.value })}
-            placeholder="เพิ่มหมายเหตุ..."
-            sx={{ fontSize: 12, flex: 1, minHeight: 36 }}
-          />
-        </Box>
-
-        {/* Status Segmented Control */}
-        <ToggleButtonGroup
-          value={task.status}
-          exclusive
-          onChange={(_, newVal) => newVal && onUpdate(task.id, { status: newVal })}
-          fullWidth
-          size="small"
-          sx={{ 
-            mt: 1.5, 
-            bgcolor: 'rgba(0,0,0,0.04)', 
-            p: '4px', 
-            borderRadius: '24px',
-            display: 'flex',
-            alignItems: 'stretch',
-            '& .MuiToggleButtonGroup-grouped': {
-              border: 0,
-              borderRadius: '20px !important',
-              m: 0,
-              '&:not(:first-of-type)': {
-                ml: 0.5,
-              },
-            }
-          }}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${
+        isDragging ? 'ring-2 ring-sky-500 ring-opacity-50' : ''
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        {/* Drag Handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="mt-1 flex cursor-grab items-center justify-center p-1 text-gray-400 hover:text-gray-600 active:cursor-grabbing"
         >
-          {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map(statusKey => {
-            const config = STATUS_CONFIG[statusKey];
-            const isActive = task.status === statusKey;
-            return (
-              <ToggleButton
-                key={statusKey}
-                value={statusKey}
-                disableRipple
-                sx={{
-                  textTransform: 'none',
-                  fontSize: 13,
-                  bgcolor: isActive ? 'white' : 'transparent',
-                  color: isActive ? `${config.color} !important` : 'text.secondary',
-                  flex: 1,
-                  py: 0.75,
-                  boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: isActive ? 'white' : 'rgba(0,0,0,0.02)',
-                  },
-                  '&.Mui-selected': {
-                    bgcolor: 'white',
-                    fontWeight: 600
+          <DragIndicatorIcon fontSize="small" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="mb-1 text-[15px] font-bold leading-snug text-gray-900">{task.title}</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex h-5 items-center rounded-full bg-gray-100 px-2 text-[10px] font-medium text-gray-600">
+              {task.category}
+            </span>
+            <div className="flex items-center rounded-md bg-black/5 px-2 py-1">
+              <LocationOnIcon sx={{ fontSize: 14 }} className="mr-1 text-gray-500" />
+              <input
+                type="text"
+                value={task.location || ''}
+                onChange={(e) => onUpdate(task.id, { location: e.target.value })}
+                placeholder="เพิ่มสถานที่..."
+                className="w-24 bg-transparent text-xs text-gray-700 placeholder-gray-400 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Count Inputs */}
+        <div className="flex items-center gap-1.5 ml-2">
+          {combineCounts ? (
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[9px] font-bold text-gray-500">ยอดรวม</span>
+              <input
+                type="number"
+                min="0"
+                value={task.count !== undefined && task.count !== '' ? task.count : (getTaskTotal(task) || '')}
+                onChange={(e) =>
+                  onUpdate(task.id, {
+                    count: e.target.value === '' ? '' : Number(e.target.value),
+                    countSenior: '',
+                    countJunior: '',
+                  })
+                }
+                placeholder="0"
+                className="h-9 w-11 rounded-md border border-gray-400 bg-gray-50 text-center text-sm font-bold text-gray-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[9px] font-bold text-blue-600">พี่</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={task.countSenior !== undefined ? task.countSenior : task.count || ''}
+                  onChange={(e) =>
+                    onUpdate(task.id, {
+                      countSenior: e.target.value === '' ? '' : Number(e.target.value),
+                      count: '',
+                    })
                   }
-                }}
-              >
-                {config.label}
-              </ToggleButton>
-            );
-          })}
-        </ToggleButtonGroup>
-      </CardContent>
-    </Card>
+                  placeholder="0"
+                  className="h-9 w-10 rounded-md border border-blue-300 bg-gray-50 text-center text-sm font-bold text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[9px] font-bold text-purple-600">น้อง</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={task.countJunior !== undefined ? task.countJunior : ''}
+                  onChange={(e) =>
+                    onUpdate(task.id, {
+                      countJunior: e.target.value === '' ? '' : Number(e.target.value),
+                    })
+                  }
+                  placeholder="0"
+                  className="h-9 w-10 rounded-md border border-purple-300 bg-gray-50 text-center text-sm font-bold text-gray-900 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <div className="ml-1 flex flex-col items-center gap-1">
+                <span className="text-[9px] font-bold text-gray-500">รวม</span>
+                <div className="flex h-9 w-10 items-center justify-center rounded-md bg-black/5">
+                  <span className="text-sm font-bold text-gray-900">{getTaskTotal(task) || '-'}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Delete Button */}
+        {!task.isFixed && (
+          <div className="ml-1 mt-1">
+            <button
+              onClick={() => onDelete(task.id)}
+              className="flex items-center justify-center rounded p-1 text-red-500 hover:bg-red-50"
+            >
+              <CloseIcon fontSize="small" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5">
+        <ChatIcon sx={{ fontSize: 14 }} className="text-gray-400" />
+        <input
+          type="text"
+          value={task.remark || ''}
+          onChange={(e) => onUpdate(task.id, { remark: e.target.value })}
+          placeholder="เพิ่มหมายเหตุ..."
+          className="flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-400"
+        />
+      </div>
+
+      {/* Status Segmented Control */}
+      <div className="mt-3 flex items-stretch gap-1 rounded-full bg-black/5 p-1">
+        {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((statusKey) => {
+          const config = STATUS_CONFIG[statusKey];
+          const isActive = task.status === statusKey;
+          return (
+            <button
+              key={statusKey}
+              onClick={() => onUpdate(task.id, { status: statusKey })}
+              className={`flex-1 rounded-[20px] py-2 text-[13px] transition-all duration-200 ${
+                isActive
+                  ? 'bg-white font-bold shadow-sm'
+                  : 'text-gray-500 hover:bg-black/5'
+              }`}
+              style={{ color: isActive ? config.color : undefined }}
+            >
+              {config.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

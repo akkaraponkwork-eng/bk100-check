@@ -15,6 +15,7 @@ export interface Personnel {
     startDate: string;
     endDate: string;
   };
+  imageUrl?: string;
 }
 
 export interface PunishmentEntry {

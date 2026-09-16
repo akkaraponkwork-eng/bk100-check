@@ -7,7 +7,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
 const theme = createTheme({
   typography: {
-    fontFamily: "'Sarabun', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: "var(--font-sans), 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif",
     button: {
       textTransform: 'none',
       fontWeight: 500,

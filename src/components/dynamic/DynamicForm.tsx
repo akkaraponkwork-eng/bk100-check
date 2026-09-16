@@ -17,11 +17,11 @@ function buildSchema(fields: any[]) {
   fields.forEach(f => {
     if (f.form) {
       if (f.type === 'Number') {
-        let fieldSchema = z.number({ invalid_type_error: "Must be a number" });
+        let fieldSchema: any = z.number({ message: "Must be a number" });
         if (!f.required) schemaObj[f.fieldname] = fieldSchema.optional().or(z.nan());
         else schemaObj[f.fieldname] = fieldSchema;
       } else {
-        let fieldSchema = z.string();
+        let fieldSchema: any = z.string();
         if (f.required) fieldSchema = fieldSchema.min(1, "This field is required");
         else fieldSchema = fieldSchema.optional().or(z.literal(""));
         schemaObj[f.fieldname] = fieldSchema;
@@ -40,7 +40,7 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
 
   const schema = metadata ? buildSchema(metadata.fields) : z.object({});
   
-  const { register, handleSubmit, setValue, getValues, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, setValue, getValues, watch, formState: { errors } } = useForm<any>({
     resolver: zodResolver(schema)
   });
   
@@ -66,8 +66,8 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
           // Use the safe backend parser
           const result = ComputedEngine.evaluateSafeFormula(field.formula, context);
           
-          if (typeof result === 'number' && !isNaN(result) && result !== watchedValues[field.fieldname]) {
-             setValue(field.fieldname, result, { shouldValidate: true });
+          if (typeof result === 'number' && !isNaN(result) && result !== (watchedValues as any)[field.fieldname]) {
+             setValue(field.fieldname as any, result as any, { shouldValidate: true });
           }
         } catch (e) {
           // Ignore partial math errors while typing (e.g. division by zero, incomplete typing)
@@ -98,7 +98,7 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
             // Populate form
             metaJson.data.fields.forEach((field: any) => {
               if (field.form) {
-                setValue(field.fieldname, record[field.fieldname]);
+                setValue(field.fieldname as any, record[field.fieldname] as any);
               }
             });
           }
@@ -210,8 +210,8 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
               
               {field.type === 'Select' && field.options ? (
                 <Select
-                  onValueChange={(val) => setValue(field.fieldname, val)}
-                  defaultValue={getValues(field.fieldname)}
+                  onValueChange={(val) => setValue(field.fieldname as any, val as any)}
+                  defaultValue={(getValues(field.fieldname as any) as any) || ''}
                   disabled={isFieldDisabled(field)}
                 >
                   <SelectTrigger>
@@ -231,7 +231,7 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
                   type="number"
                   disabled={isFieldDisabled(field)}
                   className={isFieldDisabled(field) ? "bg-gray-100" : ""}
-                  {...register(field.fieldname, { required: field.required, valueAsNumber: true })}
+                  {...register(field.fieldname as any, { required: field.required, valueAsNumber: true })}
                 />
               ) : (
                 <Input
@@ -239,7 +239,7 @@ export function DynamicForm({ docTypeName, id, userRoles }: { docTypeName: strin
                   type="text"
                   disabled={isFieldDisabled(field)}
                   className={isFieldDisabled(field) ? "bg-gray-100" : ""}
-                  {...register(field.fieldname, { required: field.required })}
+                  {...register(field.fieldname as any, { required: field.required })}
                 />
               )}
               {errors[field.fieldname] && (

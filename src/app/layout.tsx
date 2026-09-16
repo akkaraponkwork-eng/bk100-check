@@ -27,10 +27,15 @@ import type { AppUser } from '@/types';
 import { verifySessionToken } from '@/lib/session';
 import { ToastProvider } from '@/hooks/useToast';
 import LiffProvider from '@/components/LiffProvider';
-import { Geist } from "next/font/google";
+import { Prompt } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const promptFont = Prompt({
+  subsets: ['latin', 'thai'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 
 export default async function RootLayout({
@@ -45,7 +50,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="th" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html lang="th" suppressHydrationWarning className={cn("font-sans", promptFont.variable)}>
       <body>
         {/* Inline script: runs before React hydrates — prevents white flash in LINE browser */}
         <script dangerouslySetInnerHTML={{ __html: `

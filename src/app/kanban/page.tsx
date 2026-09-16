@@ -2,17 +2,32 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
-import { th } from 'date-fns/locale';
 import type { KanbanTask } from '@/types';
 import { useToast } from '@/hooks/useToast';
-import { Box, Typography, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ImageIcon from '@mui/icons-material/Image';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import { toJpeg } from 'html-to-image';
+import { domToJpeg } from 'modern-screenshot';
+import { jsPDF } from 'jspdf';
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 import PageHeader from '@/components/layout/PageHeader';
 import TaskCard, { STATUS_CONFIG, getTaskTotal } from '@/components/kanban/TaskCard';
@@ -41,16 +56,25 @@ export default function DutyCheckPage() {
   const [combineCounts, setCombineCounts] = useState(false);
   const { showToast } = useToast();
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const handleDownloadImage = async () => {
     const originalElement = document.getElementById('print-form-container');
     if (!originalElement) return;
 
-    // Create a clone to render off-screen cleanly
     const clone = originalElement.cloneNode(true) as HTMLElement;
     clone.id = 'print-form-container-clone';
     clone.classList.remove('print-only');
     
-    // Ensure the clone itself has normal positioning for the snapshot
     clone.style.cssText = `
       display: block !important;
       width: 800px !important;
@@ -58,7 +82,6 @@ export default function DutyCheckPage() {
       margin: 0 !important;
     `;
 
-    // Wrap in an off-screen container so the user doesn't see it
     const wrapper = document.createElement('div');
     wrapper.style.cssText = `
       position: absolute;
@@ -73,13 +96,12 @@ export default function DutyCheckPage() {
 
     try {
       showToast('กำลังสร้างรูปภาพ...', 'success');
-      // Give DOM time to update
       await new Promise(r => setTimeout(r, 150));
       
-      const dataUrl = await toJpeg(clone, {
+      const dataUrl = await domToJpeg(clone, {
         quality: 0.9,
         backgroundColor: '#ffffff',
-        pixelRatio: 2,
+        scale: 2,
       });
       
       const isMobile = /Line|Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -92,8 +114,84 @@ export default function DutyCheckPage() {
         link.click();
       }
     } catch (err: any) {
-      console.error('html-to-image error:', err);
+      console.error('modern-screenshot error:', err);
       showToast(`ไม่สามารถสร้างรูปภาพได้: ${err?.message || err}`, 'error');
+    } finally {
+      if (wrapper.parentNode) {
+        wrapper.parentNode.removeChild(wrapper);
+      }
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const originalElement = document.getElementById('print-form-container');
+    if (!originalElement) return;
+
+    const clone = originalElement.cloneNode(true) as HTMLElement;
+    clone.id = 'print-form-container-clone';
+    clone.classList.remove('print-only');
+    
+    clone.style.cssText = `
+      display: block !important;
+      width: 800px !important;
+      background: white !important;
+      margin: 0 !important;
+    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: -9999px;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    `;
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    try {
+      showToast('กำลังสร้าง PDF...', 'success');
+      await new Promise(r => setTimeout(r, 150));
+      
+      const canvasWidth = clone.offsetWidth;
+      const canvasHeight = clone.offsetHeight;
+
+      const dataUrl = await domToJpeg(clone, {
+        quality: 0.9,
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: 'a4',
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvasHeight * pdfWidth) / canvasWidth;
+      
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      
+      const isMobile = /Line|Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile && typeof navigator.canShare === 'function') {
+        const pdfBlob = pdf.output('blob');
+        const file = new File([pdfBlob], `ยอดกำลังพล_${today}.pdf`, { type: 'application/pdf' });
+        try {
+          await navigator.share({
+            files: [file],
+            title: `ยอดกำลังพล ${today}`
+          });
+        } catch (e) {
+          pdf.save(`ยอดกำลังพล_${today}.pdf`);
+        }
+      } else {
+        pdf.save(`ยอดกำลังพล_${today}.pdf`);
+      }
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      showToast(`ไม่สามารถสร้าง PDF ได้: ${err?.message || err}`, 'error');
     } finally {
       if (wrapper.parentNode) {
         wrapper.parentNode.removeChild(wrapper);
@@ -151,53 +249,36 @@ export default function DutyCheckPage() {
   const handleUpdate = (id: string, updates: Partial<KanbanTask>) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   };
+  
   const handleDelete = (id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
   };
+  
   const handleAdd = (t: Omit<KanbanTask, 'id'>) => {
     setTasks(prev => [...prev, { ...t, id: crypto.randomUUID(), date: today }]);
     setShowAdd(false);
   };
 
-  const handleMoveUp = (id: string) => {
-    setTasks(prev => {
-      const idx = prev.findIndex(t => t.id === id);
-      if (idx <= 0) return prev;
-      const newTasks = [...prev];
-      let prevIdx = idx - 1;
-      while (prevIdx >= 0 && newTasks[prevIdx].category !== newTasks[idx].category) {
-        prevIdx--;
-      }
-      if (prevIdx < 0) return prev;
-      const temp = newTasks[idx];
-      newTasks[idx] = newTasks[prevIdx];
-      newTasks[prevIdx] = temp;
-      return newTasks;
-    });
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleMoveDown = (id: string) => {
-    setTasks(prev => {
-      const idx = prev.findIndex(t => t.id === id);
-      if (idx < 0 || idx >= prev.length - 1) return prev;
-      const newTasks = [...prev];
-      let nextIdx = idx + 1;
-      while (nextIdx < newTasks.length && newTasks[nextIdx].category !== newTasks[idx].category) {
-        nextIdx++;
-      }
-      if (nextIdx >= newTasks.length) return prev;
-      const temp = newTasks[idx];
-      newTasks[idx] = newTasks[nextIdx];
-      newTasks[nextIdx] = temp;
-      return newTasks;
-    });
+    if (over && active.id !== over.id) {
+      setTasks((items) => {
+        const oldIndex = items.findIndex((t) => t.id === active.id);
+        const newIndex = items.findIndex((t) => t.id === over.id);
+        
+        // Prevent moving fixed routine tasks into extra categories or vice versa? 
+        // For simplicity, just allow full reordering like a standard Kanban list.
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleSave = async () => {
     if (totalCompany === '') { showToast('กรุณากรอกยอดรวม', 'error'); return; }
     
-    // Optimistic UI: Immediately give user feedback
     showToast('กำลังซิงค์ข้อมูลลง Google Sheets...', 'success');
+    setSaving(true);
     
     try {
       const totalDistributed = tasks.reduce((s, t) => s + getTaskTotal(t), 0);
@@ -206,9 +287,10 @@ export default function DutyCheckPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: today, totalCompany, totalDistributed, remaining: totalCompany - totalDistributed, tasks }),
       });
-      // Silent success since we already showed the optimistic toast
     } catch {
       showToast('เกิดข้อผิดพลาดในการบันทึก โปรดลองใหม่', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -217,97 +299,107 @@ export default function DutyCheckPage() {
   }, [tasks, filter]);
 
   return (
-    <Box sx={{ pb: { xs: 'calc(env(safe-area-inset-bottom) + 100px)', lg: '80px' } }}>
+    <div className="pb-[calc(env(safe-area-inset-bottom)+100px)] lg:pb-[80px]">
       <PrintForm tasks={tasks} date={today} totalCompany={totalCompany} combineCounts={combineCounts} />
-      <>
 
-        <PageHeader
-          title="บันทึกยอดงานประจำวัน"
-          description="ตรวจสอบและจัดการยอดกำลังพลและหน้าที่รับผิดชอบ"
-          action={
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              <IconButton onClick={handleDownloadImage} title="แชร์เป็นรูปภาพ" size="small" color="inherit">
-                <ImageIcon fontSize="small" />
-              </IconButton>
-              <IconButton onClick={() => window.print()} title="พิมพ์แบบฟอร์ม PDF" size="small" color="inherit">
-                <PictureAsPdfIcon fontSize="small" />
-              </IconButton>
-              <IconButton onClick={loadLatest} title="โหลดข้อมูลล่าสุด" size="small" color="inherit">
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-              <Button variant="outlined" size="small" startIcon={<BarChartIcon />} onClick={() => setShowSummary(true)} sx={{ borderRadius: 2, ml: 1, borderColor: 'divider', color: 'text.primary' }}>
-                สรุป
-              </Button>
-              <Button onClick={() => setShowAdd(true)} variant="contained" size="small" startIcon={<AddIcon />} sx={{ borderRadius: 2 }}>เพิ่มงาน</Button>
-            </Box>
-          }
-        />
+      <PageHeader
+        title="บันทึกยอดงานประจำวัน"
+        description="ตรวจสอบและจัดการยอดกำลังพลและหน้าที่รับผิดชอบ"
+        action={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button onClick={handleDownloadImage} title="แชร์เป็นรูปภาพ" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
+              <ImageIcon fontSize="small" />
+            </button>
+            <button onClick={handleDownloadPDF} title="พิมพ์แบบฟอร์ม PDF" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
+              <PictureAsPdfIcon fontSize="small" />
+            </button>
+            <button onClick={loadLatest} title="โหลดข้อมูลล่าสุด" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
+              <RefreshIcon fontSize="small" />
+            </button>
+            <button onClick={() => setShowSummary(true)} className="ml-2 flex h-8 items-center gap-1.5 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <BarChartIcon fontSize="small" /> สรุป
+            </button>
+            <button onClick={() => setShowAdd(true)} className="flex h-8 items-center gap-1.5 rounded-lg bg-sky-600 px-3 text-sm font-bold text-white shadow-sm hover:bg-sky-700">
+              <AddIcon fontSize="small" /> เพิ่มงาน
+            </button>
+          </div>
+        }
+      />
 
-      <Box sx={{ maxWidth: 1200, mx: 'auto', pb: 10 }}>
+      <div className="mx-auto max-w-5xl px-4 pb-24 md:px-6">
         {/* Filter Tabs */}
-        <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5, '::-webkit-scrollbar': { display: 'none' } }}>
-          <Chip
-            size="small"
-            label={`ทั้งหมด (${tasks.length})`}
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
             onClick={() => setFilter('all')}
-            color={filter === 'all' ? 'primary' : 'default'}
-            variant={filter === 'all' ? 'filled' : 'outlined'}
-            sx={{ fontWeight: filter === 'all' ? 600 : 400, fontSize: 12, flexShrink: 0, height: 28, borderRadius: 2 }}
-          />
+            className={`shrink-0 rounded-lg px-3 py-1.5 text-xs transition-colors ${
+              filter === 'all'
+                ? 'bg-sky-600 font-bold text-white shadow-sm'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            ทั้งหมด ({tasks.length})
+          </button>
           {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map(statusKey => {
             const config = STATUS_CONFIG[statusKey];
             const isActive = filter === statusKey;
             const count = tasks.filter(t => t.status === statusKey).length;
             return (
-              <Chip
+              <button
                 key={statusKey}
-                size="small"
-                label={`${config.label} (${count})`}
                 onClick={() => setFilter(statusKey)}
-                sx={{
-                  fontSize: 12,
-                  flexShrink: 0,
-                  height: 28,
-                  borderRadius: 2,
-                  fontWeight: isActive ? 600 : 400,
-                  bgcolor: isActive ? config.bg : 'transparent',
-                  color: isActive ? `${config.color} !important` : 'text.secondary',
-                  borderColor: isActive ? config.color : 'divider',
-                  borderWidth: 1,
-                  borderStyle: 'solid'
+                className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                  isActive ? 'font-bold' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                style={{
+                  backgroundColor: isActive ? config.bg : undefined,
+                  borderColor: isActive ? config.color : '#e5e7eb',
+                  color: isActive ? config.color : undefined,
                 }}
-              />
+              >
+                {config.label} ({count})
+              </button>
             );
           })}
-        </Box>
+        </div>
 
         {/* Task List */}
         {loading ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {[1, 2, 3, 4].map(i => <Box key={i} className="skeleton" sx={{ height: 120, borderRadius: 3 }} />)}
-          </Box>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-[120px] animate-pulse rounded-xl bg-gray-200" />
+            ))}
+          </div>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="flex flex-col">
             {filteredTasks.length === 0 ? (
-              <Typography sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
+              <div className="py-10 text-center text-gray-500">
                 ไม่พบงานในสถานะนี้
-              </Typography>
+              </div>
             ) : (
-              filteredTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
-                  combineCounts={combineCounts}
-                  onMoveUp={handleMoveUp}
-                  onMoveDown={handleMoveDown}
-                />
-              ))
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={filteredTasks.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredTasks.map(task => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onUpdate={handleUpdate}
+                      onDelete={handleDelete}
+                      combineCounts={combineCounts}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
-          </Box>
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* Headcount Footer */}
       <HeadcountFooter
@@ -322,40 +414,56 @@ export default function DutyCheckPage() {
       {showAdd && <AddTaskModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
       {showSummary && <SummaryModal onClose={() => setShowSummary(false)} totalCompany={totalCompany} tasks={tasks} combineCounts={combineCounts} />}
       
+      {/* Preview Image Modal */}
       {previewImage && (
-        <Dialog open={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>แตะค้างที่รูปเพื่อบันทึกหรือส่งต่อ</Typography>
-            <IconButton onClick={() => setPreviewImage(null)} size="small"><CloseIcon /></IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
-            <img src={previewImage} alt="Preview" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid oklch(0 0 0 / 0.1)' }} />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setPreviewImage(null)} color="inherit">ปิด</Button>
-            <Button variant="contained" onClick={async () => {
-              try {
-                if (navigator.share) {
-                  const blob = await (await fetch(previewImage)).blob();
-                  const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
-                  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
-                    return; // Shared successfully
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="flex w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="text-base font-bold text-gray-900">แตะค้างที่รูปเพื่อบันทึกหรือส่งต่อ</h2>
+              <button onClick={() => setPreviewImage(null)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100">
+                <CloseIcon fontSize="small" />
+              </button>
+            </div>
+            
+            <div className="bg-gray-100 p-6 text-center">
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                className="max-h-[60vh] max-w-full rounded-lg border border-black/10 object-contain shadow-md"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2 rounded-b-2xl bg-gray-50 px-6 py-4">
+              <button onClick={() => setPreviewImage(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">
+                ปิด
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    if (navigator.share) {
+                      const blob = await (await fetch(previewImage)).blob();
+                      const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
+                        return;
+                      }
+                    }
+                  } catch (e) {
+                    console.log('Share failed', e);
                   }
-                }
-              } catch (e) {
-                console.log('Share failed', e);
-              }
-              // Fallback to regular download if share fails or is not supported
-              const link = document.createElement('a');
-              link.download = `ยอดกำลังพล_${today}.jpg`;
-              link.href = previewImage;
-              link.click();
-            }}>แชร์ / ดาวน์โหลด</Button>
-          </DialogActions>
-        </Dialog>
+                  const link = document.createElement('a');
+                  link.download = `ยอดกำลังพล_${today}.jpg`;
+                  link.href = previewImage;
+                  link.click();
+                }}
+                className="rounded-lg bg-sky-600 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-sky-700"
+              >
+                แชร์ / ดาวน์โหลด
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-      </>
-    </Box>
+    </div>
   );
 }

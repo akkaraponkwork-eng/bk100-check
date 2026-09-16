@@ -39,11 +39,12 @@ const getCachedBotSettings = unstable_cache(
         leaveEnabled: String(settings['leaveEnabled']).toLowerCase() !== 'false',
         complaintsEnabled: String(settings['complaintsEnabled']).toLowerCase() !== 'false',
         combineKanbanCounts: String(settings['combineKanbanCounts']).toLowerCase() === 'true',
-        adminEmail: settings['adminEmail'] || ''
+        adminEmail: settings['adminEmail'] || '',
+        autoDutyTime: settings['autoDutyTime'] || '12:00'
       };
     } catch (e: any) {
       if (e.message && e.message.includes('Unable to parse range')) {
-        return { groupId: '', alertTimes: [], leaveEnabled: true, complaintsEnabled: true, combineKanbanCounts: false, adminEmail: '', error: 'Please create a sheet named "BotSettings"' };
+        return { groupId: '', alertTimes: [], leaveEnabled: true, complaintsEnabled: true, combineKanbanCounts: false, adminEmail: '', autoDutyTime: '12:00', error: 'Please create a sheet named "BotSettings"' };
       }
       throw e;
     }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { groupId, alertTimes, leaveEnabled, complaintsEnabled, combineKanbanCounts, adminEmail } = body;
+    const { groupId, alertTimes, leaveEnabled, complaintsEnabled, combineKanbanCounts, adminEmail, autoDutyTime } = body;
     
     const { auth, sheetId } = getSheetAuth();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     const finalComplaintsEnabled = complaintsEnabled !== undefined ? String(complaintsEnabled) : (existingSettings['complaintsEnabled'] || 'true');
     const finalCombineKanbanCounts = combineKanbanCounts !== undefined ? String(combineKanbanCounts) : (existingSettings['combineKanbanCounts'] || 'false');
     const finalAdminEmail = adminEmail !== undefined ? adminEmail : (existingSettings['adminEmail'] || '');
+    const finalAutoDutyTime = autoDutyTime !== undefined ? autoDutyTime : (existingSettings['autoDutyTime'] || '12:00');
 
     const values = [
       ['groupId', finalGroupId],
@@ -102,12 +104,13 @@ export async function POST(request: NextRequest) {
       ['complaintsEnabled', finalComplaintsEnabled],
       ['combineKanbanCounts', finalCombineKanbanCounts],
       ['adminEmail', finalAdminEmail],
+      ['autoDutyTime', finalAutoDutyTime],
     ];
 
     try {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
-        range: 'BotSettings!A1:B6',
+        range: 'BotSettings!A1:B7',
         valueInputOption: 'USER_ENTERED',
         requestBody: { values }
       });
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
         });
         await sheets.spreadsheets.values.update({
           spreadsheetId: sheetId,
-          range: 'BotSettings!A1:B6',
+          range: 'BotSettings!A1:B7',
           valueInputOption: 'USER_ENTERED',
           requestBody: { values }
         });
@@ -131,7 +134,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    revalidateTag('bot-settings');
+    revalidateTag('bot-settings', undefined as any);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error saving bot settings:', error);

@@ -35,24 +35,11 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
   const isMorning = new Date().getHours() < 12;
   const shiftText = isMorning ? 'ยอดจ่ายงานเช้า' : 'ยอดจ่ายงานบ่าย';
 
-  // Routine tasks mapping (always render all 11 fixed rows)
-  const routineList = ROUTINE_TITLES.map(title => {
-    const t = tasks.find(x => x.title === title);
-    return {
-      title,
-      location: t?.location || '',
-      countSenior: t?.countSenior !== undefined && t?.countSenior !== '' ? Number(t.countSenior) : '',
-      countJunior: t?.countJunior !== undefined && t?.countJunior !== '' ? Number(t.countJunior) : '',
-      count: t?.count !== undefined && t?.count !== '' ? Number(t.count) : '',
-      total: t ? getTaskTotal(t) : 0,
-      remark: t?.remark || '',
-    };
-  });
-
-  // Extra routine tasks (user added as รปจ but not in fixed titles)
-  const extraRoutineList = tasks
-    .filter(t => t.category === 'รปจ' && !ROUTINE_TITLES.includes(t.title))
+  // Routine tasks mapping (preserve order from 'tasks' array)
+  const combinedRoutineList = tasks
+    .filter(t => t.category === 'รปจ' || ROUTINE_TITLES.includes(t.title))
     .map(t => ({
+      id: t.id,
       title: t.title,
       location: t.location || '',
       countSenior: t.countSenior !== undefined && t.countSenior !== '' ? Number(t.countSenior) : '',
@@ -61,8 +48,6 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
       total: getTaskTotal(t),
       remark: t.remark || '',
     }));
-
-  const combinedRoutineList = [...routineList, ...extraRoutineList];
 
   // Other/Outside tasks mapping
   const otherTasksList = tasks.filter(t => t.category !== 'รปจ' && !ROUTINE_TITLES.includes(t.title));
@@ -79,7 +64,7 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
         margin: '0 auto',
         padding: '24px 32px',
         backgroundColor: '#ffffff',
-        fontFamily: '"TH Sarabun PSK", "THSarabunNew", "Sarabun", sans-serif',
+        fontFamily: 'var(--font-sans), "TH Sarabun PSK", "THSarabunNew", sans-serif',
         color: '#000000',
         boxSizing: 'border-box',
       }}
@@ -95,7 +80,6 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
         .official-table {
           width: 100%;
           border-collapse: collapse;
-          border: 2px solid #000000;
           font-size: 14px;
           color: #000000;
         }
@@ -103,6 +87,18 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
           border: 1px solid #000000;
           padding: 5px 8px;
           vertical-align: middle;
+        }
+        .official-table thead tr:first-child th {
+          border-top: 2px solid #000000;
+        }
+        .official-table tbody tr:last-child td {
+          border-bottom: 2px solid #000000;
+        }
+        .official-table th:first-child, .official-table td:first-child {
+          border-left: 2px solid #000000;
+        }
+        .official-table th:last-child, .official-table td:last-child {
+          border-right: 2px solid #000000;
         }
         .official-table th {
           font-weight: bold;
@@ -146,7 +142,7 @@ export default function PrintForm({ tasks, date, totalCompany, combineCounts }: 
         <tbody>
           {/* Routine Rows */}
           {combinedRoutineList.map((r, i) => (
-            <tr key={`${r.title}-${i}`}>
+            <tr key={`${r.id || r.title}-${i}`}>
               <td style={{ textAlign: 'left' }}>{r.title}</td>
               <td style={{ textAlign: 'left' }}>{r.location}</td>
               {combineCounts ? (
