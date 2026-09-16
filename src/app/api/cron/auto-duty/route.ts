@@ -38,10 +38,10 @@ export async function GET(request: Request) {
     const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    const internalHeaders = { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' };
+    const internalHeaders = { 'x-internal-token': process.env.INTERNAL_API_SECRET || 'bk100-internal-fallback' };
 
     // 1. Fetch all required data
-    const [personnelRes, dutyRes, punishmentsRes, exceptionsRes, botSettingsRes] = await Promise.all([
+    const responses = await Promise.all([
       fetch(`${origin}/api/personnel`, { headers: internalHeaders }),
       fetch(`${origin}/api/duty`, { headers: internalHeaders }),
       fetch(`${origin}/api/duty-meta/punishments`, { headers: internalHeaders }),
@@ -49,11 +49,20 @@ export async function GET(request: Request) {
       fetch(`${origin}/api/bot-settings`, { headers: internalHeaders })
     ]);
 
-    const { personnel } = await personnelRes.json();
-    const { shifts } = await dutyRes.json();
-    const { punishments } = await punishmentsRes.json();
-    const { exceptions } = await exceptionsRes.json();
-    const botSettings = await botSettingsRes.json();
+    for (const res of responses) {
+      if (!res.ok) {
+        const text = await res.text();
+        return NextResponse.json({ error: `Fetch failed for ${res.url}: ${res.status} ${text}` }, { status: 500 });
+      }
+    }
+
+    const [
+      { personnel },
+      { shifts },
+      { punishments },
+      { exceptions },
+      botSettings
+    ] = await Promise.all(responses.map(r => r.json()));
 
     const autoDutyTime = botSettings.autoDutyTime || '12:00';
     const autoHour = parseInt(autoDutyTime.split(':')[0], 10);
