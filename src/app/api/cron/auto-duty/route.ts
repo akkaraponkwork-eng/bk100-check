@@ -44,8 +44,7 @@ export async function GET(request: Request) {
     const responses = await Promise.all([
       fetch(`${origin}/api/personnel`, { headers: internalHeaders }),
       fetch(`${origin}/api/duty`, { headers: internalHeaders }),
-      fetch(`${origin}/api/duty-meta/punishments`, { headers: internalHeaders }),
-      fetch(`${origin}/api/duty-meta/exceptions`, { headers: internalHeaders }),
+      fetch(`${origin}/api/duty-meta`, { headers: internalHeaders }),
       fetch(`${origin}/api/bot-settings`, { headers: internalHeaders })
     ]);
 
@@ -59,8 +58,7 @@ export async function GET(request: Request) {
     const [
       { personnel },
       { shifts },
-      { punishments },
-      { exceptions },
+      { punishments, exceptions },
       botSettings
     ] = await Promise.all(responses.map(r => r.json()));
 
