@@ -66,13 +66,15 @@ export async function GET(request: Request) {
     const autoHour = parseInt(autoDutyTime.split(':')[0], 10);
     const currentHour = today.getHours();
 
-    if (currentHour !== autoHour) {
+    const isPreview = request.nextUrl.searchParams.get('preview') === 'true';
+
+    if (!isPreview && currentHour !== autoHour) {
       return NextResponse.json({ message: `Not the scheduled time. Scheduled for ${autoHour}:00 (BKK), Current hour is ${currentHour}:00 (BKK)` });
     }
 
     // Check if duty for today already exists
     const existingShift = shifts?.find((s: any) => s.date === todayStr);
-    if (existingShift && existingShift.timeSlots?.length > 0 && existingShift.timeSlots.some((s: any) => s.personnelId)) {
+    if (!isPreview && existingShift && existingShift.timeSlots?.length > 0 && existingShift.timeSlots.some((s: any) => s.personnelId)) {
       return NextResponse.json({ message: 'Duty for today already exists' });
     }
 
@@ -81,7 +83,8 @@ export async function GET(request: Request) {
     const punishedIds = Array.from(new Set(todayPunishments.map((p: any) => p.personnelId)));
 
     const isPersonnelAvailable = (p: any, dateStr: string, exceptionsList: any[]) => {
-      const exc = exceptionsList.find((e: any) => e.personnelId === p.id && e.startDate <= dateStr && e.endDate >= dateStr);
+      if (p.status !== 'available') return false;
+      const exc = exceptionsList.find((e: any) => e.personnelId === p.id && e.startDate <= dateStr && e.endDate >= dateStr && e.reason !== 'ผู้ช่วยสิบเวร');
       return !exc;
     };
 
@@ -193,97 +196,101 @@ export async function GET(request: Request) {
     };
 
     // 6. Save directly to Google Sheets (Bypassing requirePermission inside POST /api/duty)
-    const { auth, sheetId } = getSheetAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
+    if (!isPreview) {
+      const { auth, sheetId } = getSheetAuth();
+      const sheets = google.sheets({ version: 'v4', auth });
 
-    // Update Duty Sheet
-    const getDutyRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: 'Duty!A2:B',
-    });
-    const dutyRows = getDutyRes.data.values || [];
-    const rowIndex = dutyRows.findIndex(r => r[0] === newShift.date);
+      // Update Duty Sheet
+      const getDutyRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: sheetId,
+        range: 'Duty!A2:B',
+      });
+      const dutyRows = getDutyRes.data.values || [];
+      const rowIndex = dutyRows.findIndex((r: any) => r[0] === newShift.date);
 
-    if (rowIndex !== -1) {
+      if (rowIndex !== -1) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: sheetId,
+          range: `Duty!A${rowIndex + 2}:B${rowIndex + 2}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [[newShift.date, newShift.location]] }
+        });
+      } else {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: sheetId,
+          range: 'Duty!A:B',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [[newShift.date, newShift.location]] }
+        });
+      }
+
+      // Update DutySlots Sheet
+      let slotRows: string[][] = [];
+      try {
+        const slotRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheetId,
+          range: 'DutySlots!A2:H',
+        });
+        slotRows = slotRes.data.values || [];
+      } catch {}
+
+      const otherSlots = slotRows.filter((r: any) => r[1] !== newShift.date);
+      const newSlots = newShift.timeSlots.map((slot: any, index: number) => [
+        crypto.randomUUID(),
+        newShift.date,
+        slot.start,
+        slot.end,
+        slot.personnelId,
+        slot.customName || '',
+        String(index),
+        String(slot.isPunishment || false)
+      ]);
+
+      const allSlotsToSave = [...otherSlots, ...newSlots];
+
+      try {
+        await sheets.spreadsheets.values.clear({
+          spreadsheetId: sheetId,
+          range: 'DutySlots!A2:H',
+        });
+      } catch {}
+
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
-        range: `Duty!A${rowIndex + 2}:B${rowIndex + 2}`,
+        range: 'DutySlots!A2',
         valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [[newShift.date, newShift.location]] }
-      });
-    } else {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: 'Duty!A:B',
-        valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [[newShift.date, newShift.location]] }
+        requestBody: { values: allSlotsToSave }
       });
     }
 
-    // Update DutySlots Sheet
-    let slotRows: string[][] = [];
-    try {
-      const slotRes = await sheets.spreadsheets.values.get({
-        spreadsheetId: sheetId,
-        range: 'DutySlots!A2:H',
-      });
-      slotRows = slotRes.data.values || [];
-    } catch {}
-
-    const otherSlots = slotRows.filter(r => r[1] !== newShift.date);
-    const newSlots = newShift.timeSlots.map((slot, index) => [
-      crypto.randomUUID(),
-      newShift.date,
-      slot.start,
-      slot.end,
-      slot.personnelId,
-      slot.customName || '',
-      String(index),
-      String(slot.isPunishment || false)
-    ]);
-
-    const allSlotsToSave = [...otherSlots, ...newSlots];
-
-    try {
-      await sheets.spreadsheets.values.clear({
-        spreadsheetId: sheetId,
-        range: 'DutySlots!A2:H',
-      });
-    } catch {}
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: 'DutySlots!A2',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: allSlotsToSave }
-    });
-
-    // 7. Notification
-    try {
-      const settingsRes = await fetch(`${origin}/api/bot-settings`, {
-        headers: { 'x-internal-token': process.env.INTERNAL_API_SECRET || '' }
-      });
-      const settings = await settingsRes.json();
-      
-      if (settings.groupId) {
-        const getPersonnelName = (id: string) => {
-          const p = personnel.find((x: any) => x.id === id);
-          return p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ระบุ';
+    if (isPreview) {
+      // เพิ่มชื่อเข้าไปใน timeSlots สำหรับการแสดงผล Preview
+      const slotsWithNames = newShift.timeSlots.map((slot: any) => {
+        const p = availableNotPunished.find((avail: any) => avail.id === slot.personnelId) || personnel.find((px: any) => px.id === slot.personnelId);
+        return {
+          ...slot,
+          name: p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ระบุ'
         };
+      });
 
-        const dDate = new Date(newShift.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
-        let summaryText = `[อัตโนมัติ] ขออนุญาตแจ้งเวร${newShift.location} ประจำวันที่ ${dDate}\n`;
-        const slots = newShift.timeSlots || [];
-        slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
-          const name = slot.customName || getPersonnelName(slot.personnelId);
-          summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
-        });
-        summaryText += 'ครับ';
-
-        await pushLineMessage(settings.groupId, [{ type: 'text', text: summaryText }]);
-      }
-    } catch (e) {
-      console.error('Failed to notify duty update:', e);
+      return NextResponse.json({
+        success: true,
+        message: 'Preview mode: Duty auto-assigned successfully (not saved)',
+        newShift: {
+          ...newShift,
+          timeSlots: slotsWithNames
+        },
+        debug: {
+          availablePersonnel: availableNotPunished.map((p: any) => ({
+            id: p.id,
+            name: `${p.rank}${p.firstName} ${p.lastName}`,
+            batch: p.batch,
+            num: p.num
+          })),
+          punishedIds,
+          lastAssignedId
+        }
+      });
     }
 
     return NextResponse.json({ success: true, message: 'Duty auto-assigned successfully', newShift });

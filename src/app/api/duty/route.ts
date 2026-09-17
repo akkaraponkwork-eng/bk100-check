@@ -195,38 +195,7 @@ export async function POST(request: Request) {
     // @ts-expect-error: Next.js types incorrectly expect 2 arguments
     revalidateTag('duty');
 
-    // Optional Notification (Triggered if client requests it)
-    if (request.headers.get('x-notify-line') === 'true') {
-      try {
-        const origin = new URL(request.url).origin;
-        const getRes = await fetch(`${origin}/api/bot-settings`);
-        const settings = await getRes.json();
-        
-        if (settings.groupId) {
-          const personnelRes = await fetch(`${origin}/api/personnel`);
-          const personnelData = await personnelRes.json();
-          const personnelList = personnelData.personnel || [];
-          
-          const getPersonnelName = (id: string) => {
-            const p = personnelList.find((x: any) => x.id === id);
-            return p ? `${p.rank}${p.firstName} ${p.lastName}` : 'ไม่ระบุ';
-          };
 
-          const dDate = new Date(shift.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
-          let summaryText = `ขออนุญาตแจ้งเวร${shift.location}ประจำวันที่ ${dDate}\n`;
-          const slots = shift.timeSlots || [];
-          slots.sort((a: any, b: any) => a.order - b.order).forEach((slot: any, index: number) => {
-            const name = slot.customName || getPersonnelName(slot.personnelId);
-            summaryText += `${index + 1}.${name}\n${slot.start}-${slot.end}\n`;
-          });
-          summaryText += 'ครับ';
-
-          await pushLineMessage(settings.groupId, [{ type: 'text', text: summaryText }]);
-        }
-      } catch (e) {
-        console.error('Failed to notify duty update:', e);
-      }
-    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
