@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -8,6 +8,8 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import type { KanbanTask } from '@/types';
 
 type TaskStatus = KanbanTask['status'];
@@ -25,9 +27,13 @@ interface TaskCardProps {
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void;
   onDelete: (id: string) => void;
   combineCounts?: boolean;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, combineCounts, onMoveUp, onMoveDown, isFirst, isLast }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -36,6 +42,14 @@ export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: Ta
     transition,
     isDragging,
   } = useSortable({ id: task.id });
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -53,14 +67,33 @@ export default function TaskCard({ task, onUpdate, onDelete, combineCounts }: Ta
       }`}
     >
       <div className="flex items-start gap-2">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="mt-1 flex cursor-grab items-center justify-center p-1 text-gray-400 hover:text-gray-600 active:cursor-grabbing"
-        >
-          <DragIndicatorIcon fontSize="small" />
-        </div>
+        {/* Drag Handle or Reorder Buttons */}
+        {isMobile ? (
+          <div className="mt-1 flex flex-col items-center justify-center gap-1 text-gray-400">
+            <button 
+              onClick={() => onMoveUp && onMoveUp(task.id)} 
+              disabled={isFirst}
+              className={`flex h-6 w-6 items-center justify-center rounded border border-gray-200 hover:bg-gray-100 ${isFirst ? 'opacity-30 cursor-not-allowed' : 'hover:text-sky-600'}`}
+            >
+              <KeyboardArrowUpIcon fontSize="small" />
+            </button>
+            <button 
+              onClick={() => onMoveDown && onMoveDown(task.id)} 
+              disabled={isLast}
+              className={`flex h-6 w-6 items-center justify-center rounded border border-gray-200 hover:bg-gray-100 ${isLast ? 'opacity-30 cursor-not-allowed' : 'hover:text-sky-600'}`}
+            >
+              <KeyboardArrowDownIcon fontSize="small" />
+            </button>
+          </div>
+        ) : (
+          <div
+            {...attributes}
+            {...listeners}
+            className="mt-1 flex cursor-grab items-center justify-center p-1 text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+          >
+            <DragIndicatorIcon fontSize="small" />
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
           <h3 className="mb-1 text-[15px] font-bold leading-snug text-gray-900">{task.title}</h3>

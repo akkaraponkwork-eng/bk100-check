@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, parseISO } from 'date-fns';
+import { th } from 'date-fns/locale';
 import type { KanbanTask } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -10,6 +11,10 @@ import ImageIcon from '@mui/icons-material/Image';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { domToJpeg } from 'modern-screenshot';
 import { jsPDF } from 'jspdf';
 
@@ -42,12 +47,17 @@ const DEFAULT_TASKS: Omit<KanbanTask, 'id' | 'date'>[] = ROUTINE_TITLES.map(titl
   title, category: 'รปจ', location: '', count: '', countSenior: '', countJunior: '', status: 'todo', isFixed: true
 }));
 
+type ViewMode = 'calendar' | 'kanban';
+
 export default function DutyCheckPage() {
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [recordsList, setRecordsList] = useState<any[]>([]);
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [totalCompany, setTotalCompany] = useState<number | ''>('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -66,6 +76,74 @@ export default function DutyCheckPage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const loadRecordsList = useCallback(async () => {
+    try {
+      const res = await fetch('/api/records', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.records) setRecordsList(data.records);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      loadRecordsList();
+    }
+  }, [viewMode, loadRecordsList]);
+
+  const loadDateData = useCallback(async (date: string) => {
+    setLoading(true);
+    try {
+      const [dateRes, botRes] = await Promise.all([
+        fetch(`/api/records?date=${date}`, { cache: 'no-store' }),
+        fetch('/api/bot-settings', { cache: 'no-store' })
+      ]);
+
+      if (botRes.ok) {
+        const botData = await botRes.json();
+        setCombineCounts(botData.combineKanbanCounts === true);
+      }
+
+      const dateData = await dateRes.json();
+      if (dateData.record) {
+        const r = dateData.record;
+        setTotalCompany(r.totalCompany);
+        setTasks(r.tasks.map((t: KanbanTask) => ({ ...t, id: t.id || crypto.randomUUID() })));
+      } else {
+        // No data for this date — pre-fill from latest record (carry over counts from evening)
+        const latestRes = await fetch('/api/records?latest=true', { cache: 'no-store' });
+        const latestData = await latestRes.json();
+        if (latestData.record) {
+          setTotalCompany(latestData.record.totalCompany);
+          const routineTasks = latestData.record.tasks.filter((t: KanbanTask) => t.isFixed);
+          const baseTasks = routineTasks.length > 0 ? routineTasks : DEFAULT_TASKS;
+          const templateTasks: KanbanTask[] = baseTasks.map((t: any) => ({
+            ...t,
+            id: crypto.randomUUID(),
+            status: 'todo' as TaskStatus,
+            date: date,
+            isFixed: true,
+          }));
+          setTasks(templateTasks);
+        } else {
+          setTotalCompany('');
+          setTasks(DEFAULT_TASKS.map(t => ({ ...t, id: crypto.randomUUID(), date: date })));
+        }
+      }
+    } catch {
+      setTasks(DEFAULT_TASKS.map(t => ({ ...t, id: crypto.randomUUID(), date: date })));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSelectDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setViewMode('kanban');
+    loadDateData(dateStr);
+  };
 
   const handleDownloadImage = async () => {
     const originalElement = document.getElementById('print-form-container');
@@ -109,7 +187,7 @@ export default function DutyCheckPage() {
         setPreviewImage(dataUrl);
       } else {
         const link = document.createElement('a');
-        link.download = `ยอดกำลังพล_${today}.jpg`;
+        link.download = `ยอดกำลังพล_${selectedDate}.jpg`;
         link.href = dataUrl;
         link.click();
       }
@@ -177,17 +255,17 @@ export default function DutyCheckPage() {
       const isMobile = /Line|Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobile && typeof navigator.canShare === 'function') {
         const pdfBlob = pdf.output('blob');
-        const file = new File([pdfBlob], `ยอดกำลังพล_${today}.pdf`, { type: 'application/pdf' });
+        const file = new File([pdfBlob], `ยอดกำลังพล_${selectedDate}.pdf`, { type: 'application/pdf' });
         try {
           await navigator.share({
             files: [file],
-            title: `ยอดกำลังพล ${today}`
+            title: `ยอดกำลังพล ${selectedDate}`
           });
         } catch (e) {
-          pdf.save(`ยอดกำลังพล_${today}.pdf`);
+          pdf.save(`ยอดกำลังพล_${selectedDate}.pdf`);
         }
       } else {
-        pdf.save(`ยอดกำลังพล_${today}.pdf`);
+        pdf.save(`ยอดกำลังพล_${selectedDate}.pdf`);
       }
     } catch (err: any) {
       console.error('PDF generation error:', err);
@@ -199,53 +277,6 @@ export default function DutyCheckPage() {
     }
   };
 
-  const loadLatest = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [todayRes, botRes] = await Promise.all([
-        fetch(`/api/records?date=${today}`, { cache: 'no-store' }),
-        fetch('/api/bot-settings', { cache: 'no-store' })
-      ]);
-
-      if (botRes.ok) {
-        const botData = await botRes.json();
-        setCombineCounts(botData.combineKanbanCounts === true);
-      }
-
-      const todayData = await todayRes.json();
-      if (todayData.record) {
-        const r = todayData.record;
-        setTotalCompany(r.totalCompany);
-        setTasks(r.tasks.map((t: KanbanTask) => ({ ...t, id: t.id || crypto.randomUUID() })));
-      } else {
-        const latestRes = await fetch('/api/records?latest=true');
-        const latestData = await latestRes.json();
-        if (latestData.record) {
-          setTotalCompany(latestData.record.totalCompany);
-          const routineTasks = latestData.record.tasks.filter((t: KanbanTask) => t.isFixed);
-          const baseTasks = routineTasks.length > 0 ? routineTasks : DEFAULT_TASKS;
-          const templateTasks: KanbanTask[] = baseTasks.map((t: any) => ({
-            ...t,
-            id: crypto.randomUUID(),
-            count: '', countSenior: '', countJunior: '',
-            status: 'todo' as TaskStatus,
-            date: today,
-            isFixed: true,
-          }));
-          setTasks(templateTasks);
-        } else {
-          setTasks(DEFAULT_TASKS.map(t => ({ ...t, id: crypto.randomUUID(), date: today })));
-        }
-      }
-    } catch {
-      setTasks(DEFAULT_TASKS.map(t => ({ ...t, id: crypto.randomUUID(), date: today })));
-    } finally {
-      setLoading(false);
-    }
-  }, [today]);
-
-  useEffect(() => { loadLatest(); }, [loadLatest]);
-
   const handleUpdate = (id: string, updates: Partial<KanbanTask>) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   };
@@ -255,23 +286,35 @@ export default function DutyCheckPage() {
   };
   
   const handleAdd = (t: Omit<KanbanTask, 'id'>) => {
-    setTasks(prev => [...prev, { ...t, id: crypto.randomUUID(), date: today }]);
+    setTasks(prev => [...prev, { ...t, id: crypto.randomUUID(), date: selectedDate }]);
     setShowAdd(false);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (over && active.id !== over.id) {
       setTasks((items) => {
         const oldIndex = items.findIndex((t) => t.id === active.id);
         const newIndex = items.findIndex((t) => t.id === over.id);
-        
-        // Prevent moving fixed routine tasks into extra categories or vice versa? 
-        // For simplicity, just allow full reordering like a standard Kanban list.
         return arrayMove(items, oldIndex, newIndex);
       });
     }
+  };
+
+  const handleMoveUp = (id: string) => {
+    setTasks((items) => {
+      const index = items.findIndex((t) => t.id === id);
+      if (index > 0) return arrayMove(items, index, index - 1);
+      return items;
+    });
+  };
+
+  const handleMoveDown = (id: string) => {
+    setTasks((items) => {
+      const index = items.findIndex((t) => t.id === id);
+      if (index < items.length - 1) return arrayMove(items, index, index + 1);
+      return items;
+    });
   };
 
   const handleSave = async () => {
@@ -285,8 +328,9 @@ export default function DutyCheckPage() {
       await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: today, totalCompany, totalDistributed, remaining: totalCompany - totalDistributed, tasks }),
+        body: JSON.stringify({ date: selectedDate, totalCompany, totalDistributed, remaining: totalCompany - totalDistributed, tasks }),
       });
+      showToast('บันทึกสำเร็จ', 'success');
     } catch {
       showToast('เกิดข้อผิดพลาดในการบันทึก โปรดลองใหม่', 'error');
     } finally {
@@ -298,22 +342,105 @@ export default function DutyCheckPage() {
     return filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
   }, [tasks, filter]);
 
+  // Calendar rendering logic
+  const renderCalendar = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    const days = eachDayOfInterval({ start, end });
+    const firstDayOfWeek = getDay(start);
+    const blanks = Array.from({ length: firstDayOfWeek });
+
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mb-6 flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-sky-700">
+            <CalendarMonthIcon />
+            <h1 className="text-xl font-bold">เลือกวันที่ปฏิบัติงาน</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+              className="rounded-full p-2 hover:bg-gray-100"
+            >
+              <ChevronLeftIcon />
+            </button>
+            <span className="min-w-[120px] text-center font-semibold text-gray-700">
+              {format(currentMonth, 'MMMM yyyy', { locale: th })}
+            </span>
+            <button
+              onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+              className="rounded-full p-2 hover:bg-gray-100"
+            >
+              <ChevronRightIcon />
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-sm font-semibold text-gray-500">
+            {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(d => (
+              <div key={d} className="py-2">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {blanks.map((_, i) => (
+              <div key={`blank-${i}`} className="aspect-square" />
+            ))}
+            {days.map(day => {
+              const dateStr = format(day, 'yyyy-MM-dd');
+              const hasData = recordsList.some(r => r.date === dateStr);
+              const isTodayDate = isToday(day);
+
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => handleSelectDate(dateStr)}
+                  className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 transition-all hover:bg-gray-50 active:scale-95 ${
+                    isTodayDate ? 'border-sky-500 font-bold text-sky-700' : 'border-transparent text-gray-700 hover:border-gray-200'
+                  }`}
+                >
+                  <span className="text-lg">{format(day, 'd')}</span>
+                  {hasData && (
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (viewMode === 'calendar') {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <PageHeader title="บันทึกยอดงานประจำวัน" description="เลือกวันที่เพื่อจัดการยอดกำลังพล" />
+        {renderCalendar()}
+      </div>
+    );
+  }
+
+  // Kanban view
   return (
     <div className="pb-[calc(env(safe-area-inset-bottom)+100px)] lg:pb-[80px]">
-      <PrintForm tasks={tasks} date={today} totalCompany={totalCompany} combineCounts={combineCounts} />
+      <PrintForm tasks={tasks} date={selectedDate} totalCompany={totalCompany} combineCounts={combineCounts} />
 
       <PageHeader
-        title="บันทึกยอดงานประจำวัน"
+        title={`ยอดกำลังพล: ${format(parseISO(selectedDate), 'd MMMM yyyy', { locale: th })}`}
         description="ตรวจสอบและจัดการยอดกำลังพลและหน้าที่รับผิดชอบ"
         action={
           <div className="flex flex-wrap items-center gap-1.5">
+            <button onClick={() => setViewMode('calendar')} title="กลับไปหน้าปฏิทิน" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
+              <ArrowBackIcon fontSize="small" />
+            </button>
             <button onClick={handleDownloadImage} title="แชร์เป็นรูปภาพ" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
               <ImageIcon fontSize="small" />
             </button>
             <button onClick={handleDownloadPDF} title="พิมพ์แบบฟอร์ม PDF" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
               <PictureAsPdfIcon fontSize="small" />
             </button>
-            <button onClick={loadLatest} title="โหลดข้อมูลล่าสุด" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
+            <button onClick={() => loadDateData(selectedDate)} title="โหลดข้อมูลล่าสุด" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100">
               <RefreshIcon fontSize="small" />
             </button>
             <button onClick={() => setShowSummary(true)} className="ml-2 flex h-8 items-center gap-1.5 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
@@ -385,13 +512,17 @@ export default function DutyCheckPage() {
                   items={filteredTasks.map((t) => t.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {filteredTasks.map(task => (
+                  {filteredTasks.map((task, index) => (
                     <TaskCard
                       key={task.id}
                       task={task}
                       onUpdate={handleUpdate}
                       onDelete={handleDelete}
                       combineCounts={combineCounts}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      isFirst={index === 0}
+                      isLast={index === filteredTasks.length - 1}
                     />
                   ))}
                 </SortableContext>
@@ -442,9 +573,9 @@ export default function DutyCheckPage() {
                   try {
                     if (navigator.share) {
                       const blob = await (await fetch(previewImage)).blob();
-                      const file = new File([blob], `ยอดกำลังพล_${today}.jpg`, { type: 'image/jpeg' });
+                      const file = new File([blob], `ยอดกำลังพล_${selectedDate}.jpg`, { type: 'image/jpeg' });
                       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], title: `ยอดกำลังพล ${today}` });
+                        await navigator.share({ files: [file], title: `ยอดกำลังพล ${selectedDate}` });
                         return;
                       }
                     }
@@ -452,7 +583,7 @@ export default function DutyCheckPage() {
                     console.log('Share failed', e);
                   }
                   const link = document.createElement('a');
-                  link.download = `ยอดกำลังพล_${today}.jpg`;
+                  link.download = `ยอดกำลังพล_${selectedDate}.jpg`;
                   link.href = previewImage;
                   link.click();
                 }}
