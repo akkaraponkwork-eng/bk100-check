@@ -392,6 +392,21 @@ export async function POST(request: NextRequest) {
                       uri: 'https://meterbill-bk100.vercel.app/'
                     }
                   }
+                },
+                {
+                  type: 'bubble',
+                  hero: {
+                    type: 'image',
+                    url: `${origin}/images/link_doc.png?v=3`,
+                    size: 'full',
+                    aspectRatio: '1:1',
+                    aspectMode: 'cover',
+                    action: {
+                      type: 'uri',
+                      label: 'คลังเอกสาร',
+                      uri: 'https://bk100-doc.vercel.app/dashboard'
+                    }
+                  }
                 }
               ]
             }
