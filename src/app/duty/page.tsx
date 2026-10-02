@@ -83,9 +83,9 @@ function isPersonnelAvailable(
   exceptions: ExceptionEntry[],
 ): boolean {
   if (p.status !== 'available') return false;
-  // If there's any exception OTHER than 'ผู้ช่วยสิบเวร', they are unavailable
+  // ทุก exception รวมถึง ผู้ช่วยสิบเวร → ถือว่าไม่ว่างสำหรับเวรนั้น
   const ex = exceptions.find(
-    e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date && e.reason !== 'ผู้ช่วยสิบเวร'
+    e => e.personnelId === p.id && e.startDate <= date && e.endDate >= date
   );
   return !ex;
 }

@@ -84,7 +84,8 @@ export async function GET(request: Request) {
 
     const isPersonnelAvailable = (p: any, dateStr: string, exceptionsList: any[]) => {
       if (p.status !== 'available') return false;
-      const exc = exceptionsList.find((e: any) => e.personnelId === p.id && e.startDate <= dateStr && e.endDate >= dateStr && e.reason !== 'ผู้ช่วยสิบเวร');
+      // ทุก exception รวมถึง ผู้ช่วยสิบเวร → ถือว่าไม่ว่างสำหรับเวรนั้น
+      const exc = exceptionsList.find((e: any) => e.personnelId === p.id && e.startDate <= dateStr && e.endDate >= dateStr);
       return !exc;
     };
 
