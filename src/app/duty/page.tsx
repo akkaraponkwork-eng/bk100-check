@@ -1194,7 +1194,7 @@ export default function DutyPage() {
           else {
             const lastPerson = allPersonnel.find(p => p.id === lastAssignedId);
             if (lastPerson) {
-              const nextIdx = available.findIndex(p => (p.num || 0) > (lastPerson.num || 0));
+              const nextIdx = available.findIndex(p => sortPersonnelByBatchAndNum(p, lastPerson) > 0);
               pointer = nextIdx !== -1 ? nextIdx : 0;
             }
           }

@@ -52,6 +52,17 @@ export default function SearchablePersonnelSelect({ personnel, value, onChange, 
     if (!search) return true;
     const q = search.toLowerCase();
     return p.firstName.toLowerCase().includes(q) || p.lastName.toLowerCase().includes(q) || p.id.includes(q);
+  }).sort((a, b) => {
+    const batchA = a.batch || 0;
+    const batchB = b.batch || 0;
+    const yearA = batchA % 100;
+    const termA = Math.floor(batchA / 100);
+    const yearB = batchB % 100;
+    const termB = Math.floor(batchB / 100);
+    
+    if (yearA !== yearB) return yearA - yearB;
+    if (termA !== termB) return termA - termB;
+    return (a.num || 0) - (b.num || 0);
   });
 
   return (
